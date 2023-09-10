@@ -36,7 +36,7 @@
 #define INIT_KERNEL_STACK 0xffffffc052000000
 #define FREEMEM_KERNEL (INIT_KERNEL_STACK+PAGE_SIZE)//由这里开始内核自由分配
 #define TEMP_PAGE_START 0x50000000
-#define PAGE_NUM 512
+#define PAGE_NUM 384
 #define SHARE_PAGE_NUM 16
 #define SHM_PAGE_STARTVA 0x80000000
 #define HEAP_STARTVA 0x90000000
@@ -61,6 +61,8 @@ typedef struct page_allocated{
     uint8_t used;   //如果是共享内存，该变量记录有多少个进程正在共享
     enum PIN pin;
     PTE* pte;
+
+    uint8_t fqy;//记录访问频繁次数，用于clock算法
 }page_allocated;
 
 typedef struct share_page{
@@ -68,8 +70,6 @@ typedef struct share_page{
     int pg_index;//对应的内核虚地址
 }share_page;
 
-uint16_t swap_block_id = 0x200;
-uint16_t swap_page_id;
 extern page_allocated page_general[PAGE_NUM];
 extern share_page share_pages[SHARE_PAGE_NUM];
 
@@ -115,7 +115,7 @@ pid_t do_fork();
 
 static inline uint32_t kva2pgindex(uintptr_t kva)
 {
-    return (kva-FREEMEM_KERNEL)/PAGE_SIZE;
+    return (((kva>>NORMAL_PAGE_SHIFT)<<NORMAL_PAGE_SHIFT)-FREEMEM_KERNEL)/PAGE_SIZE;
 }
 
 static inline uintptr_t pgindex2kva(uint32_t index)

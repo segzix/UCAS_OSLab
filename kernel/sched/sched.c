@@ -84,9 +84,7 @@ void do_scheduler(void)
     cpu_hartmask = get_current_cpu_id() ? 0x2 : 0x1;
     check_sleeping();
 
-    // do_wake_up_recv_stream();
-    // do_resend_RSD();
-    // do_resend_ACK();
+    do_resend();
 
     if((*current_running)->pid == 2){
         for(unsigned i = 0;i < NUM_MAX_TASK;i++){
@@ -194,6 +192,14 @@ pid_t do_exec(char *name, int argc, char *argv[])
 
     current_running = get_current_cpu_id() ? &current_running_1 : &current_running_0;
     /* TODO [P3-TASK1] exec exit kill waitpid ps*/
+
+    int kernel_argc = argc;
+    char kernel_arg[5][200];
+    char* kernel_argv[5];
+    for(int i=0;i<argc;i++){
+        memcpy(kernel_arg[i], argv[i], strlen(argv[i]+1));
+        kernel_argv[i]=kernel_arg[i];
+    }
     for(int i=1;i<task_num;i++){
         // printl("%s %s\n",tasks[i].name,name);
         if(strcmp(tasks[i].task_name,name) == 0){
@@ -242,7 +248,7 @@ pid_t do_exec(char *name, int argc, char *argv[])
                     memcpy((void*)pcb[id].pcb_name, (void*)tasks[i].task_name, 32);
                     // load_task_img(tasks[i].name);
                     init_pcb_stack( pcb[id].kernel_sp,kva_user_stack,
-                                    tasks[i].task_entrypoint,&pcb[id],argc,argv);
+                                    tasks[i].task_entrypoint,&pcb[id],kernel_argc,kernel_argv);
                     // printl("%d\n",pcb[id].user_sp);
 
 

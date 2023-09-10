@@ -4,7 +4,7 @@
 #include <string.h>
 #include <unistd.h>
 #include <stdio.h>
-#define  BUFFER_NUM 19534
+#define  BUFFER_NUM 703189
 char buffer[BUFFER_NUM];
 
 uint16_t fletcher16(uint8_t *data, int n){
@@ -22,7 +22,7 @@ uint16_t fletcher16(uint8_t *data, int n){
 int main(void){
 
     FILE* fp = NULL;
-    fp = fopen("/home/stu/chengzixuan21a/testP5.txt","r");
+    fp = fopen("/home/stu/oslab/testP5.txt","r");
     fread((void *)buffer, sizeof(char), BUFFER_NUM-4, fp);
     uint16_t ret_flet = fletcher16(buffer,BUFFER_NUM-4);
     printf("fletcher num : %d\n",ret_flet);

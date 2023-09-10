@@ -54,14 +54,17 @@ void handle_irq_ext(regs_context_t *regs, uint64_t stval, uint64_t scause)
 {
     uint32_t plic_ID = plic_claim();
 
-    if(plic_ID == PLIC_E1000_QEMU_IRQ || plic_ID == PLIC_E1000_PYNQ_IRQ){
+    /*
+     * PLIC_E1000_QEMU_IRQ || PLIC_E1000_PYNQ_IRQ：处理中断
+     * 0：双核时之前另一核处理过
+     * 其他情况
+     */
+    if(plic_ID == PLIC_E1000_QEMU_IRQ || plic_ID == PLIC_E1000_PYNQ_IRQ)
         net_handle_irq();
-    }
     else if(plic_ID == 0)
         return;
-    else {
+    else
         handle_other(regs, stval, scause);
-    }
 
     plic_complete(plic_ID);
     // TODO: [p5-task3] external interrupt handler.
@@ -139,7 +142,7 @@ void handle_pagefault_access(regs_context_t *regs, uint64_t stval, uint64_t scau
     /*
      * p位有效：access位无，重新给出即可
      * p位无效：软件位有，在硬盘上
-     * p位无效：软件位无，还未分配即进行访问，报错(对于一个地址，规定先malloc建立映射，然后对该地址进行访问时分配一个物理页)
+     * p位无效：软件位无，mmaloc完还未进行分配
      */
     if(*search_PTE_swap & _PAGE_PRESENT){
         set_attribute(search_PTE_swap, 
@@ -159,6 +162,8 @@ void handle_pagefault_access(regs_context_t *regs, uint64_t stval, uint64_t scau
             
         }
     }
+
+    page_general[kva2pgindex(pa2kva(get_pfn(*search_PTE_swap)<<NORMAL_PAGE_SHIFT))].fqy = 1;
 
     local_flush_tlb_all();
 }
@@ -204,6 +209,7 @@ void handle_pagefault_store(regs_context_t *regs, uint64_t stval, uint64_t scaus
                 _PAGE_PRESENT | _PAGE_READ | _PAGE_WRITE | _PAGE_EXEC |_PAGE_ACCESSED | _PAGE_DIRTY| _PAGE_USER);
         }
     }
-
+    
+    page_general[kva2pgindex(pa2kva(get_pfn(*search_PTE_swap)<<NORMAL_PAGE_SHIFT))].fqy = 1;
     local_flush_tlb_all();
 }

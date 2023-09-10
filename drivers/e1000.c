@@ -4,7 +4,7 @@
 #include <os/string.h>
 #include <os/time.h>
 #include <os/sched.h>
-#include <assert.h>
+#include <os/smp.h>
 #include <pgtable.h>
 
 LIST_HEAD(send_block_queue);
@@ -130,14 +130,6 @@ static void e1000_configure_rx(void)
     }//全部清空
 
     /* TODO: [p5-task2] Set up the Rx descriptor base address and length */
-    
-    // uint32_t LOW  = (uint32_t)(((uint64_t)kva2pa(rx_desc_array)) & 0xffffffff);
-    // uint32_t HIGH = (uint32_t)(((uint64_t)kva2pa(rx_desc_array)) >> 32); 
-    // uint32_t SIZE = 16*RXDESCS;
-    
-    // e1000_write_reg(e1000,E1000_RDBAL,LOW);
-    // e1000_write_reg(e1000,E1000_RDBAH,HIGH);
-    // e1000_write_reg(e1000,E1000_RDLEN,SIZE);
 
     e1000_write_reg(e1000, E1000_RDBAH, kva2pa((uint64_t)rx_desc_array) >> 32);
     e1000_write_reg(e1000, E1000_RDBAL, kva2pa((uint64_t)rx_desc_array) << 32 >> 32);
@@ -185,24 +177,23 @@ void e1000_init(void)
 int e1000_transmit(void *txpacket, int length)
 {
     /* TODO: [p5-task1] Transmit one packet from txpacket */
-    local_flush_dcache();
     current_running = get_current_cpu_id()? &current_running_1 : &current_running_0;
 
     uint32_t tail = e1000_read_reg(e1000,E1000_TDT);
-    // int head = e1000_read_reg(e1000,E1000_TDH);
-    // int TCTL = e1000_read_reg(e1000,E1000_TCTL);
-    // nxt = (tail + 1) % RXDESCS;//看下一个是不是有效的，如果有效说明可以读出来
 
-    // cnt ++;
-
+    //拷贝到tx_pkt_buffer中
     tx_desc_array[tail].length = length;
-    // printl("L = %d\n",length);
     tx_desc_array[tail].status &= ~(E1000_TXD_STAT_DD);
     memcpy((void*)tx_pkt_buffer[tail],txpacket,length);//完成当前对于tail指针指向的发送描述符的一系列标志位等
+    local_flush_dcache();
     
-    tail = (tail + 1) % TXDESCS;//注意在进入这个函数的时候，tail指向的位置一定是可以写入的
-    //只不过往后走可能不能写入了，那么这个时候需要被阻塞，并且不可以把新的tail指针写入
+    /*
+     * 注意在进入这个函数的时候，tail指向的位置一定是可以写入的
+     * 只不过往后走可能不能写入了，那么这个时候需要被阻塞，并且不可以把新的tail指针写入
+     */
+    tail = (tail + 1) % TXDESCS;
 
+    //判断是否需要进行阻塞
     spin_lock_acquire(&send_block_spin_lock);
     while(!(tx_desc_array[tail].status & E1000_TXD_STAT_DD)){
         e1000_write_reg(e1000, E1000_IMS, E1000_IMS_TXQE);
@@ -211,8 +202,6 @@ int e1000_transmit(void *txpacket, int length)
     spin_lock_release(&send_block_spin_lock);
 
     e1000_write_reg(e1000,E1000_TDT,tail);
-
-    local_flush_dcache();
     return 0;
 }
 
@@ -224,31 +213,34 @@ int e1000_transmit(void *txpacket, int length)
 int e1000_poll(void *rxbuffer)
 {
     /* TODO: [p5-task2] Receive one packet and put it into rxbuffer */
-    local_flush_dcache();
     current_running = get_current_cpu_id()? &current_running_1 : &current_running_0;
 
     uint32_t tail = e1000_read_reg(e1000,E1000_RDT);
 
-    tail = (tail + 1) % RXDESCS;//看下一个是不是有效的，如果有效说明可以读出来
+    //看下一个是不是有效的，如果有效说明可以读出来
+    tail = (tail + 1) % RXDESCS;
 
+    //如果DD位有效的，则说明这里已经被硬件置过，在这种情况下是可以往后走的
     spin_lock_acquire(&recv_block_spin_lock);
-    while(!(rx_desc_array[tail].status & E1000_RXD_STAT_DD)){//如果DD位有效的，则说明这里已经被硬件置过，在这种情况下是可以往后走的
-        // e1000_write_reg(e1000, E1000_IMS, E1000_IMS_RXDMT0);
+    while(!(rx_desc_array[tail].status & E1000_RXD_STAT_DD)){
+        e1000_write_reg(e1000, E1000_IMS, E1000_IMS_RXDMT0);
         do_block(&(*current_running)->list, &recv_block_queue,&recv_block_spin_lock);
     }
     spin_lock_release(&recv_block_spin_lock);
     
+    //拷贝到rxbuffer中
     uint32_t len = rx_desc_array[tail].length;
     memcpy(rxbuffer,(void*)rx_pkt_buffer[tail],len);
+    local_flush_dcache();
     rx_desc_array[tail].status = 0;
     rx_desc_array[tail].length = 0;
-    
-    // nxt = (nxt + 1) % RXDESCS;
 
     e1000_write_reg(e1000,E1000_RDT,tail);
 
-    local_flush_dcache();
     return len;
 }
-//两个函数最不同的地方就在于，对于发送描述符，时进入函数之后一定可以发送，需要考虑的是发送完后tail能不能往前走
-//接收则首先需要考虑前面的能不能走，如果不能走那么就应该直接被阻塞
+
+/* 
+ * 两个函数最不同的地方就在于，对于发送描述符，进入函数之后一定可以发送，需要考虑的是发送完后tail能不能往前走
+ * 接收则首先需要考虑前面的能不能走，如果不能走那么就应该直接被阻塞
+ */

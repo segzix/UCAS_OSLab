@@ -7,12 +7,13 @@
 #include <os/string.h>
 #include <pgtable.h>
 #include <printk.h>
-#include <stdint.h>
 
 // NOTE: A/C-core
 static ptr_t kernMemCurr = FREEMEM_KERNEL;
 page_allocated page_general[PAGE_NUM];
 share_page share_pages[SHARE_PAGE_NUM];
+uint16_t swap_block_id = 0x200;
+uint16_t swap_page_id;
 
 // NOTE: Only need for S-core to alloc 2MB large page
 #ifdef S_CORE
@@ -76,51 +77,51 @@ uintptr_t walk(uintptr_t va, PTE *pgdir, enum WALK walk) {
 
 /*
  * swapout函数负责选中一页然后换出，返回这页对应的index，有kmalloc函数将这页重新分配出去
+ * swapout采用clock算法，根据fqy来进行判断
  */
 unsigned swap_out() {
 
     PTE *swap_PTE; //将要换出去的物理页对应的表项
     uint8_t judge_pg;
-    uint8_t judge_access;
-    uint8_t judge_dirty;
-    uint8_t judge_swap;
-
+    static int k=0;
 
     /*
-     * 先看既没读过也没写过的页，再看只读过没写过的页，然后看读过写过的页，最后看页表
+     * 先看既没读过也没写过的页，再看只读过没写过的页，然后看读过写过的页
      */
-    for (unsigned j = 0; j < 3; j++) {
-        for (unsigned i = 0; i < PAGE_NUM; swap_page_id = (swap_page_id + 1) % PAGE_NUM, i++) {
-            if (page_general[swap_page_id].pin == UNPINED && page_general[swap_page_id].used <= 1 &&
-                page_general[swap_page_id].pte != NULL) {
+    for (;;) {
+        if (page_general[swap_page_id].pin == UNPINED && page_general[swap_page_id].used <= 1 &&
+            page_general[swap_page_id].pte != NULL) {
 
-                //根据PTE表项判断出在本次j循环中，这页是否满足被换出的条件    
-                swap_PTE = page_general[i].pte;
-                judge_pg = !(*swap_PTE&(_PAGE_EXEC|_PAGE_READ|_PAGE_WRITE));
-                judge_access = *swap_PTE&_PAGE_ACCESSED;
-                judge_dirty  = *swap_PTE&_PAGE_DIRTY;
-            
-                judge_swap =(j==0)&&(!judge_pg && !judge_access) || 
-                            (j==1)&&(!judge_pg &&  judge_access && !judge_dirty) ||
-                            (j==2)&&(!judge_pg &&  judge_dirty) ||
-                            (j==3)&&( judge_pg) ;
+            swap_PTE = page_general[swap_page_id].pte;
+            judge_pg = !(*swap_PTE & (_PAGE_EXEC | _PAGE_READ | _PAGE_WRITE));
 
-                //物理页free，设置表项，将物理页写进硬盘
-                kmfree(pgindex2kva(swap_page_id));
-                setPTE(swap_PTE, swap_block_id << NORMAL_PAGE_SHIFT, _PAGE_SOFT | _PAGE_USER);
-                bios_sd_write(kva2pa(pgindex2kva(swap_page_id)), 8,
-                              swap_block_id); //将物理地址和所写的扇区号传入
-                printl("\npage[%d](kva : 0x%x) has been swapped to block id[%d]\n", i,
-                       pgindex2kva(i), swap_block_id);
+            //目前采取保守策略，不换出页表(否则性能会很差)
+            if (!judge_pg) {
+                if (page_general[swap_page_id].fqy == 0) {
+                    //物理页free，设置表项，将物理页写进硬盘
+                    uintptr_t kva = pgindex2kva(swap_page_id);
+                    kmfree(kva);
+                    setPTE(swap_PTE, swap_block_id << NORMAL_PAGE_SHIFT, _PAGE_SOFT | _PAGE_USER);
+                    bios_sd_write(kva2pa(kva), 8,
+                                  swap_block_id); //将物理地址和所写的扇区号传入
+                    printl("\npage[%d](kva : 0x%x) has been swapped to block id[%d]\n",
+                           swap_page_id, kva, swap_block_id);
+                    k++;
+                    if(k==234)
+                        k++;
 
-                // block与page编号增加
-                swap_block_id += 8;                           //扇区号加8
-                swap_page_id = (swap_page_id + 1) % PAGE_NUM; //从下一个开始算起，为fifo算法
+                    // block与page编号增加
+                    swap_block_id += 8; //扇区号加8
+                    uint16_t temp_id = swap_page_id;
+                    swap_page_id = (swap_page_id + 1) % PAGE_NUM; 
 
-                local_flush_tlb_all();
-                return swap_page_id; //返回数组中的下标
+                    local_flush_tlb_all();
+                    return temp_id; 
+                } else
+                    page_general[swap_page_id].fqy--;
             }
         }
+        swap_page_id = (swap_page_id + 1) % PAGE_NUM;
     }
 
     return -1;
@@ -235,6 +236,7 @@ void kmfree(uintptr_t kva) {
             page_general[pgindex].valid = 0;
             page_general[pgindex].pin = UNPINED;
             page_general[pgindex].pte = NULL;
+            page_general[pgindex].fqy = 0;
         }
     }
 }

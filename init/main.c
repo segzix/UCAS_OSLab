@@ -256,35 +256,6 @@ void init_tcb_stack(
     tcb->kernel_sp = (uint64_t)pt_switchto;
 }
 
-// static void init_pcb(void)
-// {
-//     /* TODO: [p2-task1] load needed tasks and init their corresponding PCB */
-
-//     int num_tasks; 
-    
-//     // task1: sched1_tasks
-//     //init_sched1_tasks();
-//     //先将sched1_tasks数组做一遍初始化
-//     for(num_tasks = 0; num_tasks < task_num; num_tasks++){
-//         //pcb[num_tasks].kernel_sp = KERNEL_STACK + (num_tasks + 1) * 0x1000;
-//         //pcb[num_tasks].user_sp = pcb[num_tasks].kernel_sp;
-//         pcb[num_tasks].kernel_sp = allocKernelPage(1) + PAGE_SIZE;
-//         pcb[num_tasks].user_sp   = allocUserPage(1) + PAGE_SIZE;
-//         list_add(&pcb[num_tasks].list, &ready_queue);
-//         pcb[num_tasks].pid = num_tasks + 1;
-//         pcb[num_tasks].tid = 0;
-//         pcb[num_tasks].status = TASK_READY;
-        
-//         load_task_img(num_tasks);
-//         init_pcb_stack( pcb[num_tasks].kernel_sp, pcb[num_tasks].user_sp, 
-//                         tasks[num_tasks].task_entrypoint, &pcb[num_tasks]); 
-//     }
-    
-//     current_running = &pid0_pcb;
-//     /* TODO: [p2-task1] remember to initialize 'current_running' */
-
-// }
-
 static void init_pcb(void)
 {
     /* TODO: [p2-task1] load needed tasks and init their corresponding PCB */
@@ -316,6 +287,7 @@ static void init_page_general(void)
         page_general[num_pages].pin = UNPINED;
         page_general[num_pages].used = 0;
         page_general[num_pages].pte = NULL;
+        page_general[num_pages].fqy = 0;
     }
 
 }
@@ -478,26 +450,26 @@ int main(void)
 
         current_running = &current_running_0;
         // Read Flatten Device Tree (｡•ᴗ-)_
-        // time_base = bios_read_fdt(TIMEBASE);
-        // e1000 = (volatile uint8_t *)bios_read_fdt(ETHERNET_ADDR);
-        // uint64_t plic_addr = bios_read_fdt(PLIC_ADDR);
-        // uint32_t nr_irqs = (uint32_t)bios_read_fdt(NR_IRQS);
-        // printk("> [INIT] e1000: %lx, plic_addr: %lx, nr_irqs: %lx.\n", e1000, plic_addr, nr_irqs);
+        time_base = bios_read_fdt(TIMEBASE);
+        e1000 = (volatile uint8_t *)bios_read_fdt(ETHERNET_ADDR);
+        uint64_t plic_addr = bios_read_fdt(PLIC_ADDR);
+        uint32_t nr_irqs = (uint32_t)bios_read_fdt(NR_IRQS);
+        printk("> [INIT] e1000: %lx, plic_addr: %lx, nr_irqs: %lx.\n", e1000, plic_addr, nr_irqs);
 
-        // // IOremap
-        // plic_addr = (uintptr_t)ioremap((uint64_t)plic_addr, 0x4000 * NORMAL_PAGE_SIZE);
-        // e1000 = (uint8_t *)ioremap((uint64_t)e1000, 8 * NORMAL_PAGE_SIZE);
-        // printk("> [INIT] IOremap initialization succeeded.\n");
+        // IOremap
+        plic_addr = (uintptr_t)ioremap((uint64_t)plic_addr, 0x4000 * NORMAL_PAGE_SIZE);
+        e1000 = (uint8_t *)ioremap((uint64_t)e1000, 8 * NORMAL_PAGE_SIZE);
+        printk("> [INIT] IOremap initialization succeeded.\n");
 
         // Init lock mechanism o(´^｀)o
         printk("> [INIT] Lock mechanism initialization succeeded.\n");
-        // // TODO: [p5-task3] Init plic
-        // plic_init(plic_addr, nr_irqs);
-        // printk("> [INIT] PLIC initialized successfully. addr = 0x%lx, nr_irqs=0x%x\n", plic_addr, nr_irqs);
+        // TODO: [p5-task3] Init plic
+        plic_init(plic_addr, nr_irqs);
+        printk("> [INIT] PLIC initialized successfully. addr = 0x%lx, nr_irqs=0x%x\n", plic_addr, nr_irqs);
 
-        // // Init network device
-        // e1000_init();
-        // printk("> [INIT] E1000 device initialized successfully.\n");
+        // Init network device
+        e1000_init();
+        printk("> [INIT] E1000 device initialized successfully.\n");
 
         // Init system call table (0_0)
         init_syscall();
@@ -516,8 +488,6 @@ int main(void)
         // Init system call table (0_0)
         init_syscall();
         printk("> [INIT] System call initialized successfully.\n");
-
-        init_stream();
 
         // Init screen (QAQ)
         init_screen();

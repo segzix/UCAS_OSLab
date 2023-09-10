@@ -29,6 +29,7 @@
 #ifndef INCLUDE_SCHEDULER_H_
 #define INCLUDE_SCHEDULER_H_
 
+#include "os/net.h"
 #include "pgtable.h"
 #include <os/lock.h>
 #include <type.h>
@@ -102,11 +103,11 @@ typedef struct pcb
     /* time(seconds) to wake up sleeping PCB */
     uint64_t wakeup_time;
 
-     /* mask 
-    0x01 core 0
-    0x02 core 1
-    0x03 core 0/1
-    */
+    /* mask 
+     * 0x01 core 0
+     * 0x02 core 1
+     * 0x03 core 0/1
+     */
     int hart_mask;
     int current_mask;
 
@@ -117,6 +118,8 @@ typedef struct pcb
 
     uint32_t pwd;
     char pwd_dir[64];//用来记录当前工作路径
+
+    netStream netstream;
 } pcb_t,tcb_t;
 
 /*main.c中定义的变量和函数*/

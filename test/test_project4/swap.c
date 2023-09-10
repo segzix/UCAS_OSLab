@@ -8,14 +8,11 @@
 
 void main(int argc, char* argv[])
 {
-    void* mem = 0x10000000;
-    for(unsigned i = 0;i < 0x300000;i+=0x1000){
-        *(unsigned *)(mem+i) = i;
-    }
-
-    mem = 0x10000000;
-    for(unsigned i = 0;i < 0x300000;i+=0x1000){
-        if(*(unsigned *)(mem+i) == i)
+    uintptr_t mem;
+    for(unsigned i = 0;i < 0x30000;i+=0x1000){
+        mem = sys_mmalloc(0x1000);
+        *(unsigned *)(mem) = i;
+        if(*(unsigned *)(mem) == i)
             continue;
         else {
             printf("swap is error!\n");
