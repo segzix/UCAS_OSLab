@@ -6,7 +6,7 @@
 #include <stdlib.h>
 #include <unistd.h>
 
-int var = 100;      //全局变量
+int var = 1;      //全局变量
 
 int main(void)
 {
@@ -44,12 +44,17 @@ int main(void)
             "syscall\n\t"
             : "=a"(pid_3)
         );
+
         clock_gettime(CLOCK_REALTIME, &time6);
 
         diff_1 += time2.tv_nsec - time1.tv_nsec;
         diff_2 += time4.tv_nsec - time3.tv_nsec;
         diff_3 += time6.tv_nsec - time5.tv_nsec;
     }
+
+    printf("pid1 = %d\n", pid_1);
+    printf("pid2 = %d\n", pid_2);
+    printf("pid3 = %d\n", pid_3);
 
     printf("time_getpid = %f ns\n", diff_1/COUNT);
     printf("time_syscall = %f ns\n", diff_2/COUNT);
