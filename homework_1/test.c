@@ -1,4 +1,4 @@
-#define COUNT 10
+#define COUNT 100
 #include <time.h>
 #include <stdio.h>
 #include <sys/syscall.h>
