@@ -44,7 +44,6 @@ int main(void)
             "syscall\n\t"
             : "=a"(pid_3)
         );
-
         clock_gettime(CLOCK_REALTIME, &time6);
 
         diff_1 += time2.tv_nsec - time1.tv_nsec;
