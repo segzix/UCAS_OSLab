@@ -39,6 +39,8 @@ int main(void)
         clock_gettime(CLOCK_REALTIME, &time4);
 
         clock_gettime(CLOCK_REALTIME, &time5);
+
+        
         asm volatile(
             "mov $20, %%eax\n\t"
             "syscall\n\t"
