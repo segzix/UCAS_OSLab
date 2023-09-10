@@ -70,8 +70,8 @@ static void e1000_configure_tx(void)
 
     /* TODO: [p5-task1] Set up the Tx descriptor base address and length */
     
-    uint32_t LOW  = (uint32_t)(((uint64_t)kva2pa(tx_desc_array)) & 0xffffffff);
-    uint32_t HIGH = (uint32_t)(((uint64_t)kva2pa(tx_desc_array)) >> 32); 
+    uint32_t LOW  = (uint32_t)(((uint64_t)kva2pa((uintptr_t)tx_desc_array)) & 0xffffffff);
+    uint32_t HIGH = (uint32_t)(((uint64_t)kva2pa((uintptr_t)tx_desc_array)) >> 32); 
     // uint32_t SIZE = 16*TXDESCS;
     uint32_t SIZE = sizeof(tx_desc_array);
     

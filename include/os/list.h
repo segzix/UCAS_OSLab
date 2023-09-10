@@ -50,7 +50,7 @@ typedef list_node_t list_head;
 // LIST_HEAD is used to define the head of a list.
 #define LIST_HEAD(name) struct list_node name = {&(name), &(name)}
 
-#define list_entry(ptr, type, member)  (type *)((void *)ptr - (unsigned)&(((type *)0)->member))
+#define list_entry(ptr, type, member)  (type *)((void *)ptr - (void *)&(((type *)0)->member))
         //减号后是确定相对偏移地址，然后用已知的地址(即指向对应pcb中list的指针)减去相对偏移，
         //得到对应pcb的开始地址，并将其转换为pcb*型
     

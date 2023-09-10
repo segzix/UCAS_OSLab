@@ -29,8 +29,6 @@ int main(void){
     uint32_t size = *(uint32_t*)buffer;
     printf("%u[Bytes]: %lu[s]\n", size, time2-time1);
 
-    memcpy((void*)buffer, (void*)buffer+4, size-4);
-    uint16_t ret_flet = fletcher16(buffer,size-4);
+    uint16_t ret_flet = fletcher16((void*)buffer+4,size-4);
     printf("fletcher num : %d\n",ret_flet);
-    printf("%lu", CLOCKS_PER_SEC);
 }

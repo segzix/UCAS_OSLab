@@ -48,6 +48,7 @@
 #include <os/net.h>
 #include <os/fs.h>
 #include <plic.h>
+#include <cpparg.h>
 
 #define USER_ADDR 0xffffffc052000000
 #define VERSION_BUF 50
@@ -449,8 +450,10 @@ int main(void)
         init_share_page();
 
         current_running = &current_running_0;
-        // Read Flatten Device Tree (｡•ᴗ-)_
+        // Read CPU frequency (｡•ᴗ-)_
         time_base = bios_read_fdt(TIMEBASE);
+        
+        #ifdef NET
         e1000 = (volatile uint8_t *)bios_read_fdt(ETHERNET_ADDR);
         uint64_t plic_addr = bios_read_fdt(PLIC_ADDR);
         uint32_t nr_irqs = (uint32_t)bios_read_fdt(NR_IRQS);
@@ -470,6 +473,7 @@ int main(void)
         // Init network device
         e1000_init();
         printk("> [INIT] E1000 device initialized successfully.\n");
+        #endif
 
         // Init system call table (0_0)
         init_syscall();
@@ -477,9 +481,6 @@ int main(void)
 
         init_shell();
         printk("> [INIT] PCB initialization succeeded.\n");
-
-        // Read CPU frequency (｡•ᴗ-)_
-        time_base = bios_read_fdt(TIMEBASE);
 
         // Init interrupt (^_^)
         init_exception();

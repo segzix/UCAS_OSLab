@@ -38,6 +38,8 @@
 #define NUM_MAX_TASK 32
 #define TASK_LOCK_MAX 16
 
+uint32_t pid;
+
 /* used to save register infomation */
 typedef struct regs_context
 {
@@ -190,5 +192,10 @@ int do_task_set(int mask,char *name, int argc, char *argv[]);
 void do_thread_create(pid_t *thread, void *thread_entrypoint, void *arg);
 pcb_t* get_pcb();
 /************************************************************/
+
+void init_pcb_mm(int id, int taskid);
+int kernel_argc;
+char kernel_arg[5][200];
+char *kernel_argv[5];
 
 #endif

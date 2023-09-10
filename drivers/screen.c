@@ -4,6 +4,7 @@
 #include <os/sched.h>
 #include <os/irq.h>
 #include <os/kernel.h>
+#include <os/smp.h>
 
 #define SCREEN_WIDTH    80
 #define SCREEN_HEIGHT   50
