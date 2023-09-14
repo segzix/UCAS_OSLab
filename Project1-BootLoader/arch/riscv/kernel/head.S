@@ -14,8 +14,24 @@ ENTRY(_start)
   csrw CSR_SIE, zero
   csrw CSR_SIP, zero
 
+  la    t0, __bss_start
+  la    t1, __BSS_END__
+
+head_loop:
+  blt   t1, t0, head_endloop # if t0 <= t1 then endloop
+  sb    zero,0(t0)
+  addi  t0,t0,1
+  j     head_loop
+head_endloop:
+  
+  mv    t0,zero 
+  mv    t1,zero
+
   /* TODO: [p1-task2] clear BSS for flat non-ELF images */
 
+  la    sp,KERNEL_STACK
+
+  call  main
 
   /* TODO: [p1-task2] setup C environment */
 

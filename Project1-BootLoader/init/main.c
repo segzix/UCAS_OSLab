@@ -8,11 +8,22 @@
 
 #define VERSION_BUF 50
 
+uint16_t task_num;
 int version = 2; // version must between 0 and 9
 char buf[VERSION_BUF];
 
 // Task info array
 task_info_t tasks[TASK_MAXNUM];
+
+static void enter_app(unsigned task_entrypoint)
+{
+    asm volatile(
+        "jalr   %0\n\t"
+        :
+        :"r"(task_entrypoint)
+        :"ra"
+    );
+}
 
 static int bss_check(void)
 {
@@ -38,6 +49,26 @@ static void init_jmptab(void)
 
 static void init_task_info(void)
 {
+    uint32_t task_info_block_phyaddr;
+    uint32_t task_info_block_size;
+
+    uint32_t task_info_block_id;
+    uint32_t task_info_block_num;
+    uint32_t task_info_block_offset;
+
+    task_info_block_phyaddr = *(uint32_t *)(0x502001fc - 0x8);
+    task_info_block_size    = *(uint32_t *)(0x502001fc - 0x4);
+    task_num                = *(uint16_t *)(0x502001fc + 0x2);
+
+    task_info_block_id      = task_info_block_phyaddr / SECTOR_SIZE;
+    task_info_block_num     = (task_info_block_phyaddr + task_info_block_size) / SECTOR_SIZE- task_info_block_id + 1;
+    task_info_block_offset  = task_info_block_phyaddr % SECTOR_SIZE;
+    //得到task_info的一系列信息，下面从sd卡读到内存中
+
+    bios_sd_read(TASK_MEM_BASE, task_info_block_num, task_info_block_id);
+    memcpy(tasks, TASK_MEM_BASE + task_info_block_offset, task_info_block_size);
+    //将task_info数组拷贝到tasks数组中
+
     // TODO: [p1-task4] Init 'tasks' array via reading app-info sector
     // NOTE: You need to get some related arguments from bootblock first
 }
@@ -49,7 +80,12 @@ static void init_task_info(void)
 int main(void)
 {
     // Check whether .bss section is set to zero
+    unsigned task_entrypoint;
+    int input_valid;
+    int k = 0;
+    int task_id = 0;
     int check = bss_check();
+    long c;
 
     // Init jump table provided by kernel and bios(ΦωΦ)
     init_jmptab();
@@ -75,6 +111,45 @@ int main(void)
 
     bios_putstr("Hello OS!\n\r");
     bios_putstr(buf);
+    bios_putstr("$ ");
+    
+    /*while (1){
+        long c;
+        if ((c = bios_getchar()) != -1)
+            bios_putchar(c);
+    }*/
+
+    while(1){
+        if((c = bios_getchar()) != -1)
+        {
+            bios_putchar(c);
+
+            if(c == 'z')
+            {
+                buf[k] = '\0';
+                for(task_id = 0;task_id < task_num;task_id++)
+                {
+                    input_valid = strcmp(buf,tasks[task_id].task_name);
+                    if(input_valid == 0)
+                        break;
+                }
+
+                if(input_valid == 0)
+                {
+                    load_task_img(task_id);
+                    task_entrypoint = tasks[task_id].task_entrypoint;
+                    enter_app(task_entrypoint);
+                    bios_putstr("$ ");
+                }
+                else
+                    bios_putstr("invalid name!\n$ ");
+                k = 0;
+            }
+            else
+                buf[k++] = c;
+        }
+        task_id = 0;
+    }
 
     // TODO: Load tasks by either task id [p1-task3] or task name [p1-task4],
     //   and then execute them.
