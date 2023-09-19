@@ -6,8 +6,9 @@
 #include <asm.h>
 #include <csr.h>
 
+#define DEFLATE_STACK		0x52030000
 #define KERNEL_STACK		0x50500000
-
+#define KERNEL		      0x50201000
 .section ".entry_function","ax"
 ENTRY(_start)
   /* Mask all interrupts */
@@ -28,15 +29,17 @@ head_endloop:
   mv    t1,zero
 
   /* TODO: [p1-task2] clear BSS for flat non-ELF images */
+  //为deflate函数创造环境，创造完环境并执行完后再直接跳转到kernel
 
-  la    sp,KERNEL_STACK
+  la    sp,DEFLATE_STACK-4
 
   la    t1,main
   jalr  t1
-  #call  main
 
   /* TODO: [p1-task2] setup C environment */
-
+  la    t1,KERNEL  # jump to   KERNEL
+  jalr  t1
+  
 
 loop:
   wfi

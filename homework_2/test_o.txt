@@ -1,0 +1,46 @@
+
+test.o:     file format elf64-x86-64
+
+SYMBOL TABLE:
+0000000000000000 l    df *ABS*	0000000000000000 test.c
+0000000000000000 l    d  .text	0000000000000000 .text
+0000000000000000 l    d  .data	0000000000000000 .data
+0000000000000000 l    d  .bss	0000000000000000 .bss
+0000000000000000 l    d  .rodata	0000000000000000 .rodata
+0000000000000000 l    d  .note.GNU-stack	0000000000000000 .note.GNU-stack
+0000000000000000 l    d  .note.gnu.property	0000000000000000 .note.gnu.property
+0000000000000000 l    d  .eh_frame	0000000000000000 .eh_frame
+0000000000000000 l    d  .comment	0000000000000000 .comment
+0000000000000004       O *COM*	0000000000000004 a
+0000000000000000 g     O .data	0000000000000004 b
+0000000000000000 g     F .text	000000000000004e main
+0000000000000000         *UND*	0000000000000000 _GLOBAL_OFFSET_TABLE_
+0000000000000000         *UND*	0000000000000000 malloc
+0000000000000000         *UND*	0000000000000000 printf
+
+
+
+Disassembly of section .text:
+
+0000000000000000 <main>:
+   0:	f3 0f 1e fa          	endbr64 
+   4:	55                   	push   %rbp
+   5:	48 89 e5             	mov    %rsp,%rbp
+   8:	48 83 ec 10          	sub    $0x10,%rsp
+   c:	bf 04 00 00 00       	mov    $0x4,%edi
+  11:	e8 00 00 00 00       	callq  16 <main+0x16>
+  16:	48 89 45 f8          	mov    %rax,-0x8(%rbp)
+  1a:	8b 15 00 00 00 00    	mov    0x0(%rip),%edx        # 20 <main+0x20>
+  20:	8b 05 00 00 00 00    	mov    0x0(%rip),%eax        # 26 <main+0x26>
+  26:	01 c2                	add    %eax,%edx
+  28:	48 8b 45 f8          	mov    -0x8(%rbp),%rax
+  2c:	89 10                	mov    %edx,(%rax)
+  2e:	48 8b 45 f8          	mov    -0x8(%rbp),%rax
+  32:	8b 00                	mov    (%rax),%eax
+  34:	89 c6                	mov    %eax,%esi
+  36:	48 8d 3d 00 00 00 00 	lea    0x0(%rip),%rdi        # 3d <main+0x3d>
+  3d:	b8 00 00 00 00       	mov    $0x0,%eax
+  42:	e8 00 00 00 00       	callq  47 <main+0x47>
+  47:	b8 00 00 00 00       	mov    $0x0,%eax
+  4c:	c9                   	leaveq 
+  4d:	c3                   	retq   

@@ -1,13 +1,14 @@
 #include <asm/biosdef.h>
 
 // os size location (os_size could be sectors [p1-task3] or bytes [p1-task4])
-.equ os_size_loc, 0x502001fc
+.equ deflate_block_size_loc, 0x502001fc
 
 // kernel address (move kernel to here, and jmp here to start kernel)
 .equ kernel, 0x50201000
 
 // BIOS function entry (jump here to use BIOS APIs)
 .equ bios_func_entry, 0x50150000
+.equ deflate,0x52000000
 
 .text
 .global main
@@ -24,6 +25,21 @@ main:
 	// TODO: [p1-task1] call BIOS to print string "It's bootblock!"
 
 	li   	a7,BIOS_SDREAD
+	la 		a0,deflate
+
+	la 	 	t1,deflate_block_size_loc
+	lh	 	a1,0(t1)
+	mv   	t1,zero
+
+	li		a2,1
+
+	jal  	bios_func_entry 
+
+	la 		t1,deflate
+	jr		t1
+	//将deflate函数加载到内存中，同时注意到这里取出来的分别直接就是num_of_blocks和block_id
+
+	/*li   	a7,BIOS_SDREAD
 	la 		a0,kernel
 
 	la 	 	t0,os_size_loc
@@ -31,7 +47,7 @@ main:
 	mv   	t0,zero
 
 	li	 	a2,1
-	jal  	bios_func_entry 
+	jal  	bios_func_entry */
 
 	// TODO: [p1-task2] call BIOS to read kernel in SD card
 
@@ -39,7 +55,7 @@ main:
 	// TODO: [p1-task4] load task-related arguments and pass them to kernel
 
 
-	j		kernel
+	//j		kernel
 	// TODO: [p1-task2] jump to kernel to start UCAS-OS
 
 	/************************************************************/

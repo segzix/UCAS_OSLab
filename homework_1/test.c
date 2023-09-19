@@ -1,12 +1,10 @@
-#define COUNT 100
+#define COUNT 10
 #include <time.h>
 #include <stdio.h>
 #include <sys/syscall.h>
 #include <sys/time.h>
 #include <stdlib.h>
 #include <unistd.h>
-
-int var = 1;      //全局变量
 
 int main(void)
 {
@@ -39,7 +37,7 @@ int main(void)
         clock_gettime(CLOCK_REALTIME, &time4);
 
         clock_gettime(CLOCK_REALTIME, &time5);
-        asm volatile(
+        asm(
             "mov $20, %%eax\n\t"
             "syscall\n\t"
             : "=a"(pid_3)

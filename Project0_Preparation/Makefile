@@ -41,7 +41,7 @@ USER_ENTRYPOINT			= 0x50000000
 # UCAS-OS User Source Files
 # -----------------------------------------------------------------------
 
-SRC_USER	= ShengZixuan_multi_add.S
+SRC_USER	= ShengZixuan_prime.S
 ELF_USER	= $(patsubst %.S, %, $(SRC_USER))
 
 # -----------------------------------------------------------------------
