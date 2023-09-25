@@ -125,7 +125,7 @@ clean:
 
 floppy:
 	sudo fdisk -l $(DISK)
-	sudo dd if=$(DIR_BUILD)/image of=$(DISK)2 conv=notrunc
+	sudo dd if=$(DIR_BUILD)/image of=$(DISK)3 conv=notrunc
 
 asm: $(ELF_BOOT) $(ELF_DECOMPRESS) $(ELF_MAIN) $(ELF_USER)
 	for elffile in $^; do $(OBJDUMP) -d $$elffile > $(notdir $$elffile).txt; done
