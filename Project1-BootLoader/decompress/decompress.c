@@ -31,10 +31,6 @@ int main()
     deflate_set_memory_allocator(NULL, NULL);
     struct libdeflate_decompressor * decompressor = deflate_alloc_decompressor();
 
-    // do compress
-    /*int out_nbytes = deflate_deflate_compress(compressor, data, data_len, compressed, BUFFER_SIZE);
-    printf("original: %d\n", data_len);
-    printf("compressed: %d\n", out_nbytes);*/
 
     // do decompress
     int restore_nbytes = 0;

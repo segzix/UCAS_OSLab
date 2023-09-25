@@ -37,17 +37,7 @@ main:
 
 	la 		t1,deflate
 	jr		t1
-	//将deflate函数加载到内存中，同时注意到这里取出来的分别直接就是num_of_blocks和block_id
-
-	/*li   	a7,BIOS_SDREAD
-	la 		a0,kernel
-
-	la 	 	t0,os_size_loc
-	lh	 	a1,0(t0)
-	mv   	t0,zero
-
-	li	 	a2,1
-	jal  	bios_func_entry */
+	//将deflate函数加载到内存中
 
 	// TODO: [p1-task2] call BIOS to read kernel in SD card
 

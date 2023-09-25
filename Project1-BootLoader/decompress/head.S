@@ -32,6 +32,7 @@ head_endloop:
   //为deflate函数创造环境，创造完环境并执行完后再直接跳转到kernel
 
   la    sp,DEFLATE_STACK-4
+  //设置压缩程序栈指针
 
   la    t1,main
   jalr  t1
