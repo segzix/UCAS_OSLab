@@ -20,10 +20,10 @@ crt0_endloop:
     la    sp,_start
     li    t4,0x10000
     add   sp,sp,t4
-    addi  sp,sp,-4
+    addi  sp,sp,-8
     //设置栈指针
 
-    addi  sp,sp,-16
+    addi  sp,sp,-32
     //分配栈空间
 
     sd    t1, 0(sp) 

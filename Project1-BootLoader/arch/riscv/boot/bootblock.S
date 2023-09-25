@@ -8,7 +8,7 @@
 
 // BIOS function entry (jump here to use BIOS APIs)
 .equ bios_func_entry, 0x50150000
-.equ deflate,0x52000000
+.equ deflate,0x53000000
 
 .text
 .global main

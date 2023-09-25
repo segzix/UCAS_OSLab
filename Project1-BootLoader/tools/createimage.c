@@ -37,6 +37,9 @@ static struct {
     int extended;
 } options;
 
+char kernel_data_buf[0x10000];
+char kernel_compress_buf[0x10000];
+
 /* prototypes of local functions */
 static void create_image(int nfiles, char *files[]);
 static void error(char *fmt, ...);
@@ -86,21 +89,19 @@ int main(int argc, char **argv)
 static void create_image(int nfiles, char *files[])
 {
     int i;
-    struct libdeflate_compressor * compressor;
-    char kernel_data_buf[0x10000];
-    char kernel_compress_buf[0x10000];
-    int kernel_compressed_phyaddr;
-    int kernel_compressed_size;
-    int data_size = 0;
-    char* kernel_data_buf_temp = kernel_data_buf;
-
     int tasknum = nfiles - 3;
-    int nbytes_decompress = 0;
-    int phyaddr_old = 0;
+    int data_size = 0;
+    struct libdeflate_compressor * compressor;
     int phyaddr = 0;
     FILE *fp = NULL, *img = NULL;
     Elf64_Ehdr ehdr;
     Elf64_Phdr phdr;
+    int kernel_compressed_phyaddr;
+    int kernel_compressed_size;
+    char* kernel_data_buf_temp = kernel_data_buf;
+
+    int nbytes_decompress = 0;
+    int phyaddr_old = 0;
 
     /* open the image file */
     img = fopen(IMAGE_FILE, "w");
@@ -138,12 +139,13 @@ static void create_image(int nfiles, char *files[])
                 data_size += get_filesz(phdr);
             }
             else
+            {
+                if (strcmp(*files, "decompress") == 0) 
+                    nbytes_decompress += get_filesz(phdr);
                 write_segment(phdr, fp, img, &phyaddr);
+            }
             //如果是kernel则先通过write_compress函数写进kernel_data_buf数组里，同时可以得到data_size
             /* update nbytes_decompress */
-            if (strcmp(*files, "decompress") == 0) {
-                nbytes_decompress += get_filesz(phdr);
-            }
         }
 
         /* write padding bytes */
@@ -175,6 +177,9 @@ static void create_image(int nfiles, char *files[])
         }
         /*else{
             write_padding(img, &phyaddr, SECTOR_SIZE * (1 + fidx * NBYTES2SEC(nbytes_decompress));
+        }*/
+        /*if (strcmp(*files, "decompress") == 0) {
+            write_padding(img, &phyaddr, SECTOR_SIZE + NBYTES2SEC(nbytes_decompress) * SECTOR_SIZE);
         }*/
 
         if(taskidx >= 0)

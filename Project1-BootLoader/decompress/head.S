@@ -6,7 +6,7 @@
 #include <asm.h>
 #include <csr.h>
 
-#define DEFLATE_STACK		0x52030000
+#define DEFLATE_STACK		0x53100000
 #define KERNEL_STACK		0x50500000
 #define KERNEL		      0x50201000
 .section ".entry_function","ax"
@@ -31,7 +31,7 @@ head_endloop:
   /* TODO: [p1-task2] clear BSS for flat non-ELF images */
   //为deflate函数创造环境，创造完环境并执行完后再直接跳转到kernel
 
-  la    sp,DEFLATE_STACK-4
+  la    sp,DEFLATE_STACK
   //设置压缩程序栈指针
 
   la    t1,main

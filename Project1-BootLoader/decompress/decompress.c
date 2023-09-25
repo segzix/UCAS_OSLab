@@ -1,4 +1,4 @@
-#define KERNEL_compressed 0x52040000
+#define KERNEL_compressed 0x54000000
 #define KERNEL            0x50201000
 #define KERNEL_compressed_phyaddr         0x502001ec
 #define KERNEL_compressed_size            0x502001f0
@@ -19,7 +19,7 @@ int main()
     KERNEL_compressed_block_phyaddr = (unsigned)*(uint32_t *)(KERNEL_compressed_phyaddr);
 
     KERNEL_compressed_block_id      = KERNEL_compressed_block_phyaddr / SECTOR_SIZE;
-    KERNEL_compressed_block_num     = (KERNEL_compressed_block_phyaddr + KERNEL_compressed_block_size) / SECTOR_SIZE - KERNEL_compressed_block_id + 1;
+    KERNEL_compressed_block_num     = (KERNEL_compressed_block_phyaddr + KERNEL_compressed_block_size) / SECTOR_SIZE - KERNEL_compressed_block_id + ((KERNEL_compressed_block_phyaddr + KERNEL_compressed_block_size) % SECTOR_SIZE != 0);
     KERNEL_compressed_block_offset  = KERNEL_compressed_block_phyaddr % SECTOR_SIZE;
 
 
