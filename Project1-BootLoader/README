@@ -42,7 +42,7 @@ Makefile文件
 
 主要文件的功能：
 一、bootblock.S
-(1) 打印字符串It's a bootloader...”。
+(1) 打印字符串"It's a bootloader..."。
 (2) 将位于SD第二个扇区的压缩代码段移动至内存。
 (3) 跳转到压缩程序代码的入口。
 二、head.S
@@ -59,3 +59,6 @@ Makefile文件
 (4) 将用户程序的相关信息的写入镜像最后，并且将其位置与大小写入bootblock后的padding区域，来将taskinfo存储的相关信息取出来。
 五、decompress.c
 (1) 将kernel压缩映像先加载到内存中，并且通过该解压缩程序将内核解压缩，并将其放到0x50200000处，作为内核入口
+
+编译指令:make all
+运行过程:make run即可。输入loadboot进入，然后输入对应用户程序名称运行对应用户程序
