@@ -5,13 +5,16 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <tinylibdeflate.h>
 
 #define IMAGE_FILE "./image"
 #define ARGS "[--extended] [--vm] <bootblock> <executable-file> ..."
 
 #define SECTOR_SIZE 512
 #define BOOT_LOADER_SIG_OFFSET 0x1fe
-#define OS_SIZE_LOC (BOOT_LOADER_SIG_OFFSET - 2)
+#define DECOMPRESS_SIZE_LOC (BOOT_LOADER_SIG_OFFSET - 2)
+#define TASK_INFO_LOC (DECOMPRESS_SIZE_LOC - 8)
+#define KERNEL_INFO_LOC (DECOMPRESS_SIZE_LOC -16)
 #define BOOT_LOADER_SIG_1 0x55
 #define BOOT_LOADER_SIG_2 0xaa
 
@@ -19,7 +22,10 @@
 
 /* TODO: [p1-task4] design your own task_info_t */
 typedef struct {
-
+    char        task_name[32];
+    uint32_t    task_block_phyaddr;
+    uint32_t    task_block_size;
+    uint32_t    task_entrypoint;
 } task_info_t;
 
 #define TASK_MAXNUM 16
@@ -31,6 +37,9 @@ static struct {
     int extended;
 } options;
 
+char kernel_data_buf[0x10000];
+char kernel_compress_buf[0x10000];
+
 /* prototypes of local functions */
 static void create_image(int nfiles, char *files[]);
 static void error(char *fmt, ...);
@@ -41,8 +50,8 @@ static uint32_t get_filesz(Elf64_Phdr phdr);
 static uint32_t get_memsz(Elf64_Phdr phdr);
 static void write_segment(Elf64_Phdr phdr, FILE *fp, FILE *img, int *phyaddr);
 static void write_padding(FILE *img, int *phyaddr, int new_phyaddr);
-static void write_img_info(int nbytes_kernel, task_info_t *taskinfo,
-                           short tasknum, FILE *img);
+static void write_img_info(int nbytes_decompress, task_info_t *taskinfo,
+                           short tasknum, FILE *img,int phyaddr,int kernel_compressed_phyaddr,int kernel_compressed_size);
 
 int main(int argc, char **argv)
 {
@@ -79,12 +88,20 @@ int main(int argc, char **argv)
 /* TODO: [p1-task4] assign your task_info_t somewhere in 'create_image' */
 static void create_image(int nfiles, char *files[])
 {
-    int tasknum = nfiles - 2;
-    int nbytes_kernel = 0;
+    int i;
+    int tasknum = nfiles - 3;
+    int data_size = 0;
+    struct libdeflate_compressor * compressor;
     int phyaddr = 0;
     FILE *fp = NULL, *img = NULL;
     Elf64_Ehdr ehdr;
     Elf64_Phdr phdr;
+    int kernel_compressed_phyaddr;
+    int kernel_compressed_size;
+    char* kernel_data_buf_temp = kernel_data_buf;
+
+    int nbytes_decompress = 0;
+    int phyaddr_old = 0;
 
     /* open the image file */
     img = fopen(IMAGE_FILE, "w");
@@ -93,7 +110,7 @@ static void create_image(int nfiles, char *files[])
     /* for each input file */
     for (int fidx = 0; fidx < nfiles; ++fidx) {
 
-        int taskidx = fidx - 2;
+        int taskidx = fidx - 3;
 
         /* open input file */
         fp = fopen(*files, "r");
@@ -112,12 +129,23 @@ static void create_image(int nfiles, char *files[])
             if (phdr.p_type != PT_LOAD) continue;
 
             /* write segment to the image */
-            write_segment(phdr, fp, img, &phyaddr);
-
-            /* update nbytes_kernel */
-            if (strcmp(*files, "main") == 0) {
-                nbytes_kernel += get_filesz(phdr);
+            if(strcmp(*files,"main") == 0)
+            {
+                fseek(fp, phdr.p_offset, SEEK_SET);
+                if (phdr.p_memsz != 0 && phdr.p_type == PT_LOAD){
+                    fread(kernel_data_buf_temp, sizeof(char), phdr.p_filesz, fp);
+                    kernel_data_buf_temp += phdr.p_filesz;
+                }
+                data_size += get_filesz(phdr);
             }
+            else
+            {
+                if (strcmp(*files, "decompress") == 0) 
+                    nbytes_decompress += get_filesz(phdr);
+                write_segment(phdr, fp, img, &phyaddr);
+            }
+            //如果是kernel则先通过write_compress函数写进kernel_data_buf数组里，同时可以得到data_size
+            /* update nbytes_decompress */
         }
 
         /* write padding bytes */
@@ -127,14 +155,48 @@ static void create_image(int nfiles, char *files[])
          *  occupies the same number of sectors
          * 2. [p1-task4] only padding bootblock is allowed!
          */
+
+
+        if(strcmp(*files,"main") == 0){
+            printf("kernel_data_size : %d\n",data_size);
+            deflate_set_memory_allocator((void * (*)(int))malloc, free);
+            compressor = deflate_alloc_compressor(1);
+
+            kernel_compressed_size = deflate_deflate_compress(compressor, kernel_data_buf, data_size, kernel_compress_buf, 0x10000);
+            kernel_compressed_phyaddr = phyaddr_old;
+
+            phyaddr = phyaddr_old + kernel_compressed_size;
+            fwrite(kernel_compress_buf, sizeof(char), kernel_compressed_size, img);
+            
+            printf("kernel_compressed_size : %d\n",kernel_compressed_size);
+            printf("kernel_compressed_phyaddr : %d\n",kernel_compressed_phyaddr);
+        }
+        //如果是kernel则首先打印出原本的data_size，压缩之后全部写进img文件中密排；然后打印出压缩之后的compress_size
         if (strcmp(*files, "bootblock") == 0) {
             write_padding(img, &phyaddr, SECTOR_SIZE);
         }
+        /*else{
+            write_padding(img, &phyaddr, SECTOR_SIZE * (1 + fidx * NBYTES2SEC(nbytes_decompress));
+        }*/
+        /*if (strcmp(*files, "decompress") == 0) {
+            write_padding(img, &phyaddr, SECTOR_SIZE + NBYTES2SEC(nbytes_decompress) * SECTOR_SIZE);
+        }*/
 
+        if(taskidx >= 0)
+        {
+            strcpy(taskinfo[taskidx].task_name,*files);
+            taskinfo[taskidx].task_block_phyaddr  =  phyaddr_old;
+            taskinfo[taskidx].task_block_size     =  phyaddr - phyaddr_old;
+            taskinfo[taskidx].task_entrypoint     =  get_entrypoint(ehdr);
+        }
+        //对应其他的用户程序
+
+        phyaddr_old = phyaddr;
+        printf("phyaddr_old : %d\n",phyaddr_old);
         fclose(fp);
         files++;
     }
-    write_img_info(nbytes_kernel, taskinfo, tasknum, img);
+    write_img_info(nbytes_decompress, taskinfo, tasknum, img, phyaddr,kernel_compressed_phyaddr,kernel_compressed_size);
 
     fclose(img);
 }
@@ -210,9 +272,63 @@ static void write_padding(FILE *img, int *phyaddr, int new_phyaddr)
     }
 }
 
-static void write_img_info(int nbytes_kernel, task_info_t *taskinfo,
-                           short tasknum, FILE * img)
+static void write_img_info(int nbytes_decompress, task_info_t *taskinfo,
+                           short tasknum, FILE *img,int phyaddr,int kernel_compressed_phyaddr,int kernel_compressed_size)
 {
+    uint32_t* check;
+    uint32_t task_info_block_phyaddr;
+    uint32_t task_info_block_size;
+
+    uint16_t decompress_SEC_number;
+    short i;
+    decompress_SEC_number = NBYTES2SEC(nbytes_decompress);
+
+    task_info_block_phyaddr     = phyaddr;
+    task_info_block_size        = sizeof(task_info_t) * tasknum;
+
+    printf("nbytes_decompress : %d\n", nbytes_decompress);
+    printf("decompress_SEC_number : %d\n", decompress_SEC_number);
+    printf("tasknum : %d\n", tasknum);
+
+    for(i = 0;i < tasknum;i++)
+    {
+        printf("task %d\n", i);
+        printf("task_name : %s\n",taskinfo[i].task_name);
+        printf("task_block_phyaddr : %d\n",taskinfo[i].task_block_phyaddr);
+        printf("task_block_size : %d\n",taskinfo[i].task_block_size);
+        printf("task_entrypoint : %x\n",taskinfo[i].task_entrypoint);
+    }
+
+    printf("task_info_block_phyaddr : %d\n", task_info_block_phyaddr);
+    printf("task_info_block_size : %d\n", task_info_block_size);
+    printf("kernel_compressed_phyaddr : %d\n", kernel_compressed_phyaddr);
+    printf("kernel_compressed_size : %d\n", kernel_compressed_size);
+
+    fseek(img,task_info_block_phyaddr,SEEK_SET);
+    fwrite(taskinfo,sizeof(task_info_t),tasknum,img);
+
+    fseek(img, DECOMPRESS_SIZE_LOC, SEEK_SET);
+    fwrite(&decompress_SEC_number,2,1,img);
+    fwrite(&tasknum,2,1,img);
+
+    fseek(img, TASK_INFO_LOC, SEEK_SET);
+    fwrite(&task_info_block_phyaddr,4,1,img);
+    fwrite(&task_info_block_size,4,1,img);
+
+    fseek(img, KERNEL_INFO_LOC, SEEK_SET);
+    fwrite(&kernel_compressed_phyaddr,4,1,img);
+    fwrite(&kernel_compressed_size,4,1,img);
+
+    /*fseek(img, 0x1ec, SEEK_SET);
+    fread(check,4,1,img);
+    printf("kernel_compressed_phyaddr_img : %d\n", *check);
+    fread(check,4,1,img);
+    printf("kernel_compressed_size_img : %d\n", *check);
+    fread(check,4,1,img);
+    printf("task_info_block_phyaddr_img : %d\n", *check);
+    fread(check,4,1,img);
+    printf("task_info_block_size_img : %d\n", *check);*/
+    
     // TODO: [p1-task3] & [p1-task4] write image info to some certain places
     // NOTE: os size, infomation about app-info sector(s) ...
 }
