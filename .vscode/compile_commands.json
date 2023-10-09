@@ -10,282 +10,15 @@
             "-Wall",
             "-mcmodel=medany",
             "-ggdb3",
-            "-I./tools/deflate",
-            "-I./arch/riscv/include",
-            "-Iinclude",
-            "-DFREESTANDING",
-            "-o",
-            "build/decompress",
-            "libs/string.c"
-        ],
-        "directory": "/home/stu/chengzixuan21a",
-        "file": "libs/string.c"
-    },
-    {
-        "arguments": [
-            "riscv64-unknown-linux-gnu-gcc",
-            "-c",
-            "-O0",
-            "-fno-builtin",
-            "-nostdlib",
-            "-nostdinc",
-            "-Wall",
-            "-mcmodel=medany",
-            "-ggdb3",
             "-I./arch/riscv/include",
             "-Iinclude",
             "-Idrivers",
             "-o",
             "build/main",
-            "arch/riscv/kernel/head.S"
+            "kernel/irq/irq.c"
         ],
         "directory": "/home/stu/chengzixuan21a",
-        "file": "arch/riscv/kernel/head.S"
-    },
-    {
-        "arguments": [
-            "riscv64-unknown-linux-gnu-gcc",
-            "-c",
-            "-O0",
-            "-fno-builtin",
-            "-nostdlib",
-            "-nostdinc",
-            "-Wall",
-            "-mcmodel=medany",
-            "-ggdb3",
-            "-I./arch/riscv/include",
-            "-Iinclude",
-            "-Idrivers",
-            "-o",
-            "build/main",
-            "drivers/screen.c"
-        ],
-        "directory": "/home/stu/chengzixuan21a",
-        "file": "drivers/screen.c"
-    },
-    {
-        "arguments": [
-            "riscv64-unknown-linux-gnu-gcc",
-            "-c",
-            "-O0",
-            "-fno-builtin",
-            "-nostdlib",
-            "-nostdinc",
-            "-Wall",
-            "-mcmodel=medany",
-            "-ggdb3",
-            "-I./tiny_libc/include",
-            "-o",
-            "build/syscall.o",
-            "tiny_libc/syscall.c"
-        ],
-        "directory": "/home/stu/chengzixuan21a",
-        "file": "tiny_libc/syscall.c"
-    },
-    {
-        "arguments": [
-            "riscv64-unknown-linux-gnu-gcc",
-            "-c",
-            "-O0",
-            "-fno-builtin",
-            "-nostdlib",
-            "-nostdinc",
-            "-Wall",
-            "-mcmodel=medany",
-            "-ggdb3",
-            "-I./tools/deflate",
-            "-I./arch/riscv/include",
-            "-Iinclude",
-            "-DFREESTANDING",
-            "-o",
-            "build/decompress",
-            "arch/riscv/bios/common.c"
-        ],
-        "directory": "/home/stu/chengzixuan21a",
-        "file": "arch/riscv/bios/common.c"
-    },
-    {
-        "arguments": [
-            "riscv64-unknown-linux-gnu-gcc",
-            "-c",
-            "-O0",
-            "-fno-builtin",
-            "-nostdlib",
-            "-nostdinc",
-            "-Wall",
-            "-mcmodel=medany",
-            "-ggdb3",
-            "-I./tools/deflate",
-            "-I./arch/riscv/include",
-            "-Iinclude",
-            "-DFREESTANDING",
-            "-o",
-            "build/decompress",
-            "tools/deflate/lib/utils.c"
-        ],
-        "directory": "/home/stu/chengzixuan21a",
-        "file": "tools/deflate/lib/utils.c"
-    },
-    {
-        "arguments": [
-            "gcc",
-            "-c",
-            "-ggdb",
-            "-Wall",
-            "-I./tools/deflate",
-            "-I./arch/riscv/include",
-            "-DFREESTANDING",
-            "-o",
-            "build/createimage",
-            "tools/deflate/lib/deflate_decompress.c"
-        ],
-        "directory": "/home/stu/chengzixuan21a",
-        "file": "tools/deflate/lib/deflate_decompress.c"
-    },
-    {
-        "arguments": [
-            "riscv64-unknown-linux-gnu-gcc",
-            "-c",
-            "-O0",
-            "-fno-builtin",
-            "-nostdlib",
-            "-nostdinc",
-            "-Wall",
-            "-mcmodel=medany",
-            "-ggdb3",
-            "-I./arch/riscv/include",
-            "-Iinclude",
-            "-Idrivers",
-            "-o",
-            "build/main",
-            "arch/riscv/kernel/entry.S"
-        ],
-        "directory": "/home/stu/chengzixuan21a",
-        "file": "arch/riscv/kernel/entry.S"
-    },
-    {
-        "arguments": [
-            "riscv64-unknown-linux-gnu-gcc",
-            "-c",
-            "-O0",
-            "-fno-builtin",
-            "-nostdlib",
-            "-nostdinc",
-            "-Wall",
-            "-mcmodel=medany",
-            "-ggdb3",
-            "-I./arch/riscv/include",
-            "-Iinclude",
-            "-Idrivers",
-            "-o",
-            "build/main",
-            "arch/riscv/bios/common.c"
-        ],
-        "directory": "/home/stu/chengzixuan21a",
-        "file": "arch/riscv/bios/common.c"
-    },
-    {
-        "arguments": [
-            "riscv64-unknown-linux-gnu-gcc",
-            "-c",
-            "-O0",
-            "-fno-builtin",
-            "-nostdlib",
-            "-nostdinc",
-            "-Wall",
-            "-mcmodel=medany",
-            "-ggdb3",
-            "-I./tools/deflate",
-            "-I./arch/riscv/include",
-            "-Iinclude",
-            "-DFREESTANDING",
-            "-o",
-            "build/decompress",
-            "decompress/head.S"
-        ],
-        "directory": "/home/stu/chengzixuan21a",
-        "file": "decompress/head.S"
-    },
-    {
-        "arguments": [
-            "riscv64-unknown-linux-gnu-gcc",
-            "-c",
-            "-O0",
-            "-fno-builtin",
-            "-nostdlib",
-            "-nostdinc",
-            "-Wall",
-            "-mcmodel=medany",
-            "-ggdb3",
-            "-I./tiny_libc/include",
-            "-o",
-            "build/printf.o",
-            "tiny_libc/printf.c"
-        ],
-        "directory": "/home/stu/chengzixuan21a",
-        "file": "tiny_libc/printf.c"
-    },
-    {
-        "arguments": [
-            "riscv64-unknown-linux-gnu-gcc",
-            "-c",
-            "-O0",
-            "-fno-builtin",
-            "-nostdlib",
-            "-nostdinc",
-            "-Wall",
-            "-mcmodel=medany",
-            "-ggdb3",
-            "-I./arch/riscv/include",
-            "-Iinclude",
-            "-Idrivers",
-            "-o",
-            "build/main",
-            "arch/riscv/kernel/trap.S"
-        ],
-        "directory": "/home/stu/chengzixuan21a",
-        "file": "arch/riscv/kernel/trap.S"
-    },
-    {
-        "arguments": [
-            "riscv64-unknown-linux-gnu-gcc",
-            "-c",
-            "-O0",
-            "-fno-builtin",
-            "-nostdlib",
-            "-nostdinc",
-            "-Wall",
-            "-mcmodel=medany",
-            "-ggdb3",
-            "-I./arch/riscv/include",
-            "-Iinclude",
-            "-Idrivers",
-            "-o",
-            "build/main",
-            "kernel/sched/sched.c"
-        ],
-        "directory": "/home/stu/chengzixuan21a",
-        "file": "kernel/sched/sched.c"
-    },
-    {
-        "arguments": [
-            "riscv64-unknown-linux-gnu-gcc",
-            "-c",
-            "-O0",
-            "-fno-builtin",
-            "-nostdlib",
-            "-nostdinc",
-            "-Wall",
-            "-mcmodel=medany",
-            "-ggdb3",
-            "-I./tiny_libc/include",
-            "./build/crt0.o",
-            "-o",
-            "build/timer",
-            "test/test_project2/timer.c"
-        ],
-        "directory": "/home/stu/chengzixuan21a",
-        "file": "test/test_project2/timer.c"
+        "file": "kernel/irq/irq.c"
     },
     {
         "arguments": [
@@ -324,66 +57,10 @@
             "-Idrivers",
             "-o",
             "build/main",
-            "kernel/sched/time.c"
+            "kernel/locking/lock.c"
         ],
         "directory": "/home/stu/chengzixuan21a",
-        "file": "kernel/sched/time.c"
-    },
-    {
-        "arguments": [
-            "riscv64-unknown-linux-gnu-gcc",
-            "-c",
-            "-O0",
-            "-fno-builtin",
-            "-nostdlib",
-            "-nostdinc",
-            "-Wall",
-            "-mcmodel=medany",
-            "-ggdb3",
-            "-I./arch/riscv/include",
-            "-Iinclude",
-            "-Idrivers",
-            "-o",
-            "build/main",
-            "init/main.c"
-        ],
-        "directory": "/home/stu/chengzixuan21a",
-        "file": "init/main.c"
-    },
-    {
-        "arguments": [
-            "riscv64-unknown-linux-gnu-gcc",
-            "-c",
-            "-O0",
-            "-fno-builtin",
-            "-nostdlib",
-            "-nostdinc",
-            "-Wall",
-            "-mcmodel=medany",
-            "-ggdb3",
-            "-I./tiny_libc/include",
-            "-o",
-            "build/time.o",
-            "tiny_libc/time.c"
-        ],
-        "directory": "/home/stu/chengzixuan21a",
-        "file": "tiny_libc/time.c"
-    },
-    {
-        "arguments": [
-            "gcc",
-            "-c",
-            "-ggdb",
-            "-Wall",
-            "-I./tools/deflate",
-            "-I./arch/riscv/include",
-            "-DFREESTANDING",
-            "-o",
-            "build/createimage",
-            "tools/deflate/tinylibdeflate.c"
-        ],
-        "directory": "/home/stu/chengzixuan21a",
-        "file": "tools/deflate/tinylibdeflate.c"
+        "file": "kernel/locking/lock.c"
     },
     {
         "arguments": [
@@ -402,10 +79,10 @@
             "-DFREESTANDING",
             "-o",
             "build/decompress",
-            "tools/deflate/lib/deflate_compress.c"
+            "arch/riscv/bios/common.c"
         ],
         "directory": "/home/stu/chengzixuan21a",
-        "file": "tools/deflate/lib/deflate_compress.c"
+        "file": "arch/riscv/bios/common.c"
     },
     {
         "arguments": [
@@ -438,13 +115,56 @@
             "-Wall",
             "-mcmodel=medany",
             "-ggdb3",
-            "-I./tiny_libc/include",
+            "-I./arch/riscv/include",
+            "-Iinclude",
+            "-Idrivers",
             "-o",
-            "build/string.o",
-            "tiny_libc/string.c"
+            "build/main",
+            "kernel/syscall/syscall.c"
         ],
         "directory": "/home/stu/chengzixuan21a",
-        "file": "tiny_libc/string.c"
+        "file": "kernel/syscall/syscall.c"
+    },
+    {
+        "arguments": [
+            "riscv64-unknown-linux-gnu-gcc",
+            "-c",
+            "-O0",
+            "-fno-builtin",
+            "-nostdlib",
+            "-nostdinc",
+            "-Wall",
+            "-mcmodel=medany",
+            "-ggdb3",
+            "-I./arch/riscv/include",
+            "-Iinclude",
+            "-Idrivers",
+            "-o",
+            "build/main",
+            "kernel/loader/loader.c"
+        ],
+        "directory": "/home/stu/chengzixuan21a",
+        "file": "kernel/loader/loader.c"
+    },
+    {
+        "arguments": [
+            "riscv64-unknown-linux-gnu-gcc",
+            "-c",
+            "-O0",
+            "-fno-builtin",
+            "-nostdlib",
+            "-nostdinc",
+            "-Wall",
+            "-mcmodel=medany",
+            "-ggdb3",
+            "-I./tiny_libc/include",
+            "./build/crt0.o",
+            "-o",
+            "build/sleep",
+            "test/test_project2/sleep.c"
+        ],
+        "directory": "/home/stu/chengzixuan21a",
+        "file": "test/test_project2/sleep.c"
     },
     {
         "arguments": [
@@ -466,6 +186,173 @@
         ],
         "directory": "/home/stu/chengzixuan21a",
         "file": "libs/printk.c"
+    },
+    {
+        "arguments": [
+            "riscv64-unknown-linux-gnu-gcc",
+            "-c",
+            "-O0",
+            "-fno-builtin",
+            "-nostdlib",
+            "-nostdinc",
+            "-Wall",
+            "-mcmodel=medany",
+            "-ggdb3",
+            "-I./arch/riscv/include",
+            "-Iinclude",
+            "-Idrivers",
+            "-o",
+            "build/main",
+            "arch/riscv/kernel/head.S"
+        ],
+        "directory": "/home/stu/chengzixuan21a",
+        "file": "arch/riscv/kernel/head.S"
+    },
+    {
+        "arguments": [
+            "riscv64-unknown-linux-gnu-gcc",
+            "-c",
+            "-O0",
+            "-fno-builtin",
+            "-nostdlib",
+            "-nostdinc",
+            "-Wall",
+            "-mcmodel=medany",
+            "-ggdb3",
+            "-I./arch/riscv/include",
+            "-Iinclude",
+            "-Idrivers",
+            "-o",
+            "build/main",
+            "arch/riscv/bios/common.c"
+        ],
+        "directory": "/home/stu/chengzixuan21a",
+        "file": "arch/riscv/bios/common.c"
+    },
+    {
+        "arguments": [
+            "riscv64-unknown-linux-gnu-gcc",
+            "-c",
+            "-O0",
+            "-fno-builtin",
+            "-nostdlib",
+            "-nostdinc",
+            "-Wall",
+            "-mcmodel=medany",
+            "-ggdb3",
+            "-I./arch/riscv/include",
+            "-Iinclude",
+            "-Idrivers",
+            "-o",
+            "build/main",
+            "arch/riscv/kernel/trap.S"
+        ],
+        "directory": "/home/stu/chengzixuan21a",
+        "file": "arch/riscv/kernel/trap.S"
+    },
+    {
+        "arguments": [
+            "riscv64-unknown-linux-gnu-gcc",
+            "-c",
+            "-O0",
+            "-fno-builtin",
+            "-nostdlib",
+            "-nostdinc",
+            "-Wall",
+            "-mcmodel=medany",
+            "-ggdb3",
+            "-I./tools/deflate",
+            "-I./arch/riscv/include",
+            "-Iinclude",
+            "-DFREESTANDING",
+            "-o",
+            "build/decompress",
+            "libs/string.c"
+        ],
+        "directory": "/home/stu/chengzixuan21a",
+        "file": "libs/string.c"
+    },
+    {
+        "arguments": [
+            "riscv64-unknown-linux-gnu-gcc",
+            "-c",
+            "-O0",
+            "-fno-builtin",
+            "-nostdlib",
+            "-nostdinc",
+            "-Wall",
+            "-mcmodel=medany",
+            "-ggdb3",
+            "-I./tiny_libc/include",
+            "-I./arch/riscv/include",
+            "-o",
+            "build/crt0.o",
+            "arch/riscv/crt0/crt0.S"
+        ],
+        "directory": "/home/stu/chengzixuan21a",
+        "file": "arch/riscv/crt0/crt0.S"
+    },
+    {
+        "arguments": [
+            "riscv64-unknown-linux-gnu-gcc",
+            "-c",
+            "-O0",
+            "-fno-builtin",
+            "-nostdlib",
+            "-nostdinc",
+            "-Wall",
+            "-mcmodel=medany",
+            "-ggdb3",
+            "-I./arch/riscv/include",
+            "-Iinclude",
+            "-Idrivers",
+            "-o",
+            "build/main",
+            "kernel/sched/sched.c"
+        ],
+        "directory": "/home/stu/chengzixuan21a",
+        "file": "kernel/sched/sched.c"
+    },
+    {
+        "arguments": [
+            "riscv64-unknown-linux-gnu-gcc",
+            "-c",
+            "-O0",
+            "-fno-builtin",
+            "-nostdlib",
+            "-nostdinc",
+            "-Wall",
+            "-mcmodel=medany",
+            "-ggdb3",
+            "-I./tiny_libc/include",
+            "./build/crt0.o",
+            "-o",
+            "build/lock1",
+            "test/test_project2/lock1.c"
+        ],
+        "directory": "/home/stu/chengzixuan21a",
+        "file": "test/test_project2/lock1.c"
+    },
+    {
+        "arguments": [
+            "riscv64-unknown-linux-gnu-gcc",
+            "-c",
+            "-O0",
+            "-fno-builtin",
+            "-nostdlib",
+            "-nostdinc",
+            "-Wall",
+            "-mcmodel=medany",
+            "-ggdb3",
+            "-I./arch/riscv/include",
+            "-Iinclude",
+            "-Idrivers",
+            "-o",
+            "build/main",
+            "arch/riscv/kernel/entry.S"
+        ],
+        "directory": "/home/stu/chengzixuan21a",
+        "file": "arch/riscv/kernel/entry.S"
     },
     {
         "arguments": [
@@ -525,67 +412,6 @@
             "-Idrivers",
             "-o",
             "build/main",
-            "kernel/loader/loader.c"
-        ],
-        "directory": "/home/stu/chengzixuan21a",
-        "file": "kernel/loader/loader.c"
-    },
-    {
-        "arguments": [
-            "riscv64-unknown-linux-gnu-gcc",
-            "-c",
-            "-O0",
-            "-fno-builtin",
-            "-nostdlib",
-            "-nostdinc",
-            "-Wall",
-            "-mcmodel=medany",
-            "-ggdb3",
-            "-I./tiny_libc/include",
-            "./build/crt0.o",
-            "-o",
-            "build/lock1",
-            "test/test_project2/lock1.c"
-        ],
-        "directory": "/home/stu/chengzixuan21a",
-        "file": "test/test_project2/lock1.c"
-    },
-    {
-        "arguments": [
-            "riscv64-unknown-linux-gnu-gcc",
-            "-c",
-            "-O0",
-            "-fno-builtin",
-            "-nostdlib",
-            "-nostdinc",
-            "-Wall",
-            "-mcmodel=medany",
-            "-ggdb3",
-            "-I./tiny_libc/include",
-            "./build/crt0.o",
-            "-o",
-            "build/sleep",
-            "test/test_project2/sleep.c"
-        ],
-        "directory": "/home/stu/chengzixuan21a",
-        "file": "test/test_project2/sleep.c"
-    },
-    {
-        "arguments": [
-            "riscv64-unknown-linux-gnu-gcc",
-            "-c",
-            "-O0",
-            "-fno-builtin",
-            "-nostdlib",
-            "-nostdinc",
-            "-Wall",
-            "-mcmodel=medany",
-            "-ggdb3",
-            "-I./arch/riscv/include",
-            "-Iinclude",
-            "-Idrivers",
-            "-o",
-            "build/main",
             "kernel/mm/mm.c"
         ],
         "directory": "/home/stu/chengzixuan21a",
@@ -602,15 +428,13 @@
             "-Wall",
             "-mcmodel=medany",
             "-ggdb3",
-            "-I./arch/riscv/include",
-            "-Iinclude",
-            "-Idrivers",
+            "-I./tiny_libc/include",
             "-o",
-            "build/main",
-            "kernel/syscall/syscall.c"
+            "build/syscall.o",
+            "tiny_libc/syscall.c"
         ],
         "directory": "/home/stu/chengzixuan21a",
-        "file": "kernel/syscall/syscall.c"
+        "file": "tiny_libc/syscall.c"
     },
     {
         "arguments": [
@@ -642,23 +466,29 @@
             "-I./tiny_libc/include",
             "./build/crt0.o",
             "-o",
-            "build/fly",
-            "test/test_project2/fly.c"
+            "build/timer",
+            "test/test_project2/timer.c"
         ],
         "directory": "/home/stu/chengzixuan21a",
-        "file": "test/test_project2/fly.c"
+        "file": "test/test_project2/timer.c"
     },
     {
         "arguments": [
-            "gcc",
+            "riscv64-unknown-linux-gnu-gcc",
             "-c",
-            "-ggdb",
+            "-O0",
+            "-fno-builtin",
+            "-nostdlib",
+            "-nostdinc",
             "-Wall",
+            "-mcmodel=medany",
+            "-ggdb3",
             "-I./tools/deflate",
             "-I./arch/riscv/include",
+            "-Iinclude",
             "-DFREESTANDING",
             "-o",
-            "build/createimage",
+            "build/decompress",
             "tools/deflate/lib/utils.c"
         ],
         "directory": "/home/stu/chengzixuan21a",
@@ -666,19 +496,87 @@
     },
     {
         "arguments": [
-            "gcc",
+            "riscv64-unknown-linux-gnu-gcc",
             "-c",
-            "-ggdb",
+            "-O0",
+            "-fno-builtin",
+            "-nostdlib",
+            "-nostdinc",
             "-Wall",
-            "-I./tools/deflate",
+            "-mcmodel=medany",
+            "-ggdb3",
             "-I./arch/riscv/include",
-            "-DFREESTANDING",
+            "-Iinclude",
+            "-Idrivers",
             "-o",
-            "build/createimage",
-            "tools/deflate/lib/deflate_compress.c"
+            "build/main",
+            "kernel/sched/time.c"
         ],
         "directory": "/home/stu/chengzixuan21a",
-        "file": "tools/deflate/lib/deflate_compress.c"
+        "file": "kernel/sched/time.c"
+    },
+    {
+        "arguments": [
+            "riscv64-unknown-linux-gnu-gcc",
+            "-c",
+            "-O0",
+            "-fno-builtin",
+            "-nostdlib",
+            "-nostdinc",
+            "-Wall",
+            "-mcmodel=medany",
+            "-ggdb3",
+            "-I./tools/deflate",
+            "-I./arch/riscv/include",
+            "-Iinclude",
+            "-DFREESTANDING",
+            "-o",
+            "build/decompress",
+            "tools/deflate/lib/deflate_decompress.c"
+        ],
+        "directory": "/home/stu/chengzixuan21a",
+        "file": "tools/deflate/lib/deflate_decompress.c"
+    },
+    {
+        "arguments": [
+            "riscv64-unknown-linux-gnu-gcc",
+            "-c",
+            "-O0",
+            "-fno-builtin",
+            "-nostdlib",
+            "-nostdinc",
+            "-Wall",
+            "-mcmodel=medany",
+            "-ggdb3",
+            "-I./tiny_libc/include",
+            "-o",
+            "build/time.o",
+            "tiny_libc/time.c"
+        ],
+        "directory": "/home/stu/chengzixuan21a",
+        "file": "tiny_libc/time.c"
+    },
+    {
+        "arguments": [
+            "riscv64-unknown-linux-gnu-gcc",
+            "-c",
+            "-O0",
+            "-fno-builtin",
+            "-nostdlib",
+            "-nostdinc",
+            "-Wall",
+            "-mcmodel=medany",
+            "-ggdb3",
+            "-I./tools/deflate",
+            "-I./arch/riscv/include",
+            "-Iinclude",
+            "-DFREESTANDING",
+            "-o",
+            "build/decompress",
+            "decompress/head.S"
+        ],
+        "directory": "/home/stu/chengzixuan21a",
+        "file": "decompress/head.S"
     },
     {
         "arguments": [
@@ -716,52 +614,10 @@
             "-Idrivers",
             "-o",
             "build/main",
-            "libs/string.c"
+            "drivers/screen.c"
         ],
         "directory": "/home/stu/chengzixuan21a",
-        "file": "libs/string.c"
-    },
-    {
-        "arguments": [
-            "riscv64-unknown-linux-gnu-gcc",
-            "-c",
-            "-O0",
-            "-fno-builtin",
-            "-nostdlib",
-            "-nostdinc",
-            "-Wall",
-            "-mcmodel=medany",
-            "-ggdb3",
-            "-I./tools/deflate",
-            "-I./arch/riscv/include",
-            "-Iinclude",
-            "-DFREESTANDING",
-            "-o",
-            "build/decompress",
-            "tools/deflate/lib/deflate_decompress.c"
-        ],
-        "directory": "/home/stu/chengzixuan21a",
-        "file": "tools/deflate/lib/deflate_decompress.c"
-    },
-    {
-        "arguments": [
-            "riscv64-unknown-linux-gnu-gcc",
-            "-c",
-            "-O0",
-            "-fno-builtin",
-            "-nostdlib",
-            "-nostdinc",
-            "-Wall",
-            "-mcmodel=medany",
-            "-ggdb3",
-            "-I./tiny_libc/include",
-            "-I./arch/riscv/include",
-            "-o",
-            "build/crt0.o",
-            "arch/riscv/crt0/crt0.S"
-        ],
-        "directory": "/home/stu/chengzixuan21a",
-        "file": "arch/riscv/crt0/crt0.S"
+        "file": "drivers/screen.c"
     },
     {
         "arguments": [
@@ -801,10 +657,154 @@
             "-Idrivers",
             "-o",
             "build/main",
-            "kernel/locking/lock.c"
+            "init/main.c"
         ],
         "directory": "/home/stu/chengzixuan21a",
-        "file": "kernel/locking/lock.c"
+        "file": "init/main.c"
+    },
+    {
+        "arguments": [
+            "riscv64-unknown-linux-gnu-gcc",
+            "-c",
+            "-O0",
+            "-fno-builtin",
+            "-nostdlib",
+            "-nostdinc",
+            "-Wall",
+            "-mcmodel=medany",
+            "-ggdb3",
+            "-I./tiny_libc/include",
+            "-o",
+            "build/printf.o",
+            "tiny_libc/printf.c"
+        ],
+        "directory": "/home/stu/chengzixuan21a",
+        "file": "tiny_libc/printf.c"
+    },
+    {
+        "arguments": [
+            "riscv64-unknown-linux-gnu-gcc",
+            "-c",
+            "-O0",
+            "-fno-builtin",
+            "-nostdlib",
+            "-nostdinc",
+            "-Wall",
+            "-mcmodel=medany",
+            "-ggdb3",
+            "-I./tools/deflate",
+            "-I./arch/riscv/include",
+            "-Iinclude",
+            "-DFREESTANDING",
+            "-o",
+            "build/decompress",
+            "tools/deflate/lib/deflate_compress.c"
+        ],
+        "directory": "/home/stu/chengzixuan21a",
+        "file": "tools/deflate/lib/deflate_compress.c"
+    },
+    {
+        "arguments": [
+            "riscv64-unknown-linux-gnu-gcc",
+            "-c",
+            "-O0",
+            "-fno-builtin",
+            "-nostdlib",
+            "-nostdinc",
+            "-Wall",
+            "-mcmodel=medany",
+            "-ggdb3",
+            "-I./tiny_libc/include",
+            "./build/crt0.o",
+            "-o",
+            "build/fly",
+            "test/test_project2/fly.c"
+        ],
+        "directory": "/home/stu/chengzixuan21a",
+        "file": "test/test_project2/fly.c"
+    },
+    {
+        "arguments": [
+            "gcc",
+            "-c",
+            "-ggdb",
+            "-Wall",
+            "-I./tools/deflate",
+            "-I./arch/riscv/include",
+            "-DFREESTANDING",
+            "-o",
+            "build/createimage",
+            "tools/deflate/lib/deflate_decompress.c"
+        ],
+        "directory": "/home/stu/chengzixuan21a",
+        "file": "tools/deflate/lib/deflate_decompress.c"
+    },
+    {
+        "arguments": [
+            "riscv64-unknown-linux-gnu-gcc",
+            "-c",
+            "-O0",
+            "-fno-builtin",
+            "-nostdlib",
+            "-nostdinc",
+            "-Wall",
+            "-mcmodel=medany",
+            "-ggdb3",
+            "-I./tiny_libc/include",
+            "-o",
+            "build/string.o",
+            "tiny_libc/string.c"
+        ],
+        "directory": "/home/stu/chengzixuan21a",
+        "file": "tiny_libc/string.c"
+    },
+    {
+        "arguments": [
+            "gcc",
+            "-c",
+            "-ggdb",
+            "-Wall",
+            "-I./tools/deflate",
+            "-I./arch/riscv/include",
+            "-DFREESTANDING",
+            "-o",
+            "build/createimage",
+            "tools/deflate/lib/utils.c"
+        ],
+        "directory": "/home/stu/chengzixuan21a",
+        "file": "tools/deflate/lib/utils.c"
+    },
+    {
+        "arguments": [
+            "gcc",
+            "-c",
+            "-ggdb",
+            "-Wall",
+            "-I./tools/deflate",
+            "-I./arch/riscv/include",
+            "-DFREESTANDING",
+            "-o",
+            "build/createimage",
+            "tools/deflate/lib/deflate_compress.c"
+        ],
+        "directory": "/home/stu/chengzixuan21a",
+        "file": "tools/deflate/lib/deflate_compress.c"
+    },
+    {
+        "arguments": [
+            "gcc",
+            "-c",
+            "-ggdb",
+            "-Wall",
+            "-I./tools/deflate",
+            "-I./arch/riscv/include",
+            "-DFREESTANDING",
+            "-o",
+            "build/createimage",
+            "tools/deflate/tinylibdeflate.c"
+        ],
+        "directory": "/home/stu/chengzixuan21a",
+        "file": "tools/deflate/tinylibdeflate.c"
     },
     {
         "arguments": [
@@ -822,9 +822,9 @@
             "-Idrivers",
             "-o",
             "build/main",
-            "kernel/irq/irq.c"
+            "libs/string.c"
         ],
         "directory": "/home/stu/chengzixuan21a",
-        "file": "kernel/irq/irq.c"
+        "file": "libs/string.c"
     }
 ]
