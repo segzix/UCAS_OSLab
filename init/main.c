@@ -236,6 +236,8 @@ int main(void)
     init_screen();
     printk("> [INIT] SCREEN initialization succeeded.\n");
 
+    enable_interrupt();
+    bios_set_timer(get_ticks() + TIMER_INTERVAL);
     // TODO: [p2-task4] Setup timer interrupt and enable all interrupt globally
     // NOTE: The function of sstatus.sie is different from sie's
     
@@ -300,11 +302,11 @@ int main(void)
     while (1)
     {
         // If you do non-preemptive scheduling, it's used to surrender control
-        do_scheduler();
+        //do_scheduler();
 
         // If you do preemptive scheduling, they're used to enable CSR_SIE and wfi
-        // enable_preempt();
-        // asm volatile("wfi");
+        enable_preempt();
+        asm volatile("wfi");
     }
 
     return 0;

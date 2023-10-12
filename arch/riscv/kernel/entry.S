@@ -60,8 +60,8 @@
    */
   li t0, SR_SUM | SR_FS
   //目前P2有用吗？
-  //csrr t0, CSR_SSTATUS
-  //sd t0, OFFSET_REG_SSTATUS(sp)
+  csrr t0, CSR_SSTATUS
+  sd t0, OFFSET_REG_SSTATUS(sp)
   csrr t0, CSR_SEPC
   sd t0, OFFSET_REG_SEPC(sp)
   csrr t0, CSR_SCAUSE
