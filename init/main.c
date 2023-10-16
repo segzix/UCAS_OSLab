@@ -24,6 +24,7 @@
 #define num_sched1_tasks 7
 
 uint16_t task_num;
+uint16_t tcb_num;
 int version = 2; // version must between 0 and 9
 char buf[VERSION_BUF];
 extern void ret_from_exception();//conflict
@@ -152,6 +153,42 @@ static void init_pcb_stack(
     pcb->kernel_sp -= sizeof(switchto_context_t);
 }
 
+static void init_tcb_stack(
+    ptr_t kernel_stack, ptr_t user_stack, ptr_t entry_point, ptr_t rank_id,
+    tcb_t *tcb)
+{
+    regs_context_t *pt_regs =
+        (regs_context_t *)(kernel_stack - sizeof(regs_context_t));
+    //准备将该进程运行时的一些需要写寄存器的值全部放入栈中
+    pt_regs->regs[1] = (reg_t)entry_point;             //ra
+    pt_regs->regs[2] = (reg_t)user_stack;              //sp
+    pt_regs->regs[4] = (reg_t)tcb;                     //tp
+    pt_regs->regs[10]= (reg_t)rank_id;                 //a0传参
+    pt_regs->sepc    = (reg_t)entry_point;             //sepc
+    pt_regs->sstatus = (reg_t)SR_SPIE;                 //sstatus
+
+    tcb->kernel_sp -= sizeof(regs_context_t);
+     /* TODO: [p2-task3] initialization of registers on kernel stack
+      * HINT: sp, ra, sepc, sstatus
+      * NOTE: To run the task in user mode, you should set corresponding bits
+      *     of sstatus(SPP, SPIE, etc.).
+      */
+    
+
+
+    /* TODO: [p2-task1] set sp to simulate just returning from switch_to
+     * NOTE: you should prepare a stack, and push some values to
+     * simulate a callee-saved context.
+     */
+    switchto_context_t *pt_switchto =
+        (switchto_context_t *)((ptr_t)pt_regs - sizeof(switchto_context_t));
+    //初始化该进程控制块中的sp指针
+    pt_switchto->regs[0] = (reg_t)ret_from_exception;    //ra
+    pt_switchto->regs[1] = (reg_t)(tcb->kernel_sp);      //sp
+
+    tcb->kernel_sp -= sizeof(switchto_context_t);
+}
+
 static void init_pcb(void)
 {
     /* TODO: [p2-task1] load needed tasks and init their corresponding PCB */
@@ -159,9 +196,9 @@ static void init_pcb(void)
     int num_tasks; 
     
     // task1: sched1_tasks
-    init_sched1_tasks();
+    //init_sched1_tasks();
     //先将sched1_tasks数组做一遍初始化
-    for(num_tasks = 0; num_tasks < num_sched1_tasks; num_tasks++){
+    for(num_tasks = 0; num_tasks < task_num; num_tasks++){
         //pcb[num_tasks].kernel_sp = KERNEL_STACK + (num_tasks + 1) * 0x1000;
         //pcb[num_tasks].user_sp = pcb[num_tasks].kernel_sp;
         pcb[num_tasks].kernel_sp = allocKernelPage(1) + PAGE_SIZE;
@@ -180,6 +217,19 @@ static void init_pcb(void)
 
 }
 
+static void do_thread_create(uint64_t addr,uint64_t rank_id)
+{
+    tcb[tcb_num].kernel_sp = allocKernelPage(1) + PAGE_SIZE;
+    tcb[tcb_num].user_sp   = allocUserPage(1)   + PAGE_SIZE;
+    list_add(&tcb[tcb_num].list, &ready_queue);
+    tcb[tcb_num].pid = task_num + tcb_num + 1;
+    tcb[tcb_num].status = TASK_READY;
+        
+    init_tcb_stack( tcb[tcb_num].kernel_sp, tcb[tcb_num].user_sp, 
+                    addr, rank_id, &tcb[tcb_num]); 
+    tcb_num++;
+}
+
 static void init_syscall(void)
 {
     syscall[SYSCALL_SLEEP]          = (long(*)())do_sleep;
@@ -192,6 +242,7 @@ static void init_syscall(void)
     syscall[SYSCALL_REFLUSH]        = (long(*)())screen_reflush;
     syscall[SYSCALL_GET_TIMEBASE]   = (long(*)())get_time_base;
     syscall[SYSCALL_GET_TICK]       = (long(*)())get_ticks;
+    syscall[SYSCALL_THREAD_YIELD]   = (long(*)())do_thread_create;
     // TODO: [p2-task3] initialize system call table.
 }
 /************************************************************/

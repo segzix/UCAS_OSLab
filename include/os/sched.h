@@ -85,7 +85,7 @@ typedef struct pcb
     /* time(seconds) to wake up sleeping PCB */
     uint64_t wakeup_time;
 
-} pcb_t;
+} pcb_t,tcb_t;
 
 /* ready queue to run */
 extern list_head ready_queue;
@@ -98,6 +98,7 @@ extern pcb_t * volatile current_running;
 extern pid_t process_id;
 
 extern pcb_t pcb[NUM_MAX_TASK];
+extern tcb_t tcb[NUM_MAX_TASK];
 extern pcb_t pid0_pcb;
 extern const ptr_t pid0_stack;
 

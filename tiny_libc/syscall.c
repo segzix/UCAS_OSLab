@@ -103,6 +103,20 @@ void sys_sleep(uint32_t time)
     /* TODO: [p2-task3] call invoke_syscall to implement sys_sleep */
 }
 
+void sys_thread_create(uint64_t addr,uint64_t rank_id)
+{
+    invoke_syscall(SYSCALL_THREAD_YIELD, addr, rank_id,IGNORE,IGNORE,IGNORE);
+    return;
+    /* TODO: [p2-task3] call invoke_syscall to implement sys_sleep */
+}
+
+void sys_thread_yield(void)
+{
+    invoke_syscall(SYSCALL_YIELD, IGNORE, IGNORE,IGNORE,IGNORE,IGNORE);
+    return;
+    /* TODO: [p2-task3] call invoke_syscall to implement sys_sleep */
+}
+
 /************************************************************/
 /* Do not touch this comment. Reserved for future projects. */
 /************************************************************/

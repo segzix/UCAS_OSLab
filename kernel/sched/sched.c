@@ -8,6 +8,7 @@
 #include <assert.h>
 
 pcb_t pcb[NUM_MAX_TASK];
+tcb_t tcb[NUM_MAX_TASK];
 const ptr_t pid0_stack = INIT_KERNEL_STACK + PAGE_SIZE;
 pcb_t pid0_pcb = {
     .pid = 0,
