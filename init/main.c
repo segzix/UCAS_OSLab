@@ -21,7 +21,6 @@
 #define VERSION_BUF 50
 #define task_info_addr 0x502001fc
 #define KERNEL_STACK 0x50501000
-#define num_sched1_tasks 7
 
 uint16_t task_num;
 uint16_t tcb_num;
@@ -31,7 +30,6 @@ extern void ret_from_exception();//conflict
 
 // Task info array
 task_info_t tasks[TASK_MAXNUM];
-task_info_t sched1_tasks[TASK_MAXNUM];
 
 
 static void enter_app(uint32_t task_entrypoint)
@@ -105,16 +103,6 @@ static void init_task_info(void)
 
     // TODO: [p1-task4] Init 'tasks' array via reading app-info sector
     // NOTE: You need to get some related arguments from bootblock first
-}
-
-static void init_sched1_tasks(void)
-{
-    memcpy(&sched1_tasks[0], &tasks[0], sizeof(task_info_t));
-    memcpy(&sched1_tasks[1], &tasks[1], sizeof(task_info_t));
-    memcpy(&sched1_tasks[2], &tasks[3], sizeof(task_info_t));
-    memcpy(&sched1_tasks[3], &tasks[4], sizeof(task_info_t));
-    memcpy(&sched1_tasks[4], &tasks[5], sizeof(task_info_t));
-    //这里写的还非常的不完善！！！将task数组里面的某些用户程序的task_info_t选择性的按顺序写入sched1_tasks数组中
 }
 
 /************************************************************/
@@ -205,6 +193,7 @@ static void init_pcb(void)
         pcb[num_tasks].user_sp   = allocUserPage(1) + PAGE_SIZE;
         list_add(&pcb[num_tasks].list, &ready_queue);
         pcb[num_tasks].pid = num_tasks + 1;
+        pcb[num_tasks].tid = 0;
         pcb[num_tasks].status = TASK_READY;
         
         load_task_img(num_tasks);
@@ -217,16 +206,17 @@ static void init_pcb(void)
 
 }
 
-static void do_thread_create(uint64_t addr,uint64_t rank_id)
+static void do_thread_create(uint64_t addr,uint64_t thread_id)
 {
     tcb[tcb_num].kernel_sp = allocKernelPage(1) + PAGE_SIZE;
     tcb[tcb_num].user_sp   = allocUserPage(1)   + PAGE_SIZE;
     list_add(&tcb[tcb_num].list, &ready_queue);
-    tcb[tcb_num].pid = task_num + tcb_num + 1;
+    tcb[tcb_num].pid = current_running->pid;
+    tcb[tcb_num].tid = thread_id+1;
     tcb[tcb_num].status = TASK_READY;
         
     init_tcb_stack( tcb[tcb_num].kernel_sp, tcb[tcb_num].user_sp, 
-                    addr, rank_id, &tcb[tcb_num]); 
+                    addr, thread_id, &tcb[tcb_num]); 
     tcb_num++;
 }
 
@@ -242,7 +232,8 @@ static void init_syscall(void)
     syscall[SYSCALL_REFLUSH]        = (long(*)())screen_reflush;
     syscall[SYSCALL_GET_TIMEBASE]   = (long(*)())get_time_base;
     syscall[SYSCALL_GET_TICK]       = (long(*)())get_ticks;
-    syscall[SYSCALL_THREAD_YIELD]   = (long(*)())do_thread_create;
+    syscall[SYSCALL_THREAD_CREATE]  = (long(*)())do_thread_create;
+    syscall[SYSCALL_THREAD_YIELD]   = (long(*)())do_thread_scheduler;
     // TODO: [p2-task3] initialize system call table.
 }
 /************************************************************/

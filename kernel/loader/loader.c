@@ -24,7 +24,7 @@ uint64_t load_task_img(int taskid)
     return 0;
 }
 
-uint64_t load_task_img_sched1(int taskid)
+/*uint64_t load_task_img_sched1(int taskid)
 {
     uint32_t task_block_id;
     uint32_t task_block_num;
@@ -42,5 +42,5 @@ uint64_t load_task_img_sched1(int taskid)
      * 2. [p1-task4] load task via task name, thus the arg should be 'char *taskname'
      */
 
-    return 0;
-}
+    /*return 0;
+}*/

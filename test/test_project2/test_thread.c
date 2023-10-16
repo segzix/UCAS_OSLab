@@ -10,7 +10,7 @@ void thread_start(int rank_id)
     while(1){
         while(thread_num[rank_id] < (thread_num[(rank_id+1)%2]+5)){
             sys_move_cursor(0, 7+rank_id);;
-            printf("> thread_start[%d] is running! thread_num is [%d]",rank_id,thread_num[rank_id]);
+            printf("> [TASK] thread_child[%d] is running! thread_num is [%d]",rank_id,thread_num[rank_id]);
             thread_num[rank_id]++;
         }
         field_times++;
@@ -25,6 +25,6 @@ int main()
     }
     while(1){
         sys_move_cursor(0, 6);
-        printf("> thread_main is running! field_times[%d]",field_times);
+        printf("> [TASK] thread_parent is running! field_times is [%d]",field_times);
     }
 }

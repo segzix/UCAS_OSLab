@@ -12,6 +12,7 @@ tcb_t tcb[NUM_MAX_TASK];
 const ptr_t pid0_stack = INIT_KERNEL_STACK + PAGE_SIZE;
 pcb_t pid0_pcb = {
     .pid = 0,
+    .tid = 0,
     .kernel_sp = (ptr_t)pid0_stack,
     .user_sp = (ptr_t)pid0_stack,
 
@@ -47,6 +48,48 @@ void do_scheduler(void)
     } 
     //注意这里如果status为BLOCKED则不用执行上面的操作，因为已经加入到对应lock的block_queue中了
     current_running = list_entry(ready_queue.next, pcb_t, list);
+    list_del(&(current_running->list));
+    current_running->status = TASK_RUNNING;
+    //将当前执行的进程对应的pcb加入ready队列之中，同时将ready队列的最前端进程取下来，由prev_running指向它。
+    //注意将两个pcb的进程状态修改。
+
+    process_id = current_running->pid;
+    //修改当前执行进程ID
+
+    /*vt100_move_cursor(current_running->cursor_x, current_running->cursor_y);
+    screen_cursor_x = current_running->cursor_x;
+    screen_cursor_y = current_running->cursor_y;*/
+    // 将当前执行进程的screen_cursor修改一下？
+
+    // TODO: [p2-task1] Modify the current_running pointer.
+
+    switch_to(prev_running, current_running);
+    // TODO: [p2-task1] switch_to current_running
+
+}
+
+void do_thread_scheduler(void)
+{   
+    // TODO: [p2-task3] Check sleep queue to wake up PCBs
+
+    /************************************************************/
+    /* Do not touch this comment. Reserved for future projects. */
+    /************************************************************/
+    list_node_t* list_check;
+    pcb_t* prev_running = current_running;
+
+    if(current_running->status == TASK_RUNNING){
+        list_add(&(current_running->list), &ready_queue);
+        current_running->status = TASK_READY;
+    } 
+    //注意这里如果status为BLOCKED则不用执行上面的操作，因为已经加入到对应lock的block_queue中了
+    list_check = ready_queue.next;
+    current_running = list_entry(list_check, pcb_t, list);
+
+    while(current_running->pid != prev_running->pid){
+        list_check = list_check->next;
+        current_running = list_entry(list_check, pcb_t, list);
+    }
     list_del(&(current_running->list));
     current_running->status = TASK_RUNNING;
     //将当前执行的进程对应的pcb加入ready队列之中，同时将ready队列的最前端进程取下来，由prev_running指向它。
