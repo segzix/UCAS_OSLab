@@ -30,7 +30,8 @@ head_endloop:
   /* TODO: [p1-task2] clear BSS for flat non-ELF images */
 
   la    tp, pid0_pcb
-  ld    sp, pid0_stack
+  //ld    sp, pid0_stack
+  li    sp,KERNEL_STACK
   #la    sp,KERNEL_STACK
 
   la    t1,main

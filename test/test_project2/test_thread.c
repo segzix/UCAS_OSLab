@@ -2,7 +2,7 @@
 #include <unistd.h>
 
 int thread_num[2];
-int field_times = 0;
+int yield_times = 0;
 
 void thread_start(int rank_id)
 {
@@ -13,7 +13,7 @@ void thread_start(int rank_id)
             printf("> [TASK] thread_child[%d] is running! thread_num is [%d]",rank_id,thread_num[rank_id]);
             thread_num[rank_id]++;
         }
-        field_times++;
+        yield_times++;
         sys_thread_yield();
     }
 }
@@ -25,6 +25,6 @@ int main()
     }
     while(1){
         sys_move_cursor(0, 6);
-        printf("> [TASK] thread_parent is running! field_times is [%d]",field_times);
+        printf("> [TASK] thread_parent is running! yield_times is [%d]",yield_times);
     }
 }
