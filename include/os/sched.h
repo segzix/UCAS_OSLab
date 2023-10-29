@@ -29,6 +29,7 @@
 #ifndef INCLUDE_SCHEDULER_H_
 #define INCLUDE_SCHEDULER_H_
 
+#include "os/lock.h"
 #include <type.h>
 #include <os/list.h>
 
@@ -91,9 +92,11 @@ typedef struct pcb
 
 /* ready queue to run */
 extern list_head ready_queue;
+extern spin_lock_t ready_spin_lock;
 
 /* sleep queue to be blocked in */
 extern list_head sleep_queue;
+extern spin_lock_t sleep_spin_lock;
 
 /* current running task PCB */
 extern pcb_t * volatile current_running;
@@ -109,7 +112,7 @@ void do_scheduler(void);
 void do_thread_scheduler(void);
 void do_sleep(uint32_t);
 
-void do_block(list_node_t *, list_head *queue);
+void do_block(list_node_t *pcb_node, list_head *queue, spin_lock_t *lock);
 void do_unblock(list_node_t *);
 
 /************************************************************/

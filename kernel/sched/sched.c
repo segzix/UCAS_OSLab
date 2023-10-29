@@ -23,6 +23,8 @@ pcb_t pid0_pcb = {
 
 LIST_HEAD(ready_queue);
 LIST_HEAD(sleep_queue);
+spin_lock_t ready_spin_lock = {UNLOCKED};
+spin_lock_t sleep_spin_lock = {UNLOCKED};
 
 /* current running task PCB */
 pcb_t * volatile current_running;
@@ -34,6 +36,8 @@ pid_t process_id = 1;
 
 void do_scheduler(void)
 {   
+    spin_lock_acquire(&ready_spin_lock);
+
     check_sleeping();
     // TODO: [p2-task3] Check sleep queue to wake up PCBs
 
@@ -62,6 +66,7 @@ void do_scheduler(void)
     // 将当前执行进程的screen_cursor修改一下？
 
     // TODO: [p2-task1] Modify the current_running pointer.
+    spin_lock_release(&ready_spin_lock);
 
     switch_to(prev_running, current_running);
     // TODO: [p2-task1] switch_to current_running
@@ -72,6 +77,7 @@ void do_thread_scheduler(void)
 {   
     // TODO: [p2-task3] Check sleep queue to wake up PCBs
 
+    spin_lock_acquire(&ready_spin_lock);
     /************************************************************/
     /* Do not touch this comment. Reserved for future projects. */
     /************************************************************/
@@ -104,7 +110,8 @@ void do_thread_scheduler(void)
     // 将当前执行进程的screen_cursor修改一下？
 
     // TODO: [p2-task1] Modify the current_running pointer.
-
+    spin_lock_release(&ready_spin_lock);
+    
     switch_to(prev_running, current_running);
     // TODO: [p2-task1] switch_to current_running
 
@@ -114,19 +121,26 @@ void do_sleep(uint32_t sleep_time)
 {
     // TODO: [p2-task3] sleep(seconds)
     // NOTE: you can assume: 1 second = 1 `timebase` ticks
-    do_block(&current_running->list, &sleep_queue);
+    spin_lock_acquire(&sleep_spin_lock);
     current_running->wakeup_time = get_timer() + sleep_time;
-    do_scheduler();
+    do_block(&current_running->list, &sleep_queue,&sleep_spin_lock);
+    spin_lock_release(&sleep_spin_lock);
+    //do_scheduler();
     // 1. block the current_running
     // 2. set the wake up time for the blocked task
     // 3. reschedule because the current_running is blocked.
 }
 
-void do_block(list_node_t *pcb_node, list_head *queue)
+void do_block(list_node_t *pcb_node, list_head *queue, spin_lock_t *lock)
 {
     list_del(pcb_node);
     list_add(pcb_node, queue);
     (list_entry(pcb_node, pcb_t, list))->status = TASK_BLOCKED;
+    spin_lock_release(lock);
+    do_scheduler();
+
+    //在之前全部执行完毕之后，再次切到自己是，再acquire自旋锁
+    spin_lock_acquire(lock);
     //return;
     //将正在运行的进程pcb加入到对应锁的阻塞队列里，同时将pcb状态更改为TASK_BLOCKED
     //这里有queue参数，是因为不知道要加入哪个锁的阻塞队列之中
@@ -136,7 +150,11 @@ void do_block(list_node_t *pcb_node, list_head *queue)
 void do_unblock(list_node_t *pcb_node)
 {
     list_del(pcb_node);
+
+    spin_lock_acquire(&ready_spin_lock);
     list_add(pcb_node, &ready_queue);
+    spin_lock_release(&ready_spin_lock);
+
     (list_entry(pcb_node, pcb_t, list))->status = TASK_READY;
     //return;
     // TODO: [p2-task2] unblock the `pcb` from the block queue

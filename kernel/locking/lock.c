@@ -33,10 +33,7 @@ int spin_lock_try_acquire(spin_lock_t *lock)
 void spin_lock_acquire(spin_lock_t *lock)
 {
     while(lock->status == LOCKED)
-    {
-        do_block(&current_running->list,&(((mutex_lock_t *)lock)->block_queue));
-        do_scheduler();
-    }
+        ;
     lock->status = LOCKED;
     return;
     //不断地去查询锁是否处于LOCKED状态，如果出于该状态，则加入该锁的队列中；如果不处于则上锁
@@ -45,11 +42,7 @@ void spin_lock_acquire(spin_lock_t *lock)
 
 void spin_lock_release(spin_lock_t *lock)
 {
-    mutex_lock_t* temp_mutex_lock = (mutex_lock_t *)lock;
-    //临时的temp_mutex_lock对应的spin_lock;
     lock->status = UNLOCKED;
-    while((temp_mutex_lock->block_queue).next != &(temp_mutex_lock->block_queue))
-        do_unblock((temp_mutex_lock->block_queue).next);
 
     return;
     /* TODO: [p2-task2] release spin lock */
@@ -84,6 +77,16 @@ void do_mutex_lock_acquire(int mlock_idx)
         if(mlocks[i].key == mlock_idx)
         {
             spin_lock_acquire(&mlocks[i].lock);
+            while(mlocks[i].mutex_status == LOCKED)
+            {
+                do_block(&current_running->list,&mlocks[i].block_queue,&mlocks[i].lock);
+                // spin_lock_release(&mlocks[i].lock);
+                // do_scheduler();
+                // spin_lock_acquire(&mlocks[i].lock);
+            }
+            mlocks[i].mutex_status = LOCKED;
+            spin_lock_release(&mlocks[i].lock);
+
             return;
         }
     }
@@ -97,7 +100,12 @@ void do_mutex_lock_release(int mlock_idx)
     {
         if(mlocks[i].key == mlock_idx)
         {
+            spin_lock_acquire(&mlocks[i].lock);
+            mlocks[i].mutex_status = UNLOCKED;
+            while((mlocks[i].block_queue).next != &(mlocks[i].block_queue))
+                do_unblock((mlocks[i].block_queue).next);
             spin_lock_release(&mlocks[i].lock);
+
             return;
         }
     }
