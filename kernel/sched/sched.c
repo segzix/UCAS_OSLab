@@ -1,6 +1,7 @@
 #include <os/list.h>
 #include <os/lock.h>
 #include <os/sched.h>
+#include <os/kernel.h>
 #include <os/time.h>
 #include <os/mm.h>
 #include <screen.h>
@@ -37,7 +38,7 @@ pid_t process_id = 1;
 void do_scheduler(void)
 {   
     spin_lock_acquire(&ready_spin_lock);
-
+    // bios_set_timer(get_ticks() + TIMER_INTERVAL);
     check_sleeping();
     // TODO: [p2-task3] Check sleep queue to wake up PCBs
 
