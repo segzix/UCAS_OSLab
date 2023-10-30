@@ -319,7 +319,7 @@ int main(void)
                 else
                     bios_putstr("invalid name!\n$ ");
                 buf_number = 0;
-            }/*
+            }*/
             /*else if(c == 0x8)
             {
                 if(buf_number > 0)

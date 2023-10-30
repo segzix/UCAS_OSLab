@@ -92,7 +92,7 @@ void do_thread_scheduler(void)
     list_check = ready_queue.next;
     current_running = list_entry(list_check, pcb_t, list);
 
-    while(current_running->pid != prev_running->pid){
+    while((current_running->pid != prev_running->pid) || (current_running->tid == 0) || (current_running->tid ==  prev_running->tid)){
         list_check = list_check->next;
         current_running = list_entry(list_check, pcb_t, list);
     }
