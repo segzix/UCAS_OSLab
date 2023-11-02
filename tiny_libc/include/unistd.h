@@ -45,6 +45,11 @@ int  sys_barrier_init(int key, int goal);
 void sys_barrier_wait(int bar_idx);
 void sys_barrier_destroy(int bar_idx);
 
+int sys_semaphore_init(int key, int init);
+void sys_semaphore_up(int sema_idx);
+void sys_semaphore_down(int sema_idx);
+void sys_semaphore_destroy(int sema_idx);
+
 /* TODO: [P3 task2] condition */ 
 int sys_condition_init(int key);
 void sys_condition_wait(int cond_idx, int mutex_idx);

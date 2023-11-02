@@ -51,19 +51,24 @@ void spin_lock_release(spin_lock_t *lock)
 int do_mutex_lock_init(int key)
 {
     int i;
+    spin_lock_acquire(&mutex_init_lock);
     for(i = 0;i < LOCK_NUM;i++)
     {
-        if(mlocks[i].key == key)
+        if(mlocks[i].key == key){
+            spin_lock_release(&mutex_init_lock);
             return key;
+        }
     }
     for(i = 0;i < LOCK_NUM;i++)
     {
         if(mlocks[i].key == -1)
         {
             mlocks[i].key = key;
+            spin_lock_release(&mutex_init_lock);
             return key;
         }
     }
+    spin_lock_release(&mutex_init_lock);
     //每一个程序在调用该函数时寻找是否有已经可以匹配的锁，有则直接返回，没有分配一把新的
     /* TODO: [p2-task2] initialize mutex lock */
     return -1;
@@ -119,4 +124,165 @@ void do_mutex_lock_release(int mlock_idx)
         }
     }
     /* TODO: [p2-task2] release mutex lock */
+}
+
+
+
+barrier_t barriers[BARRIER_NUM];
+
+void init_barriers(void){
+    int i;
+    for(i=0; i < BARRIER_NUM; i++){
+        barriers[i].key = -1;
+        barriers[i].queue_size = 0;
+        barriers[i].target_size = 0;
+        barriers[i].barrier_queue.prev = &(barriers[i].barrier_queue);
+        barriers[i].barrier_queue.next = &(barriers[i].barrier_queue);
+    }
+}
+
+int do_barrier_init(int key,int goal){
+    int i;
+    int id;
+
+    spin_lock_acquire(&barrier_init_lock);
+    for(i=0; i < BARRIER_NUM; i++){
+        if(barriers[i].key==key){
+            spin_lock_release(&barrier_init_lock);
+            return -1;
+        }
+    }
+    for(i=0; i < BARRIER_NUM; i++){
+        if(barriers[i].key == -1){
+            id = i;
+            barriers[id].key = key;
+            barriers[id].queue_size = 0;
+            barriers[id].target_size = goal;
+            spin_lock_release(&barrier_init_lock);
+            return id;
+        }
+    }
+    spin_lock_release(&barrier_init_lock);
+    //每一个程序在调用该函数时寻找是否有已经可以匹配的屏障，有则说明该key已经被分配过故返回-1，没有则选择barrier进行分配
+    return -1;
+}
+
+void do_barrier_wait(int bar_idx){
+    // current_running = get_current_cpu_id()? &current_running_1 : &current_running_0;
+    barrier_t * barrier_now = &(barriers[bar_idx]);
+
+    spin_lock_acquire(&(barrier_now->lock));
+    barrier_now->queue_size++;
+
+    if(barrier_now->queue_size < barrier_now->target_size)
+        do_block(&current_running->list, &barrier_now->barrier_queue, &barrier_now->lock);
+
+    while(barrier_now->barrier_queue.next != &(barrier_now->barrier_queue))
+        do_unblock(barrier_now->barrier_queue.next);
+
+    barrier_now->queue_size = 0;
+    spin_lock_release(&(barrier_now->lock));
+}
+
+void do_barrier_destroy(int bar_idx){
+    barrier_t * barrier_now = &(barriers[bar_idx]);
+
+    spin_lock_acquire(&(barrier_now->lock));
+    while(barrier_now->barrier_queue.next != &(barrier_now->barrier_queue))
+        do_unblock(barrier_now->barrier_queue.next);
+
+    barrier_now->key=-1;
+    barrier_now->queue_size=0;
+    barrier_now->target_size=0;
+
+    spin_lock_release(&(barrier_now->lock));
+}
+
+semaphore_t semaphores[SEMAPHORE_NUM];
+
+void init_semaphores(void){
+    int i;
+    for(i=0; i < SEMAPHORE_NUM; i++){
+        semaphores[i].key = -1;
+        semaphores[i].semaphore_size = 0;
+        semaphores[i].semaphore_queue.prev = &(semaphores[i].semaphore_queue);
+        semaphores[i].semaphore_queue.next = &(semaphores[i].semaphore_queue);
+    }
+}
+
+int do_semaphore_init(int key,int init){
+    int i;
+    int id;
+
+    spin_lock_acquire(&semaphore_init_lock);
+    for(i=0; i < SEMAPHORE_NUM; i++){
+        if(semaphores[i].key==key){
+            spin_lock_release(&semaphore_init_lock);
+            return -1;
+        }
+    }
+    for(i=0; i < SEMAPHORE_NUM; i++){
+        if(semaphores[i].key == -1){
+            id = i;
+            semaphores[id].key = key;
+            semaphores[id].semaphore_size = init;
+            spin_lock_release(&semaphore_init_lock);
+            return id;
+        }
+    }
+    spin_lock_release(&semaphore_init_lock);
+    //每一个程序在调用该函数时寻找是否有已经可以匹配的屏障，有则说明该key已经被分配过故返回-1，没有则选择barrier进行分配
+    return -1;
+}
+
+void do_semaphore_up(int sema_idx){
+    // current_running = get_current_cpu_id()? &current_running_1 : &current_running_0;
+    semaphore_t * semaphore_now = &(semaphores[sema_idx]);
+
+    spin_lock_acquire(&(semaphore_now->lock));
+
+    if(semaphore_now->semaphore_size < 0)
+        // if(semaphore_now->semaphore_queue.next != &(semaphore_now->semaphore_queue))
+            do_unblock(semaphore_now->semaphore_queue.next);
+    semaphore_now->semaphore_size++;
+
+    // if(semaphore_now->semaphore_queue.next != &(semaphore_now->semaphore_queue))
+    //     do_unblock(semaphore_now->semaphore_queue.next);
+    // else
+    //     semaphore_now->semaphore_size++;
+
+    spin_lock_release(&(semaphore_now->lock));
+}
+
+void do_semaphore_down(int sema_idx){
+    // current_running = get_current_cpu_id()? &current_running_1 : &current_running_0;
+    semaphore_t * semaphore_now = &(semaphores[sema_idx]);
+
+    spin_lock_acquire(&(semaphore_now->lock));
+
+    semaphore_now->semaphore_size--;
+    if(semaphore_now->semaphore_size < 0)
+        do_block(&current_running->list,&semaphore_now->semaphore_queue,&semaphore_now->lock);
+
+    // if(semaphore_now->semaphore_size > 0)
+    //     semaphore_now->semaphore_size--;
+    // if(semaphore_now->semaphore_size == 0)
+    //     do_block(&current_running->list,&semaphore_now->semaphore_queue,&semaphore_now->lock);
+
+    spin_lock_release(&(semaphore_now->lock));
+}
+
+void do_semaphore_destroy(int sema_idx){
+    semaphore_t * semaphore_now = &(semaphores[sema_idx]);
+
+    spin_lock_acquire(&(semaphore_now->lock));
+
+    // semaphore_now->semaphore_queue.prev = &(semaphore_now->semaphore_queue);
+    // semaphore_now->semaphore_queue.next = &(semaphore_now->semaphore_queue);
+    while(semaphore_now->semaphore_queue.next != &(semaphore_now->semaphore_queue))
+        do_unblock(semaphore_now->semaphore_queue.next);
+    semaphore_now->key=-1;
+    semaphore_now->semaphore_size=0;
+
+    spin_lock_release(&(semaphore_now->lock));
 }

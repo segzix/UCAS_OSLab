@@ -219,7 +219,7 @@ void do_exit(void)
     // list_del(&(current_running->list));
 
     spin_lock_acquire(&(current_running->wait_lock));
-    while((current_running->wait_list).next != &(current_running)->wait_list)
+    while((current_running->wait_list).next != &(current_running->wait_list))
         do_unblock((current_running->wait_list).next);
     spin_lock_release(&(current_running->wait_lock));
 
@@ -278,9 +278,9 @@ int do_waitpid(pid_t pid)
     if(id == NUM_MAX_TASK)
         return 0;
     else{
-        spin_lock_acquire(&(current_running->wait_lock));
+        spin_lock_acquire(&(pcb[id].wait_lock));
         do_block(&(current_running->list),&(pcb[id].wait_list),&(pcb[id].wait_lock));
-        spin_lock_release(&(current_running->wait_lock));
+        spin_lock_release(&(pcb[id].wait_lock));
 
         return 1;
     } 

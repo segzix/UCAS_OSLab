@@ -177,16 +177,19 @@ int  sys_getchar(void)
 
 int  sys_barrier_init(int key, int goal)
 {
+    return invoke_syscall(SYSCALL_BARR_INIT, key, goal, IGNORE, IGNORE, IGNORE);
     /* TODO: [p3-task2] call invoke_syscall to implement sys_barrier_init */
 }
 
 void sys_barrier_wait(int bar_idx)
 {
+    invoke_syscall(SYSCALL_BARR_WAIT, bar_idx, IGNORE, IGNORE, IGNORE, IGNORE);
     /* TODO: [p3-task2] call invoke_syscall to implement sys_barrie_wait */
 }
 
 void sys_barrier_destroy(int bar_idx)
 {
+    invoke_syscall(SYSCALL_BARR_DESTROY, bar_idx, IGNORE, IGNORE, IGNORE, IGNORE);
     /* TODO: [p3-task2] call invoke_syscall to implement sys_barrie_destory */
 }
 
@@ -217,21 +220,25 @@ void sys_condition_destroy(int cond_idx)
 
 int sys_semaphore_init(int key, int init)
 {
+    return invoke_syscall(SYSCALL_SEMA_INIT, key, init, IGNORE, IGNORE, IGNORE);
     /* TODO: [p3-task2] call invoke_syscall to implement sys_semaphore_init */
 }
 
 void sys_semaphore_up(int sema_idx)
 {
+    invoke_syscall(SYSCALL_SEMA_UP, sema_idx, IGNORE, IGNORE, IGNORE, IGNORE);
     /* TODO: [p3-task2] call invoke_syscall to implement sys_semaphore_up */
 }
 
 void sys_semaphore_down(int sema_idx)
 {
+    invoke_syscall(SYSCALL_SEMA_DOWN, sema_idx, IGNORE, IGNORE, IGNORE, IGNORE);
     /* TODO: [p3-task2] call invoke_syscall to implement sys_semaphore_down */
 }
 
 void sys_semaphore_destroy(int sema_idx)
 {
+    invoke_syscall(SYSCALL_SEMA_DESTROY, sema_idx, IGNORE, IGNORE, IGNORE, IGNORE);
     /* TODO: [p3-task2] call invoke_syscall to implement sys_semaphore_destroy */
 }
 

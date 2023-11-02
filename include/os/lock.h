@@ -49,6 +49,7 @@ typedef struct mutex_lock
     list_head block_queue;
     int key;
 } mutex_lock_t;
+spin_lock_t mutex_init_lock;
 
 void init_locks(void);
 
@@ -65,7 +66,13 @@ void do_mutex_lock_release(int mlock_idx);
 typedef struct barrier
 {
     // TODO [P3-TASK2 barrier]
+    int key;
+    int target_size;
+    int queue_size;
+    list_head barrier_queue;
+    spin_lock_t lock;
 } barrier_t;
+spin_lock_t barrier_init_lock;
 
 #define BARRIER_NUM 16
 
@@ -91,7 +98,12 @@ void do_condition_destroy(int cond_idx);
 typedef struct semaphore
 {
     // TODO [P3-TASK2 semaphore]
+    int key;
+    int semaphore_size;
+    list_head semaphore_queue;
+    spin_lock_t lock;
 } semaphore_t;
+spin_lock_t semaphore_init_lock;
 
 #define SEMAPHORE_NUM 16
 

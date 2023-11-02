@@ -305,6 +305,15 @@ static void init_syscall(void)
     syscall[SYSCALL_GETPID]         = (long(*)())do_getpid;
     syscall[SYSCALL_PS]             = (long(*)())do_process_show;
     syscall[SYSCALL_CLEAR]          = (long(*)())screen_clear;
+
+    syscall[SYSCALL_BARR_INIT]      = (long(*)())do_barrier_init;
+    syscall[SYSCALL_BARR_WAIT]      = (long(*)())do_barrier_wait;
+    syscall[SYSCALL_BARR_DESTROY]   = (long(*)())do_barrier_destroy;
+
+    syscall[SYSCALL_SEMA_INIT]      = (long(*)())do_semaphore_init;
+    syscall[SYSCALL_SEMA_UP]        = (long(*)())do_semaphore_up;
+    syscall[SYSCALL_SEMA_DOWN]      = (long(*)())do_semaphore_down;
+    syscall[SYSCALL_SEMA_DESTROY]   = (long(*)())do_semaphore_destroy;
     // syscall[SYSCALL_THREAD_CREATE]  = (long(*)())do_thread_create;
     // syscall[SYSCALL_THREAD_YIELD]   = (long(*)())do_thread_scheduler;
 
@@ -342,6 +351,8 @@ int main(void)
 
     // Init lock mechanism o(´^｀)o
     init_locks();
+    init_barriers();
+    init_semaphores();
     printk("> [INIT] Lock mechanism initialization succeeded.\n");
 
     // Init interrupt (^_^)

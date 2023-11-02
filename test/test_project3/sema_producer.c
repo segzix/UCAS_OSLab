@@ -21,7 +21,7 @@ int main(int argc, char *argv[])
     int i;
     int sum_production = 0;
 
-    for (i = 0; i < 10; i++)
+    for (i = 0; i < 5; i++)
     {
         sys_move_cursor(0, print_location);
         int next;
@@ -32,7 +32,8 @@ int main(int argc, char *argv[])
 
         sys_sleep(next);
     }
-    printf("> [TASK] Total produced 10 products.                          ");
+    sys_move_cursor(0, print_location);
+    printf("> [TASK] Total produced 5 products.                          ");
     
     return 0;
 }
