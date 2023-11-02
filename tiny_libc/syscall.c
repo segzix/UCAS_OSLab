@@ -103,20 +103,155 @@ void sys_sleep(uint32_t time)
     /* TODO: [p2-task3] call invoke_syscall to implement sys_sleep */
 }
 
-void sys_thread_create(uint64_t addr,uint64_t thread_id)
-{
-    invoke_syscall(SYSCALL_THREAD_CREATE, addr, thread_id,IGNORE,IGNORE,IGNORE);
-    return;
-    /* TODO: [p2-task3] call invoke_syscall to implement sys_sleep */
-}
+// void sys_thread_create(uint64_t addr,uint64_t thread_id)
+// {
+//     invoke_syscall(SYSCALL_THREAD_CREATE, addr, thread_id,IGNORE,IGNORE,IGNORE);
+//     return;
+//     /* TODO: [p2-task3] call invoke_syscall to implement sys_sleep */
+// }
 
-void sys_thread_yield(void)
-{
-    invoke_syscall(SYSCALL_THREAD_YIELD, IGNORE, IGNORE,IGNORE,IGNORE,IGNORE);
-    return;
-    /* TODO: [p2-task3] call invoke_syscall to implement sys_sleep */
-}
+// void sys_thread_yield(void)
+// {
+//     invoke_syscall(SYSCALL_THREAD_YIELD, IGNORE, IGNORE,IGNORE,IGNORE,IGNORE);
+//     return;
+//     /* TODO: [p2-task3] call invoke_syscall to implement sys_sleep */
+// }
 
 /************************************************************/
 /* Do not touch this comment. Reserved for future projects. */
+
+/************************************************************/
+#ifdef S_CORE
+pid_t  sys_exec(int id, int argc, uint64_t arg0, uint64_t arg1, uint64_t arg2)
+{
+    /* TODO: [p3-task1] call invoke_syscall to implement sys_exec for S_CORE */
+}    
+#else
+pid_t  sys_exec(char *name, int argc, char **argv)
+{
+    return invoke_syscall(SYSCALL_EXEC, (uintptr_t)name,argc,(uintptr_t)argv,IGNORE,IGNORE);
+    /* TODO: [p3-task1] call invoke_syscall to implement sys_exec */
+}
+#endif
+
+void sys_exit(void)
+{
+    invoke_syscall(SYSCALL_EXIT, IGNORE, IGNORE, IGNORE, IGNORE, IGNORE);
+    /* TODO: [p3-task1] call invoke_syscall to implement sys_exit */
+}
+
+int  sys_kill(pid_t pid)
+{
+    return invoke_syscall(SYSCALL_KILL, pid, IGNORE, IGNORE, IGNORE, IGNORE);
+    /* TODO: [p3-task1] call invoke_syscall to implement sys_kill */
+}
+
+int  sys_waitpid(pid_t pid)
+{
+    return invoke_syscall(SYSCALL_WAITPID, pid, IGNORE, IGNORE, IGNORE, IGNORE);
+    /* TODO: [p3-task1] call invoke_syscall to implement sys_waitpid */
+}
+
+int sys_ps()
+{
+    return invoke_syscall(SYSCALL_PS, IGNORE, IGNORE, IGNORE, IGNORE, IGNORE);
+    /* TODO: [p3-task1] call invoke_syscall to implement sys_ps */
+}
+
+void sys_clear(int begin,int end)
+{
+    invoke_syscall(SYSCALL_CLEAR, begin, end, IGNORE, IGNORE, IGNORE);
+}
+
+pid_t sys_getpid()
+{
+    return invoke_syscall(SYSCALL_GETPID, IGNORE, IGNORE, IGNORE, IGNORE, IGNORE);
+    /* TODO: [p3-task1] call invoke_syscall to implement sys_getpid */
+}
+
+int  sys_getchar(void)
+{
+    return invoke_syscall(SYSCALL_READCH, IGNORE, IGNORE, IGNORE, IGNORE, IGNORE);
+    /* TODO: [p3-task1] call invoke_syscall to implement sys_getchar */
+}
+
+int  sys_barrier_init(int key, int goal)
+{
+    /* TODO: [p3-task2] call invoke_syscall to implement sys_barrier_init */
+}
+
+void sys_barrier_wait(int bar_idx)
+{
+    /* TODO: [p3-task2] call invoke_syscall to implement sys_barrie_wait */
+}
+
+void sys_barrier_destroy(int bar_idx)
+{
+    /* TODO: [p3-task2] call invoke_syscall to implement sys_barrie_destory */
+}
+
+int sys_condition_init(int key)
+{
+    /* TODO: [p3-task2] call invoke_syscall to implement sys_condition_init */
+}
+
+void sys_condition_wait(int cond_idx, int mutex_idx)
+{
+    /* TODO: [p3-task2] call invoke_syscall to implement sys_condition_wait */
+}
+
+void sys_condition_signal(int cond_idx)
+{
+    /* TODO: [p3-task2] call invoke_syscall to implement sys_condition_signal */
+}
+
+void sys_condition_broadcast(int cond_idx)
+{
+    /* TODO: [p3-task2] call invoke_syscall to implement sys_condition_broadcast */
+}
+
+void sys_condition_destroy(int cond_idx)
+{
+    /* TODO: [p3-task2] call invoke_syscall to implement sys_condition_destroy */
+}
+
+int sys_semaphore_init(int key, int init)
+{
+    /* TODO: [p3-task2] call invoke_syscall to implement sys_semaphore_init */
+}
+
+void sys_semaphore_up(int sema_idx)
+{
+    /* TODO: [p3-task2] call invoke_syscall to implement sys_semaphore_up */
+}
+
+void sys_semaphore_down(int sema_idx)
+{
+    /* TODO: [p3-task2] call invoke_syscall to implement sys_semaphore_down */
+}
+
+void sys_semaphore_destroy(int sema_idx)
+{
+    /* TODO: [p3-task2] call invoke_syscall to implement sys_semaphore_destroy */
+}
+
+int sys_mbox_open(char * name)
+{
+    /* TODO: [p3-task2] call invoke_syscall to implement sys_mbox_open */
+}
+
+void sys_mbox_close(int mbox_id)
+{
+    /* TODO: [p3-task2] call invoke_syscall to implement sys_mbox_close */
+}
+
+int sys_mbox_send(int mbox_idx, void *msg, int msg_length)
+{
+    /* TODO: [p3-task2] call invoke_syscall to implement sys_mbox_send */
+}
+
+int sys_mbox_recv(int mbox_idx, void *msg, int msg_length)
+{
+    /* TODO: [p3-task2] call invoke_syscall to implement sys_mbox_recv */
+}
 /************************************************************/

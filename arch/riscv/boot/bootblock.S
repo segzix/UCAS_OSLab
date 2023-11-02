@@ -2,6 +2,9 @@
 
 // os size location (os_size could be sectors [p1-task3] or bytes [p1-task4])
 .equ deflate_block_size_loc, 0x502001fc
+# =======
+# .equ os_size_loc, 0x502001fc
+# >>>>>>> start/Project3-Interactive_OS_and_Process_Management
 
 // kernel address (move kernel to here, and jmp here to start kernel)
 .equ kernel, 0x50201000
@@ -16,6 +19,8 @@
 main:
 	// fence on all memory and I/O
 	fence
+	// a0 is mhartid
+	bnez a0, secondary
 
 	li   	a7,BIOS_PUTSTR
 	lui  	a0,%hi(msg)
@@ -45,11 +50,18 @@ main:
 	// TODO: [p1-task4] load task-related arguments and pass them to kernel
 
 
-	//j		kernel
-	// TODO: [p1-task2] jump to kernel to start UCAS-OS
-
 	/************************************************************/
-	/* Do not touch this comment. Reserved for future projects. */
+secondary:
+	/* TODO [P3-task3]: 
+	 * 1. Mask all interrupts
+	 * 2. let stvec pointer to kernel_main
+	 * 3. enable software interrupt for ipi
+	 */
+
+wait_for_wakeup:
+	wfi
+	j wait_for_wakeup
+
 	/************************************************************/
 // while(1) --> stop here
 stop:

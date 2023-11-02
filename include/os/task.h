@@ -4,7 +4,7 @@
 #include <type.h>
 
 #define TASK_MEM_BASE    0x52000000
-#define TASK_MAXNUM      16
+#define TASK_MAXNUM      32
 #define TASK_SIZE        0x10000
 
 

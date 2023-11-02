@@ -15,6 +15,9 @@
 #define DECOMPRESS_SIZE_LOC (BOOT_LOADER_SIG_OFFSET - 2)
 #define TASK_INFO_LOC (DECOMPRESS_SIZE_LOC - 8)
 #define KERNEL_INFO_LOC (DECOMPRESS_SIZE_LOC -16)
+// =======
+// #define OS_SIZE_LOC (BOOT_LOADER_SIG_OFFSET - 2)
+// >>>>>>> start/Project3-Interactive_OS_and_Process_Management
 #define BOOT_LOADER_SIG_1 0x55
 #define BOOT_LOADER_SIG_2 0xaa
 
@@ -102,6 +105,14 @@ static void create_image(int nfiles, char *files[])
     int kernel_compressed_phyaddr;
     int kernel_compressed_size;
     char* kernel_data_buf_temp = kernel_data_buf;
+// =======
+//     int tasknum = nfiles - 2;
+//     int nbytes_kernel = 0;
+//     int phyaddr = 0;
+//     FILE *fp = NULL, *img = NULL;
+//     Elf64_Ehdr ehdr;
+//     Elf64_Phdr phdr;
+// >>>>>>> start/Project3-Interactive_OS_and_Process_Management
 
     /* open the image file */
     img = fopen(IMAGE_FILE, "w");
@@ -111,6 +122,9 @@ static void create_image(int nfiles, char *files[])
     for (int fidx = 0; fidx < nfiles; ++fidx) {
 
         int taskidx = fidx - 3;
+// =======
+//         int taskidx = fidx - 2;
+// >>>>>>> start/Project3-Interactive_OS_and_Process_Management
 
         /* open input file */
         fp = fopen(*files, "r");
@@ -146,6 +160,14 @@ static void create_image(int nfiles, char *files[])
             }
             //如果是kernel则先通过write_compress函数写进kernel_data_buf数组里，同时可以得到data_size
             /* update nbytes_decompress */
+// =======
+//             write_segment(phdr, fp, img, &phyaddr);
+
+//             /* update nbytes_kernel */
+//             if (strcmp(*files, "main") == 0) {
+//                 nbytes_kernel += get_filesz(phdr);
+//             }
+// >>>>>>> start/Project3-Interactive_OS_and_Process_Management
         }
 
         /* write padding bytes */
@@ -197,6 +219,16 @@ static void create_image(int nfiles, char *files[])
         files++;
     }
     write_img_info(nbytes_decompress, taskinfo, tasknum, img, phyaddr,kernel_compressed_phyaddr,kernel_compressed_size);
+// =======
+//         if (strcmp(*files, "bootblock") == 0) {
+//             write_padding(img, &phyaddr, SECTOR_SIZE);
+//         }
+
+//         fclose(fp);
+//         files++;
+//     }
+//     write_img_info(nbytes_kernel, taskinfo, tasknum, img);
+// >>>>>>> start/Project3-Interactive_OS_and_Process_Management
 
     fclose(img);
 }
@@ -329,6 +361,11 @@ static void write_img_info(int nbytes_decompress, task_info_t *taskinfo,
     fread(check,4,1,img);
     printf("task_info_block_size_img : %d\n", *check);*/
     
+// =======
+// static void write_img_info(int nbytes_kernel, task_info_t *taskinfo,
+//                            short tasknum, FILE * img)
+// {
+// >>>>>>> start/Project3-Interactive_OS_and_Process_Management
     // TODO: [p1-task3] & [p1-task4] write image info to some certain places
     // NOTE: os size, infomation about app-info sector(s) ...
 }

@@ -2,7 +2,10 @@
 # Project Information
 # -----------------------------------------------------------------------
 
-PROJECT_IDX	= 2
+# <<<<<<< HEAD
+# PROJECT_IDX	= 2
+# =======
+PROJECT_IDX	= 3
 
 # -----------------------------------------------------------------------
 # Host Linux Variables
@@ -57,6 +60,7 @@ QEMU_OPTS       = -nographic -machine virt -m 256M -kernel $(UBOOT) -bios none \
                      -monitor telnet::45454,server,nowait -serial mon:stdio \
                      -D $(QEMU_LOG_FILE) -d oslab
 QEMU_DEBUG_OPT  = -s -S
+QEMU_SMP_OPT	= -smp 2
 
 # -----------------------------------------------------------------------
 # UCAS-OS Entrypoints and Variables
@@ -117,7 +121,9 @@ SRC_LIBC    = $(wildcard ./tiny_libc/*.c)
 OBJ_LIBC    = $(patsubst %.c, %.o, $(foreach file, $(SRC_LIBC), $(DIR_BUILD)/$(notdir $(file))))
 LIB_TINYC   = $(DIR_BUILD)/libtinyc.a
 
-SRC_USER    = $(wildcard $(DIR_TEST_PROJ)/*.c)
+
+SRC_SHELL	= $(DIR_TEST)/shell.c
+SRC_USER    = $(SRC_SHELL) $(wildcard $(DIR_TEST_PROJ)/*.c)
 ELF_USER    = $(patsubst %.c, %, $(foreach file, $(SRC_USER), $(DIR_BUILD)/$(notdir $(file))))
 
 # -----------------------------------------------------------------------
@@ -152,13 +158,19 @@ gdb:
 run:
 	$(QEMU) $(QEMU_OPTS)
 
+run-smp:
+	$(QEMU) $(QEMU_OPTS) $(QEMU_SMP_OPT)
+
 debug:
 	$(QEMU) $(QEMU_OPTS) $(QEMU_DEBUG_OPT)
+
+debug-smp:
+	$(QEMU) $(QEMU_OPTS) $(QEMU_SMP_OPT) $(QEMU_DEBUG_OPT)
 
 minicom:
 	sudo $(MINICOM) -D $(TTYUSB1)
 
-.PHONY: all dirs clean floppy asm gdb run debug minicom
+.PHONY: all dirs clean floppy asm gdb run debug viewlog minicom
 
 # -----------------------------------------------------------------------
 # UCAS-OS Rules
@@ -169,6 +181,7 @@ $(ELF_BOOT): $(SRC_BOOT) riscv.lds
 
 $(ELF_MAIN): $(SRC_MAIN) riscv.lds
 	$(CC) $(KERNEL_CFLAGS) -o $@ $(SRC_MAIN)
+
 
 $(ELF_DECOMPRESS): $(SRC_DECOMPRESS) riscv.lds
 	$(CC) $(DECOMPRESS_CFLAGS) -DFREESTANDING -o $@ $(SRC_DECOMPRESS) 
@@ -186,9 +199,11 @@ $(DIR_BUILD)/%: $(DIR_TEST_PROJ)/%.c $(OBJ_CRT0) $(LIB_TINYC) riscv.lds
 	$(CC) $(USER_CFLAGS) -o $@ $(OBJ_CRT0) $< $(USER_LDFLAGS) -Wl,--defsym=TEXT_START=$(USER_ENTRYPOINT) -T riscv.lds
 	$(eval USER_ENTRYPOINT := $(shell python3 -c "print(hex(int('$(USER_ENTRYPOINT)', 16) + int('0x10000', 16)))"))
 
+$(DIR_BUILD)/%: $(DIR_TEST)/%.c $(OBJ_CRT0) $(LIB_TINYC) riscv.lds
+	$(CC) $(USER_CFLAGS) -o $@ $(OBJ_CRT0) $< $(USER_LDFLAGS) -Wl,--defsym=TEXT_START=$(USER_ENTRYPOINT) -T riscv.lds
+	$(eval USER_ENTRYPOINT := $(shell python3 -c "print(hex(int('$(USER_ENTRYPOINT)', 16) + int('0x10000', 16)))"))
 
 elf: $(ELF_BOOT) $(ELF_DECOMPRESS) $(ELF_MAIN) $(LIB_TINYC) $(ELF_USER)
-#elf: $(ELF_BOOT) $(ELF_DECOMPRESS) $(ELF_MAIN) $(ELF_USER)
 
 .PHONY: elf
 
@@ -200,6 +215,12 @@ $(ELF_CREATEIMAGE): $(SRC_CREATEIMAGE) $(SRC_DEFLATE_1) $(SRC_DEFLATE_2)
 	$(HOST_CC) $(SRC_CREATEIMAGE) $(SRC_DEFLATE_1) $(SRC_DEFLATE_2) -o $@ -ggdb -Wall -I$(DIR_DEFLATE) -I$(DIR_ARCH)/include -DFREESTANDING
 
 image: $(ELF_CREATEIMAGE) $(ELF_BOOT) $(ELF_DECOMPRESS) $(ELF_MAIN) $(ELF_USER)
+# =======
+# $(ELF_CREATEIMAGE): $(SRC_CREATEIMAGE)
+# 	$(HOST_CC) $(SRC_CREATEIMAGE) -o $@ -ggdb -Wall
+
+# image: $(ELF_CREATEIMAGE) $(ELF_BOOT) $(ELF_MAIN) $(ELF_USER)
+# >>>>>>> start/Project3-Interactive_OS_and_Process_Management
 	cd $(DIR_BUILD) && ./$(<F) --extended $(filter-out $(<F), $(^F))
 
 .PHONY: image

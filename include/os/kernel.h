@@ -23,6 +23,9 @@ typedef enum {
     NUM_ENTRIES,
     WRITE,
     REFLUSH
+// =======
+//     NUM_ENTRIES
+// >>>>>>> start/Project3-Interactive_OS_and_Process_Management
 } jmptab_idx_t;
 
 static inline long call_jmptab(long which, long arg0, long arg1, long arg2, long arg3, long arg4)

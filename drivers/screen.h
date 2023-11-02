@@ -31,7 +31,7 @@
 void init_screen(void);
 
 /* clear screen */
-void screen_clear(void);
+void screen_clear(int begin,int end);
 
 /* reflush screen buffer */
 void screen_reflush(void);

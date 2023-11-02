@@ -7,6 +7,7 @@
 
 #define SCREEN_WIDTH    80
 #define SCREEN_HEIGHT   50
+#define SCREEN_HEIGHT_START 21
 #define SCREEN_LOC(x, y) ((y) * SCREEN_WIDTH + (x))
 
 /* screen buffer */
@@ -53,13 +54,13 @@ void init_screen(void)
 {
     vt100_hidden_cursor();
     vt100_clear();
-    screen_clear();
+    screen_clear(0,SCREEN_HEIGHT);
 }
 
-void screen_clear(void)
+void screen_clear(int begin,int end)
 {
     int i, j;
-    for (i = 0; i < SCREEN_HEIGHT; i++)
+    for (i = begin; i < end; i++)
     {
         for (j = 0; j < SCREEN_WIDTH; j++)
         {

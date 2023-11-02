@@ -72,6 +72,7 @@ int do_mutex_lock_init(int key)
 void do_mutex_lock_acquire(int mlock_idx)
 {
     int i;
+    int k;
     for(i = 0;i < LOCK_NUM;i++)
     {
         if(mlocks[i].key == mlock_idx)
@@ -83,6 +84,14 @@ void do_mutex_lock_acquire(int mlock_idx)
                 // spin_lock_release(&mlocks[i].lock);
                 // do_scheduler();
                 // spin_lock_acquire(&mlocks[i].lock);
+            }
+
+            for(k = 0;k < TASK_LOCK_MAX;k++){
+                if(!current_running->mutex_lock_key[k])
+                {
+                    current_running->mutex_lock_key[k] = mlock_idx;
+                    break;
+                }
             }
             mlocks[i].mutex_status = LOCKED;
             spin_lock_release(&mlocks[i].lock);

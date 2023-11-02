@@ -23,13 +23,15 @@
 #define KERNEL_STACK 0x50501000
 
 uint16_t task_num;
-uint16_t tcb_num;
+uint16_t num_threads;
+uint16_t num_tasks;//记录已经有过的进程数
 int version = 2; // version must between 0 and 9
 char buf[VERSION_BUF];
 extern void ret_from_exception();//conflict
 
 // Task info array
 task_info_t tasks[TASK_MAXNUM];
+
 
 
 static void enter_app(uint32_t task_entrypoint)
@@ -106,20 +108,26 @@ static void init_task_info(void)
 }
 
 /************************************************************/
-static void init_pcb_stack(
+void init_pcb_stack(
     ptr_t kernel_stack, ptr_t user_stack, ptr_t entry_point,
-    pcb_t *pcb)
+    pcb_t *pcb,int argc, char *argv[])
 {
+    int i;
+    
     regs_context_t *pt_regs =
         (regs_context_t *)(kernel_stack - sizeof(regs_context_t));
-    //准备将该进程运行时的一些需要写寄存器的值全部放入栈中
-    pt_regs->regs[1] = (reg_t)entry_point;             //ra
-    pt_regs->regs[2] = (reg_t)user_stack;              //sp
-    pt_regs->regs[4] = (reg_t)pcb;                     //tp
-    pt_regs->sepc    = (reg_t)entry_point;             //sepc
-    pt_regs->sstatus = (reg_t)SR_SPIE;                 //sstatus
+    uintptr_t argv_base = user_stack - sizeof(uintptr_t)*(argc + 1);
 
-    pcb->kernel_sp -= sizeof(regs_context_t);
+    //准备将该进程运行时的一些需要写寄存器的值全部放入栈中
+    pt_regs->regs[1]    = (reg_t)entry_point;             //ra
+    pt_regs->regs[4]    = (reg_t)pcb;                     //tp
+    pt_regs->regs[10]   = (reg_t)argc;                    //a0寄存器，命令行参数长度
+    pt_regs->regs[11]   = argv_base;
+    pt_regs->sepc       = (reg_t)entry_point;             //sepc
+    pt_regs->sstatus    = (reg_t)(SR_SPIE & ~SR_SPP);     //sstatus
+    pt_regs->sbadaddr   = 0;
+    pt_regs->scause     = 0;
+
      /* TODO: [p2-task3] initialization of registers on kernel stack
       * HINT: sp, ra, sepc, sstatus
       * NOTE: To run the task in user mode, you should set corresponding bits
@@ -136,12 +144,32 @@ static void init_pcb_stack(
         (switchto_context_t *)((ptr_t)pt_regs - sizeof(switchto_context_t));
     //初始化该进程控制块中的sp指针
     pt_switchto->regs[0] = (reg_t)ret_from_exception;    //ra
-    pt_switchto->regs[1] = (reg_t)(pcb->kernel_sp);      //sp
+    pt_switchto->regs[1] = (reg_t)(pt_regs);      //sp
 
-    pcb->kernel_sp -= sizeof(switchto_context_t);
+    uint64_t user_sp_now = argv_base;
+    uintptr_t * argv_ptr = (ptr_t)argv_base;
+    for(i=0; i<argc; i++){
+        uint32_t len = strlen(argv[i]);
+        user_sp_now = user_sp_now - len - 1;
+
+        (*argv_ptr) = user_sp_now;
+        strcpy((char*)user_sp_now,argv[i]);
+        argv_ptr++;
+    }
+    (*argv_ptr) = 0;
+    // int user_stack_size =  user_stack - user_sp_now;
+    // int siz_alignment = ((user_stack_size/16) + !(user_stack_size%128==0))*16;
+    // user_sp_now = user_stack - siz_alignment;
+
+    user_sp_now = user_sp_now & (~0xf);
+
+    pt_regs->regs[2]  = (reg_t)user_sp_now;     //sp
+    pcb->user_sp=(reg_t)user_sp_now;
+
+    pcb->kernel_sp = (reg_t)pt_switchto;
 }
 
-static void init_tcb_stack(
+void init_tcb_stack(
     ptr_t kernel_stack, ptr_t user_stack, ptr_t entry_point, ptr_t rank_id,
     tcb_t *tcb)
 {
@@ -161,7 +189,6 @@ static void init_tcb_stack(
       * NOTE: To run the task in user mode, you should set corresponding bits
       *     of sstatus(SPP, SPIE, etc.).
       */
-    
 
 
     /* TODO: [p2-task1] set sp to simulate just returning from switch_to
@@ -177,47 +204,84 @@ static void init_tcb_stack(
     tcb->kernel_sp -= sizeof(switchto_context_t);
 }
 
+// static void init_pcb(void)
+// {
+//     /* TODO: [p2-task1] load needed tasks and init their corresponding PCB */
+
+//     int num_tasks; 
+    
+//     // task1: sched1_tasks
+//     //init_sched1_tasks();
+//     //先将sched1_tasks数组做一遍初始化
+//     for(num_tasks = 0; num_tasks < task_num; num_tasks++){
+//         //pcb[num_tasks].kernel_sp = KERNEL_STACK + (num_tasks + 1) * 0x1000;
+//         //pcb[num_tasks].user_sp = pcb[num_tasks].kernel_sp;
+//         pcb[num_tasks].kernel_sp = allocKernelPage(1) + PAGE_SIZE;
+//         pcb[num_tasks].user_sp   = allocUserPage(1) + PAGE_SIZE;
+//         list_add(&pcb[num_tasks].list, &ready_queue);
+//         pcb[num_tasks].pid = num_tasks + 1;
+//         pcb[num_tasks].tid = 0;
+//         pcb[num_tasks].status = TASK_READY;
+        
+//         load_task_img(num_tasks);
+//         init_pcb_stack( pcb[num_tasks].kernel_sp, pcb[num_tasks].user_sp, 
+//                         tasks[num_tasks].task_entrypoint, &pcb[num_tasks]); 
+//     }
+    
+//     current_running = &pid0_pcb;
+//     /* TODO: [p2-task1] remember to initialize 'current_running' */
+
+// }
+
 static void init_pcb(void)
 {
     /* TODO: [p2-task1] load needed tasks and init their corresponding PCB */
 
-    int num_tasks; 
+    int num_pcbs; 
     
-    // task1: sched1_tasks
-    //init_sched1_tasks();
-    //先将sched1_tasks数组做一遍初始化
-    for(num_tasks = 0; num_tasks < task_num; num_tasks++){
-        //pcb[num_tasks].kernel_sp = KERNEL_STACK + (num_tasks + 1) * 0x1000;
-        //pcb[num_tasks].user_sp = pcb[num_tasks].kernel_sp;
-        pcb[num_tasks].kernel_sp = allocKernelPage(1) + PAGE_SIZE;
-        pcb[num_tasks].user_sp   = allocUserPage(1) + PAGE_SIZE;
-        list_add(&pcb[num_tasks].list, &ready_queue);
-        pcb[num_tasks].pid = num_tasks + 1;
-        pcb[num_tasks].tid = 0;
-        pcb[num_tasks].status = TASK_READY;
-        
-        load_task_img(num_tasks);
-        init_pcb_stack( pcb[num_tasks].kernel_sp, pcb[num_tasks].user_sp, 
-                        tasks[num_tasks].task_entrypoint, &pcb[num_tasks]); 
+    for(num_pcbs = 0; num_pcbs < NUM_MAX_TASK; num_pcbs++){
+        pcb[num_pcbs].status = TASK_EXITED;
+        pcb[num_pcbs].pid = -1;
+        pcb[num_pcbs].kill = 0;
     }
-    
-    current_running = &pid0_pcb;
-    /* TODO: [p2-task1] remember to initialize 'current_running' */
 
 }
 
-static void do_thread_create(uint64_t addr,uint64_t thread_id)
+static void init_memory(void)
 {
-    tcb[tcb_num].kernel_sp = allocKernelPage(1) + PAGE_SIZE;
-    tcb[tcb_num].user_sp   = allocUserPage(1)   + PAGE_SIZE;
-    list_add(&tcb[tcb_num].list, &ready_queue);
-    tcb[tcb_num].pid = current_running->pid;
-    tcb[tcb_num].tid = thread_id+1;
-    tcb[tcb_num].status = TASK_READY;
-        
-    init_tcb_stack( tcb[tcb_num].kernel_sp, tcb[tcb_num].user_sp, 
-                    addr, thread_id, &tcb[tcb_num]); 
-    tcb_num++;
+    int mem_tasks; 
+    
+    for(mem_tasks = 0; mem_tasks < task_num; mem_tasks++)
+        load_task_img(mem_tasks);
+
+}
+//初始时将所有的程序加载到内存中来
+
+static void init_shell(void)
+{
+    
+    //pcb[num_tasks].kernel_sp = KERNEL_STACK + (num_tasks + 1) * 0x1000;
+    //pcb[num_tasks].user_sp = pcb[num_tasks].kernel_sp;
+    pcb[num_tasks].kernel_sp = allocKernelPage(1) + PAGE_SIZE;
+    pcb[num_tasks].user_sp   = allocUserPage(1) + PAGE_SIZE;
+    pcb[num_tasks].wait_list.prev = &pcb[num_tasks].wait_list;
+    pcb[num_tasks].wait_list.next = &pcb[num_tasks].wait_list;
+    pcb[num_tasks].kill = 0;
+    pcb[num_tasks].pid = num_tasks + 1;
+    pcb[num_tasks].tid = 0;
+    for(int k = 0;k < TASK_LOCK_MAX;k++){
+        pcb[num_tasks].mutex_lock_key[k] = 0;
+    }
+    strcpy(pcb[num_tasks].pcb_name, "shell");
+    init_pcb_stack( pcb[num_tasks].kernel_sp, pcb[num_tasks].user_sp, 
+                    tasks[num_tasks].task_entrypoint, &pcb[num_tasks],0,0);
+
+    list_add(&pcb[num_tasks].list, &ready_queue);
+    pcb[num_tasks].status = TASK_READY; 
+
+    num_tasks++;
+    /* TODO: [p2-task1] remember to initialize 'current_running' */
+
 }
 
 static void init_syscall(void)
@@ -232,8 +296,18 @@ static void init_syscall(void)
     syscall[SYSCALL_REFLUSH]        = (long(*)())screen_reflush;
     syscall[SYSCALL_GET_TIMEBASE]   = (long(*)())get_time_base;
     syscall[SYSCALL_GET_TICK]       = (long(*)())get_ticks;
-    syscall[SYSCALL_THREAD_CREATE]  = (long(*)())do_thread_create;
-    syscall[SYSCALL_THREAD_YIELD]   = (long(*)())do_thread_scheduler;
+    
+    syscall[SYSCALL_READCH]         = (long(*)())port_read_ch;
+    syscall[SYSCALL_EXEC]           = (long(*)())do_exec;
+    syscall[SYSCALL_EXIT]           = (long(*)())do_exit;
+    syscall[SYSCALL_KILL]           = (long(*)())do_kill;
+    syscall[SYSCALL_WAITPID]        = (long(*)())do_waitpid;
+    syscall[SYSCALL_GETPID]         = (long(*)())do_getpid;
+    syscall[SYSCALL_PS]             = (long(*)())do_process_show;
+    syscall[SYSCALL_CLEAR]          = (long(*)())screen_clear;
+    // syscall[SYSCALL_THREAD_CREATE]  = (long(*)())do_thread_create;
+    // syscall[SYSCALL_THREAD_YIELD]   = (long(*)())do_thread_scheduler;
+
     // TODO: [p2-task3] initialize system call table.
 }
 /************************************************************/
@@ -256,7 +330,11 @@ int main(void)
     init_task_info();
 
     // Init Process Control Blocks |•'-'•) ✧
+    // init_pcb();
+    init_memory();
     init_pcb();
+    init_shell();
+    current_running = &pid0_pcb;
     printk("> [INIT] PCB initialization succeeded.\n");
 
     // Read CPU frequency (｡•ᴗ-)_
@@ -276,13 +354,14 @@ int main(void)
 
     // Init screen (QAQ)
     init_screen();
-    printk("> [INIT] SCREEN initialization succeeded.\n");
+    // printk("> [INIT] SCREEN initialization succeeded.\n");
 
     enable_interrupt();
     bios_set_timer(get_ticks() + TIMER_INTERVAL);
     // TODO: [p2-task4] Setup timer interrupt and enable all interrupt globally
     // NOTE: The function of sstatus.sie is different from sie's
     
+
 
 /*
     bios_putstr("Hello OS!\n\r");

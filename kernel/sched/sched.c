@@ -2,8 +2,10 @@
 #include <os/lock.h>
 #include <os/sched.h>
 #include <os/kernel.h>
+#include <os/string.h>
 #include <os/time.h>
 #include <os/mm.h>
+#include <os/task.h>
 #include <screen.h>
 #include <printk.h>
 #include <assert.h>
@@ -159,4 +161,174 @@ void do_unblock(list_node_t *pcb_node)
     (list_entry(pcb_node, pcb_t, list))->status = TASK_READY;
     //return;
     // TODO: [p2-task2] unblock the `pcb` from the block queue
+}
+
+pid_t do_exec(char *name, int argc, char *argv[])
+{
+    /* TODO [P3-TASK1] exec exit kill waitpid ps*/
+    for(int i=1;i<task_num;i++){
+        // printl("%s %s\n",tasks[i].name,name);
+        if(strcmp(tasks[i].task_name,name) == 0){
+            for(int id=0; id < NUM_MAX_TASK; id++){
+                if(pcb[id].status == TASK_EXITED){
+                    pcb[id].kernel_sp  = allocKernelPage(1) + PAGE_SIZE;
+                    pcb[id].user_sp    = allocUserPage(1) +   PAGE_SIZE;
+                    pcb[id].cursor_x   = 0;
+                    pcb[id].cursor_y   = 0;
+                    pcb[id].wakeup_time = 0;
+                    pcb[id].pid = num_tasks + 1;
+                    pcb[id].tid = 0;
+                    pcb[id].wait_list.prev = &pcb[id].wait_list;
+                    pcb[id].wait_list.next = &pcb[id].wait_list;
+                    pcb[id].kill = 0;
+
+                    for(int k = 0;k < TASK_LOCK_MAX;k++){
+                        pcb[id].mutex_lock_key[k] = 0;
+                    }
+
+                    memcpy((void*)pcb[id].pcb_name, (void*)tasks[i].task_name, 32);
+                    // load_task_img(tasks[i].name);
+                    init_pcb_stack( pcb[id].kernel_sp,pcb[id].user_sp,
+                                    tasks[i].task_entrypoint,&pcb[id],argc,argv);
+                    // printl("%d\n",pcb[id].user_sp);
+
+
+                    list_add(&(pcb[id].list),&ready_queue);
+                    pcb[id].status     = TASK_READY;
+                    num_tasks++;
+                    return pcb[id].pid;
+                }
+            }
+        }
+    }
+    return 0;
+}
+
+void do_exit(void)
+{
+    int i;
+    current_running->status = TASK_EXITED;
+
+    for(i = 0;i < TASK_LOCK_MAX;i++){
+        if(current_running->mutex_lock_key[i] != 0)
+        {
+            do_mutex_lock_release(current_running->mutex_lock_key[i]);
+        }
+    }
+
+    // list_del(&(current_running->list));
+
+    spin_lock_acquire(&(current_running->wait_lock));
+    while((current_running->wait_list).next != &(current_running)->wait_list)
+        do_unblock((current_running->wait_list).next);
+    spin_lock_release(&(current_running->wait_lock));
+
+    do_scheduler();
+}   
+int do_kill(pid_t pid)
+{
+    int id;
+    for(id = 0;id < NUM_MAX_TASK;id++){
+        if((pcb[id].pid == pid) && (pcb[id].status != TASK_EXITED))
+            break;
+    }
+
+    if(id == NUM_MAX_TASK)
+        return 0;
+    else{
+        pcb[id].kill = 1;
+        return 1;
+    } 
+
+    // if(id < 0 || id >= NUM_MAX_TASK || pcb[id].status == TASK_EXITED){
+    //     printk("\n> [Kill] Pid number not in use. \n\r");
+    //     return 0;
+    // }
+    // if(id == 0){
+    //     printk("\n> [Kill] Can not kill the shell. \n\r");
+    //     return 0;
+    // }
+    // if(pcb[id].status != TASK_RUNNING){
+    //     list_del(&(pcb[id].list));
+    //     while(pcb[id].wait_list.prev != &(pcb[id].wait_list))
+    //         do_unblock(pcb[id].wait_list.prev);
+    // }
+    // pcb[id].status = TASK_EXITED;
+    // return 1;
+}
+int do_waitpid(pid_t pid)
+{
+    int id;
+    for(id = 0;id < NUM_MAX_TASK;id++){
+        if((pcb[id].pid == pid) && (pcb[id].status != TASK_EXITED))
+            break;
+    }
+    // if(id < 0 || id >= NUM_MAX_TASK ){
+    //     printk("> [Waitpid] Pid number not in use. \n\r");
+    //     return 0;
+    // }
+    // if(id == 0){
+    //     printk("> [Waitpid] Can not wait the shell to kill. \n\r");
+    //     return 0;
+    // }
+    // if(pcb[id].status == TASK_EXITED){
+    //     return 0;
+    // }
+
+    if(id == NUM_MAX_TASK)
+        return 0;
+    else{
+        spin_lock_acquire(&(current_running->wait_lock));
+        do_block(&(current_running->list),&(pcb[id].wait_list),&(pcb[id].wait_lock));
+        spin_lock_release(&(current_running->wait_lock));
+
+        return 1;
+    } 
+}
+
+pid_t do_getpid(){
+    return current_running->pid;
+}
+
+void do_thread_create(uint64_t addr,uint64_t thread_id)
+{
+    tcb[num_threads].kernel_sp = allocKernelPage(1) + PAGE_SIZE;
+    tcb[num_threads].user_sp   = allocUserPage(1)   + PAGE_SIZE;
+    list_add(&tcb[num_threads].list, &ready_queue);
+    tcb[num_threads].pid = current_running->pid;
+    tcb[num_threads].tid = thread_id+1;
+    tcb[num_threads].status = TASK_READY;
+        
+    init_tcb_stack( tcb[num_threads].kernel_sp, tcb[num_threads].user_sp, 
+                    addr, thread_id, &tcb[num_threads]); 
+    num_threads++;
+}
+
+int do_process_show()
+{
+    int i = 0;
+    int add_lines = 1;
+    printk("\n[Process Table]: \n");
+    while(i < NUM_MAX_TASK){
+        switch (pcb[i].status) {
+            case TASK_RUNNING:
+                printk("[%d] NAME : %s  PID : %d  STATUS : TASK_RUNNING\n",i,pcb[i].pcb_name,pcb[i].pid);
+                add_lines++;
+                break;
+            case TASK_READY:
+                printk("[%d] NAME : %s  PID : %d  STATUS : TASK_READY\n",i,pcb[i].pcb_name,pcb[i].pid);
+                add_lines++;
+                break;
+            case TASK_BLOCKED:
+                printk("[%d] NAME : %s  PID : %d  STATUS : TASK_BLOCKED\n",i,pcb[i].pcb_name,pcb[i].pid);
+                add_lines++;
+                break;
+            default:
+                break;
+        }
+        
+        i++;
+    }
+
+    return add_lines;
 }

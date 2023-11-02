@@ -38,11 +38,14 @@ crt0_endloop:
     /*ld    ra, 8(sp)  
     ld    sp, 0(sp)*/
 
+    call sys_exit
+    
     RET
     /* TODO: [p1-task3] finish task and return to the kernel, replace this in p3-task2! */
 
+
     /************************************************************/
-    /* Do not touch this comment. Reserved for future projects. */
+    /* TODO: [P3] call sys_exit */
     /************************************************************/
 // while(1) loop, unreachable here
 loop:
