@@ -3,6 +3,7 @@
 #include <os/list.h>
 #include <os/string.h>
 #include <atomic.h>
+#include <os/string.h>
 
 mutex_lock_t mlocks[LOCK_NUM];
 
@@ -353,15 +354,6 @@ void do_mbox_close(int mbox_idx){
     spin_lock_release(&(mailbox_now->lock));
 }
 
-char *mboxncpy(char *dest, const char *src, int n)
-{
-    char *tmp = dest;
-
-    while (n-- > 0) {
-        *dest++ = *src++;
-    }
-    return tmp;
-}
 
 int do_mbox_send(int mbox_idx, void * msg, int msg_length){
     // current_running = get_current_cpu_id()? &current_running_1 : &current_running_0;
@@ -377,7 +369,7 @@ int do_mbox_send(int mbox_idx, void * msg, int msg_length){
         
     mailbox_now->siz += msg_length;
     if(msg_length + mailbox_now->tail <= MAX_MBOX_LENGTH){//如果发现不用循环，直接往后加即可
-        mboxncpy((mailbox_now->buffer + mailbox_now->tail),msg,msg_length);
+        memcpy((void*)(mailbox_now->buffer + mailbox_now->tail),msg,msg_length);
         // printl("send buffer=%s,msg=%s,len=%d",msg,((*mailbox_now).buffer + mailbox_now->tail),msg_length);
         if(mailbox_now->tail + msg_length == MAX_MBOX_LENGTH)
             mailbox_now->tail = 0;
@@ -386,8 +378,8 @@ int do_mbox_send(int mbox_idx, void * msg, int msg_length){
     }
     else{
         int prelen = MAX_MBOX_LENGTH - (mailbox_now->tail);//记录要放在循环数组后面的字符串长度
-        mboxncpy((mailbox_now->buffer + mailbox_now->tail),msg,prelen);//放在循环数组后面
-        mboxncpy(mailbox_now->buffer,msg+prelen,msg_length-prelen);//放在循环数组前面
+        memcpy((void*)(mailbox_now->buffer + mailbox_now->tail),msg,prelen);//放在循环数组后面
+        memcpy((void*)mailbox_now->buffer,msg+prelen,msg_length-prelen);//放在循环数组前面
         mailbox_now->tail = msg_length - prelen;
     }
 
@@ -412,7 +404,7 @@ int do_mbox_recv(int mbox_idx, void * msg, int msg_length){
 
     mailbox_now->siz -= msg_length;
     if(mailbox_now->head + msg_length <= MAX_MBOX_LENGTH){//消费是改变头指针，消费完之后看是否需要掉头循环
-        mboxncpy(msg,(mailbox_now->buffer + mailbox_now->head),msg_length);
+        memcpy(msg,(void*)(mailbox_now->buffer + mailbox_now->head),msg_length);
         // printl("recv buffer=%s,msg=%s,len=%d",msg,((*mailbox_now).buffer + mailbox_now->head),msg_length);
         if(mailbox_now->head + msg_length == MAX_MBOX_LENGTH)
             mailbox_now->head = 0;
@@ -421,8 +413,8 @@ int do_mbox_recv(int mbox_idx, void * msg, int msg_length){
     }
     else{
         int prelen = MAX_MBOX_LENGTH - (mailbox_now->head);
-        mboxncpy(msg,(mailbox_now->buffer + mailbox_now->head),prelen);//数组后
-        mboxncpy(msg+prelen,mailbox_now->buffer,msg_length-prelen);//数组前
+        memcpy(msg,(void*)(mailbox_now->buffer + mailbox_now->head),prelen);//数组后
+        memcpy(msg+prelen,(void*)mailbox_now->buffer,msg_length-prelen);//数组前
         mailbox_now->head = msg_length - prelen;
     }
 
