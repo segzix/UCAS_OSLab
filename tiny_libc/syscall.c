@@ -244,21 +244,25 @@ void sys_semaphore_destroy(int sema_idx)
 
 int sys_mbox_open(char * name)
 {
+    return invoke_syscall(SYSCALL_MBOX_OPEN, name, IGNORE, IGNORE, IGNORE, IGNORE);
     /* TODO: [p3-task2] call invoke_syscall to implement sys_mbox_open */
 }
 
 void sys_mbox_close(int mbox_id)
 {
+    invoke_syscall(SYSCALL_MBOX_CLOSE, mbox_id, IGNORE, IGNORE, IGNORE, IGNORE);
     /* TODO: [p3-task2] call invoke_syscall to implement sys_mbox_close */
 }
 
 int sys_mbox_send(int mbox_idx, void *msg, int msg_length)
 {
+    return invoke_syscall(SYSCALL_MBOX_SEND, mbox_idx, msg, msg_length, IGNORE, IGNORE);
     /* TODO: [p3-task2] call invoke_syscall to implement sys_mbox_send */
 }
 
 int sys_mbox_recv(int mbox_idx, void *msg, int msg_length)
 {
+    return invoke_syscall(SYSCALL_MBOX_RECV, mbox_idx, msg, msg_length, IGNORE, IGNORE);
     /* TODO: [p3-task2] call invoke_syscall to implement sys_mbox_recv */
 }
 /************************************************************/

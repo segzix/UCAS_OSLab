@@ -314,6 +314,11 @@ static void init_syscall(void)
     syscall[SYSCALL_SEMA_UP]        = (long(*)())do_semaphore_up;
     syscall[SYSCALL_SEMA_DOWN]      = (long(*)())do_semaphore_down;
     syscall[SYSCALL_SEMA_DESTROY]   = (long(*)())do_semaphore_destroy;
+
+    syscall[SYSCALL_MBOX_OPEN]      = (long(*)())do_mbox_open;
+    syscall[SYSCALL_MBOX_CLOSE]     = (long(*)())do_mbox_close;
+    syscall[SYSCALL_MBOX_SEND]      = (long(*)())do_mbox_send;
+    syscall[SYSCALL_MBOX_RECV]      = (long(*)())do_mbox_recv;
     // syscall[SYSCALL_THREAD_CREATE]  = (long(*)())do_thread_create;
     // syscall[SYSCALL_THREAD_YIELD]   = (long(*)())do_thread_scheduler;
 
@@ -353,6 +358,7 @@ int main(void)
     init_locks();
     init_barriers();
     init_semaphores();
+    init_mbox();
     printk("> [INIT] Lock mechanism initialization succeeded.\n");
 
     // Init interrupt (^_^)

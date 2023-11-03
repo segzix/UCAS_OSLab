@@ -1,6 +1,7 @@
 #include <os/lock.h>
 #include <os/sched.h>
 #include <os/list.h>
+#include <os/string.h>
 #include <atomic.h>
 
 mutex_lock_t mlocks[LOCK_NUM];
@@ -285,4 +286,149 @@ void do_semaphore_destroy(int sema_idx){
     semaphore_now->semaphore_size=0;
 
     spin_lock_release(&(semaphore_now->lock));
+}
+
+
+mailbox_t mailboxs[MBOX_NUM];
+
+void init_mbox(){
+    for(int i=0; i < MBOX_NUM; i++){
+        mailboxs[i].siz  = 0;
+        mailboxs[i].head = 0;
+        mailboxs[i].tail = 0;
+        mailboxs[i].using = 0;
+        mailboxs[i].name[0] = '\0';
+
+        mailboxs[i].mailbox_recv_queue.next = &(mailboxs[i].mailbox_recv_queue);
+        mailboxs[i].mailbox_recv_queue.prev = &(mailboxs[i].mailbox_recv_queue);
+        mailboxs[i].mailbox_send_queue.next = &(mailboxs[i].mailbox_send_queue);
+        mailboxs[i].mailbox_send_queue.prev = &(mailboxs[i].mailbox_send_queue);
+    }
+}
+
+int do_mbox_open(char *name){
+    int i;
+    int id;
+
+    spin_lock_acquire(&mailbox_init_lock);
+    for(i=0; i < MBOX_NUM; i++){
+        if(strcmp(mailboxs[i].name,name) == 0){
+            id = i;
+            mailboxs[i].using++;
+            spin_lock_release(&mailbox_init_lock);
+            return id;
+        }
+    }
+    for(i=0; i < MBOX_NUM; i++){
+        if(mailboxs[i].name[0] == '\0'){
+            id = i;
+            strcpy(mailboxs[i].name,name);
+            spin_lock_release(&mailbox_init_lock);
+            return id;
+        }
+    }
+
+    spin_lock_release(&mailbox_init_lock);
+    return -1;
+}
+
+void do_mbox_close(int mbox_idx){
+    mailbox_t * mailbox_now = &(mailboxs[mbox_idx]);
+
+    spin_lock_acquire(&(mailbox_now->lock));
+
+    mailbox_now->using -- ;
+    if(mailbox_now->using == 0){
+        mailbox_now->siz = 0;
+        mailbox_now->head = 0;
+        mailbox_now->tail = 0;
+        mailbox_now->name[0] = '\0'; 
+
+        mailbox_now->mailbox_recv_queue.next = &(mailbox_now->mailbox_recv_queue);
+        mailbox_now->mailbox_recv_queue.prev = &(mailbox_now->mailbox_recv_queue);
+        mailbox_now->mailbox_send_queue.next = &(mailbox_now->mailbox_send_queue);
+        mailbox_now->mailbox_send_queue.prev = &(mailbox_now->mailbox_send_queue);
+    }
+
+    spin_lock_release(&(mailbox_now->lock));
+}
+
+char *mboxncpy(char *dest, const char *src, int n)
+{
+    char *tmp = dest;
+
+    while (n-- > 0) {
+        *dest++ = *src++;
+    }
+    return tmp;
+}
+
+int do_mbox_send(int mbox_idx, void * msg, int msg_length){
+    // current_running = get_current_cpu_id()? &current_running_1 : &current_running_0;
+    int block = 0;
+    mailbox_t * mailbox_now = &(mailboxs[mbox_idx]);
+
+    spin_lock_acquire(&(mailbox_now->lock));
+
+    while(msg_length + mailbox_now->siz > MAX_MBOX_LENGTH){//生产者发现当前空余量已经不够生产
+        block++;
+        do_block(&current_running->list, &mailbox_now->mailbox_send_queue, &mailbox_now->lock);
+    }
+        
+    mailbox_now->siz += msg_length;
+    if(msg_length + mailbox_now->tail <= MAX_MBOX_LENGTH){//如果发现不用循环，直接往后加即可
+        mboxncpy((mailbox_now->buffer + mailbox_now->tail),msg,msg_length);
+        // printl("send buffer=%s,msg=%s,len=%d",msg,((*mailbox_now).buffer + mailbox_now->tail),msg_length);
+        if(mailbox_now->tail + msg_length == MAX_MBOX_LENGTH)
+            mailbox_now->tail = 0;
+        else
+            mailbox_now->tail = mailbox_now->tail + msg_length;
+    }
+    else{
+        int prelen = MAX_MBOX_LENGTH - (mailbox_now->tail);//记录要放在循环数组后面的字符串长度
+        mboxncpy((mailbox_now->buffer + mailbox_now->tail),msg,prelen);//放在循环数组后面
+        mboxncpy(mailbox_now->buffer,msg+prelen,msg_length-prelen);//放在循环数组前面
+        mailbox_now->tail = msg_length - prelen;
+    }
+
+    while(mailbox_now->mailbox_recv_queue.next != &(mailbox_now->mailbox_recv_queue))//生产成功唤醒所有消费者
+        do_unblock(mailbox_now->mailbox_recv_queue.next);
+
+    spin_lock_release(&(mailbox_now->lock));
+    return block;
+}
+
+int do_mbox_recv(int mbox_idx, void * msg, int msg_length){
+    // current_running = get_current_cpu_id()? &current_running_1 : &current_running_0;
+    int block = 0;
+    mailbox_t * mailbox_now = &(mailboxs[mbox_idx]);
+
+    spin_lock_acquire(&(mailbox_now->lock));
+
+    while(mailbox_now->siz < msg_length){
+        block++;
+        do_block(&current_running->list, &mailbox_now->mailbox_recv_queue, &mailbox_now->lock);
+    }
+
+    mailbox_now->siz -= msg_length;
+    if(mailbox_now->head + msg_length <= MAX_MBOX_LENGTH){//消费是改变头指针，消费完之后看是否需要掉头循环
+        mboxncpy(msg,(mailbox_now->buffer + mailbox_now->head),msg_length);
+        // printl("recv buffer=%s,msg=%s,len=%d",msg,((*mailbox_now).buffer + mailbox_now->head),msg_length);
+        if(mailbox_now->head + msg_length == MAX_MBOX_LENGTH)
+            mailbox_now->head = 0;
+        else
+            mailbox_now->head = mailbox_now->head + msg_length;
+    }
+    else{
+        int prelen = MAX_MBOX_LENGTH - (mailbox_now->head);
+        mboxncpy(msg,(mailbox_now->buffer + mailbox_now->head),prelen);//数组后
+        mboxncpy(msg+prelen,mailbox_now->buffer,msg_length-prelen);//数组前
+        mailbox_now->head = msg_length - prelen;
+    }
+
+    while(mailbox_now->mailbox_send_queue.next != &(mailbox_now->mailbox_send_queue))//消费成功唤醒所有生产者
+        do_unblock(mailbox_now->mailbox_send_queue.next);
+
+    spin_lock_release(&(mailbox_now->lock));
+    return block;    
 }
