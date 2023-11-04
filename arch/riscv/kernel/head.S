@@ -7,12 +7,16 @@
 #include <csr.h>
 
 #define KERNEL_STACK		0x50501000
+#define KERNEL_STACK1		0x50502000
 
 .section ".entry_function","ax"
 ENTRY(_start)
   /* Mask all interrupts */
   csrw CSR_SIE, zero
   csrw CSR_SIP, zero
+
+  csrr t0, CSR_MHARTID
+  bnez t0, secondary
 
   la    t0, __bss_start
   la    t1, __BSS_END__
@@ -39,7 +43,12 @@ head_endloop:
   #call  main
 
   /* TODO: [p1-task2] setup C environment */
+secondary:
+  la tp, pid1_pcb
+  li sp, KERNEL_STACK1
 
+  la    t1,main
+  jalr  t1
 
 loop:
   wfi

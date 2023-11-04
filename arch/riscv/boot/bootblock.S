@@ -1,5 +1,5 @@
 #include <asm/biosdef.h>
-
+#include <csr.h>
 // os size location (os_size could be sectors [p1-task3] or bytes [p1-task4])
 .equ deflate_block_size_loc, 0x502001fc
 # =======
@@ -57,6 +57,23 @@ secondary:
 	 * 2. let stvec pointer to kernel_main
 	 * 3. enable software interrupt for ipi
 	 */
+	csrw CSR_SIE, zero
+	csrw CSR_SIP, zero
+
+	la t0, kernel
+	csrw CSR_STVEC, t0
+
+	li t0, SIE_SSIE
+	csrs CSR_SIE, t0
+
+	li t0, SR_SIE
+	csrw CSR_SSTATUS, t0
+
+	lui a5, 	 %hi(msg2)
+	addi a1, a5, %lo(msg2)
+
+	li a0, BIOS_PUTSTR
+	call bios_func_entry
 
 wait_for_wakeup:
 	wfi
@@ -71,4 +88,5 @@ stop:
 .data
 
 msg: .string "It's a bootloader...\n\r"
+msg2: .string "It's a bootloader... core2\n\r"
 

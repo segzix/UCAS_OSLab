@@ -12,7 +12,9 @@ handler_t exc_table[EXCC_COUNT];
 
 void interrupt_helper(regs_context_t *regs, uint64_t stval, uint64_t scause)
 {
-    if(current_running->kill == 1)
+
+    current_running = get_current_cpu_id() ? &current_running_1 : &current_running_0;
+    if((*current_running)->kill == 1)
         do_exit();
 
     if(scause & (1UL << 63)){
@@ -23,11 +25,12 @@ void interrupt_helper(regs_context_t *regs, uint64_t stval, uint64_t scause)
         (*exc_table[scause])(regs, stval, scause);
     }
 
-    if(current_running->kill == 1)
+    if((*current_running)->kill == 1)
         do_exit();
     //stval传递为interrupt值，确定类型
     // TODO: [p2-task3] & [p2-task4] interrupt handler.
     // call corresponding handler by the value of `scause`
+
 }
 
 void handle_irq_timer(regs_context_t *regs, uint64_t stval, uint64_t scause)

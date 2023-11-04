@@ -231,16 +231,16 @@ ENTRY(switch_to)
 ENDPROC(switch_to)
 
 ENTRY(ret_from_exception)
+  call unlock_kernel
   RESTORE_CONTEXT
   /* TODO: [p2-task3] restore context via provided macro and return to sepc */
-
   sret
   /* HINT: remember to check your sp, does it point to the right address? */
 ENDPROC(ret_from_exception)
 
 ENTRY(exception_handler_entry)
-
   SAVE_CONTEXT
+  call lock_kernel
   /* TODO: [p2-task3] save context via the provided macro */
 
   la ra, ret_from_exception
@@ -263,3 +263,8 @@ ENTRY(exception_handler_entry)
 
 
 ENDPROC(exception_handler_entry)
+
+ENTRY(clear_sip)
+  csrw CSR_SIP, zero
+  jr ra
+ENDPROC(clear_sip)

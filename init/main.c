@@ -245,6 +245,8 @@ static void init_pcb(void)
         pcb[num_pcbs].kill = 0;
     }
 
+    current_running_0 = &pid0_pcb;
+    current_running_1 = &pid1_pcb;
 }
 
 static void init_memory(void)
@@ -267,7 +269,7 @@ static void init_shell(void)
     pcb[num_tasks].wait_list.prev = &pcb[num_tasks].wait_list;
     pcb[num_tasks].wait_list.next = &pcb[num_tasks].wait_list;
     pcb[num_tasks].kill = 0;
-    pcb[num_tasks].pid = num_tasks + 1;
+    pcb[num_tasks].pid = num_tasks + 2;
     pcb[num_tasks].tid = 0;
     for(int k = 0;k < TASK_LOCK_MAX;k++){
         pcb[num_tasks].mutex_lock_key[k] = 0;
@@ -328,123 +330,83 @@ static void init_syscall(void)
 
 int main(void)
 {
+    if(get_current_cpu_id() == 0){
+        lock_kernel();
+        // Init jump table provided by kernel and bios(ΦωΦ)
+        init_jmptab();
 
-    // Check whether .bss section is set to zero
-    int input_valid;
-    int buf_number = 0;
-    int task_id = 0;
-    //int check = bss_check();
-    long c;
-    //confilct
+        // Init task information (〃'▽'〃)
+        init_task_info();
 
-    // Init jump table provided by kernel and bios(ΦωΦ)
-    init_jmptab();
+        // Init Process Control Blocks |•'-'•) ✧
+        // init_pcb();
+        init_memory();
+        init_pcb();
 
-    // Init task information (〃'▽'〃)
-    init_task_info();
+        current_running = &current_running_0;
 
-    // Init Process Control Blocks |•'-'•) ✧
-    // init_pcb();
-    init_memory();
-    init_pcb();
-    init_shell();
-    current_running = &pid0_pcb;
-    printk("> [INIT] PCB initialization succeeded.\n");
+        init_shell();
+        printk("> [INIT] PCB initialization succeeded.\n");
 
-    // Read CPU frequency (｡•ᴗ-)_
-    time_base = bios_read_fdt(TIMEBASE);
+        // Read CPU frequency (｡•ᴗ-)_
+        time_base = bios_read_fdt(TIMEBASE);
 
-    // Init lock mechanism o(´^｀)o
-    init_locks();
-    init_barriers();
-    init_semaphores();
-    init_mbox();
-    printk("> [INIT] Lock mechanism initialization succeeded.\n");
+        // Init lock mechanism o(´^｀)o
+        init_locks();
+        init_barriers();
+        init_semaphores();
+        init_mbox();
+        printk("> [INIT] Lock mechanism initialization succeeded.\n");
 
-    // Init interrupt (^_^)
-    init_exception();
-    printk("> [INIT] Interrupt processing initialization succeeded.\n");
+        // Init interrupt (^_^)
+        init_exception();
+        printk("> [INIT] Interrupt processing initialization succeeded.\n");
 
-    // Init system call table (0_0)
-    init_syscall();
-    printk("> [INIT] System call initialized successfully.\n");
+        // Init system call table (0_0)
+        init_syscall();
+        printk("> [INIT] System call initialized successfully.\n");
 
-    // Init screen (QAQ)
-    init_screen();
-    // printk("> [INIT] SCREEN initialization succeeded.\n");
+        // Init screen (QAQ)
+        init_screen();
+        // printk("> [INIT] SCREEN initialization succeeded.\n");
 
-    enable_interrupt();
-    bios_set_timer(get_ticks() + TIMER_INTERVAL);
-    // TODO: [p2-task4] Setup timer interrupt and enable all interrupt globally
-    // NOTE: The function of sstatus.sie is different from sie's
-    
+        enable_interrupt();
 
+        send_ipi((unsigned long *)0);
+        clear_sip();
 
-/*
-    bios_putstr("Hello OS!\n\r");
-    bios_putstr(buf);
-    bios_putstr("$ ");
-*/
-    /*while (1){
-        long c;
-        if ((c = bios_getchar()) != -1)
-            bios_putchar(c);
-    }*/
-/*
-    while(1){
-        if((c = bios_getchar()) != -1)
+        bios_set_timer(get_ticks() + TIMER_INTERVAL);
+        // TODO: [p2-task4] Setup timer interrupt and enable all interrupt globally
+        // NOTE: The function of sstatus.sie is different from sie's
+
+        // TODO: Load tasks by either task id [p1-task3] or task name [p1-task4],
+        //   and then execute them.
+
+        // Infinite while loop, where CPU stays in a low-power state (QAQQQQQQQQQQQ)
+        unlock_kernel();
+        while (1)
         {
-            bios_putchar(c);
+            // If you do non-preemptive scheduling, it's used to surrender control
+            //do_scheduler();
 
-            if(c == '\t')
-            {
-                buf[buf_number] = '\0';
-                for(task_id = 0;task_id < task_num;task_id++)
-                {
-                    input_valid = strcmp(buf,tasks[task_id].task_name);
-                    if(input_valid == 0)
-                        break;
-                }
-
-                if(input_valid == 0)
-                {
-                    load_task_img(task_id);
-                    enter_app(tasks[task_id].task_entrypoint);
-                    bios_putstr("$ ");
-                }
-                else
-                    bios_putstr("invalid name!\n$ ");
-                buf_number = 0;
-            }*/
-            /*else if(c == 0x8)
-            {
-                if(buf_number > 0)
-                {
-                    bios_putstr(" \b");
-                    buf[--buf_number] = '\0';
-                }
-                else
-                    bios_putstr("$ ");
-            }*/
-           /*else
-                buf[buf_number++] = c;
+            // If you do preemptive scheduling, they're used to enable CSR_SIE and wfi
+            enable_preempt();
+            asm volatile("wfi");
         }
-        task_id = 0;
     }
-*/
-
-    // TODO: Load tasks by either task id [p1-task3] or task name [p1-task4],
-    //   and then execute them.
-
-    // Infinite while loop, where CPU stays in a low-power state (QAQQQQQQQQQQQ)
-    while (1)
-    {
-        // If you do non-preemptive scheduling, it's used to surrender control
-        //do_scheduler();
-
-        // If you do preemptive scheduling, they're used to enable CSR_SIE and wfi
-        enable_preempt();
-        asm volatile("wfi");
+    else{
+        lock_kernel();
+        current_running = &current_running_1;
+        setup_exception();
+        // lock_kernel();
+        bios_set_timer(get_ticks() + TIMER_INTERVAL);
+        // unlock_kernel();
+        enable_interrupt();
+        unlock_kernel();
+        while(1){
+            enable_preempt();
+            asm volatile("wfi");
+        }
     }
 
     return 0;

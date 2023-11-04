@@ -29,22 +29,21 @@ void spin_lock_init(spin_lock_t *lock)
 int spin_lock_try_acquire(spin_lock_t *lock)
 {
     /* TODO: [p2-task2] try to acquire spin lock */
-    return 0;
+    return atomic_swap_d(LOCKED, (lock_status_t*)lock);
 }
 
 void spin_lock_acquire(spin_lock_t *lock)
 {
-    while(lock->status == LOCKED)
-        ;
-    lock->status = LOCKED;
-    return;
+    while(spin_lock_try_acquire(lock) == LOCKED);
+    // lock->status = LOCKED;
+    // return;
     //不断地去查询锁是否处于LOCKED状态，如果出于该状态，则加入该锁的队列中；如果不处于则上锁
     /* TODO: [p2-task2] acquire spin lock */
 }
 
 void spin_lock_release(spin_lock_t *lock)
 {
-    lock->status = UNLOCKED;
+    atomic_swap_d(UNLOCKED, (lock_status_t*)lock);
 
     return;
     /* TODO: [p2-task2] release spin lock */
@@ -80,6 +79,7 @@ void do_mutex_lock_acquire(int mlock_idx)
 {
     int i;
     int k;
+    current_running = get_current_cpu_id() ? &current_running_1 : &current_running_0;
     for(i = 0;i < LOCK_NUM;i++)
     {
         if(mlocks[i].key == mlock_idx)
@@ -87,16 +87,16 @@ void do_mutex_lock_acquire(int mlock_idx)
             spin_lock_acquire(&mlocks[i].lock);
             while(mlocks[i].mutex_status == LOCKED)
             {
-                do_block(&current_running->list,&mlocks[i].block_queue,&mlocks[i].lock);
+                do_block(&(*current_running)->list,&mlocks[i].block_queue,&mlocks[i].lock);
                 // spin_lock_release(&mlocks[i].lock);
                 // do_scheduler();
                 // spin_lock_acquire(&mlocks[i].lock);
             }
 
             for(k = 0;k < TASK_LOCK_MAX;k++){
-                if(!current_running->mutex_lock_key[k])
+                if(!(*current_running)->mutex_lock_key[k])
                 {
-                    current_running->mutex_lock_key[k] = mlock_idx;
+                    (*current_running)->mutex_lock_key[k] = mlock_idx;
                     break;
                 }
             }
@@ -171,13 +171,14 @@ int do_barrier_init(int key,int goal){
 
 void do_barrier_wait(int bar_idx){
     // current_running = get_current_cpu_id()? &current_running_1 : &current_running_0;
+    current_running = get_current_cpu_id() ? &current_running_1 : &current_running_0;
     barrier_t * barrier_now = &(barriers[bar_idx]);
 
     spin_lock_acquire(&(barrier_now->lock));
     barrier_now->queue_size++;
 
     if(barrier_now->queue_size < barrier_now->target_size)
-        do_block(&current_running->list, &barrier_now->barrier_queue, &barrier_now->lock);
+        do_block(&(*current_running)->list, &barrier_now->barrier_queue, &barrier_now->lock);
 
     while(barrier_now->barrier_queue.next != &(barrier_now->barrier_queue))
         do_unblock(barrier_now->barrier_queue.next);
@@ -257,14 +258,14 @@ void do_semaphore_up(int sema_idx){
 }
 
 void do_semaphore_down(int sema_idx){
-    // current_running = get_current_cpu_id()? &current_running_1 : &current_running_0;
+    current_running = get_current_cpu_id()? &current_running_1 : &current_running_0;
     semaphore_t * semaphore_now = &(semaphores[sema_idx]);
 
     spin_lock_acquire(&(semaphore_now->lock));
 
     semaphore_now->semaphore_size--;
     if(semaphore_now->semaphore_size < 0)
-        do_block(&current_running->list,&semaphore_now->semaphore_queue,&semaphore_now->lock);
+        do_block(&(*current_running)->list,&semaphore_now->semaphore_queue,&semaphore_now->lock);
 
     // if(semaphore_now->semaphore_size > 0)
     //     semaphore_now->semaphore_size--;
@@ -357,6 +358,7 @@ void do_mbox_close(int mbox_idx){
 
 int do_mbox_send(int mbox_idx, void * msg, int msg_length){
     // current_running = get_current_cpu_id()? &current_running_1 : &current_running_0;
+    current_running = get_current_cpu_id() ? &current_running_1 : &current_running_0;
     int block = 0;
     mailbox_t * mailbox_now = &(mailboxs[mbox_idx]);
 
@@ -364,7 +366,7 @@ int do_mbox_send(int mbox_idx, void * msg, int msg_length){
 
     while(msg_length + mailbox_now->siz > MAX_MBOX_LENGTH){//生产者发现当前空余量已经不够生产
         block++;
-        do_block(&current_running->list, &mailbox_now->mailbox_send_queue, &mailbox_now->lock);
+        do_block(&(*current_running)->list, &mailbox_now->mailbox_send_queue, &mailbox_now->lock);
     }
         
     mailbox_now->siz += msg_length;
@@ -392,6 +394,7 @@ int do_mbox_send(int mbox_idx, void * msg, int msg_length){
 
 int do_mbox_recv(int mbox_idx, void * msg, int msg_length){
     // current_running = get_current_cpu_id()? &current_running_1 : &current_running_0;
+    current_running = get_current_cpu_id() ? &current_running_1 : &current_running_0;
     int block = 0;
     mailbox_t * mailbox_now = &(mailboxs[mbox_idx]);
 
@@ -399,7 +402,7 @@ int do_mbox_recv(int mbox_idx, void * msg, int msg_length){
 
     while(mailbox_now->siz < msg_length){
         block++;
-        do_block(&current_running->list, &mailbox_now->mailbox_recv_queue, &mailbox_now->lock);
+        do_block(&(*current_running)->list, &mailbox_now->mailbox_recv_queue, &mailbox_now->lock);
     }
 
     mailbox_now->siz -= msg_length;
