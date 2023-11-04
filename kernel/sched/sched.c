@@ -19,6 +19,8 @@ pcb_t pid0_pcb = {
     .tid = 0,
     .kernel_sp = (ptr_t)pid0_stack,
     .user_sp = (ptr_t)pid0_stack,
+    .hart_mask = 0x1,
+    //每个核对应的都有可以跑的
 
     .list = {NULL,NULL}, 
     .status = TASK_RUNNING
@@ -28,6 +30,8 @@ pcb_t pid1_pcb = {
     .tid = 0,
     .kernel_sp = (ptr_t)pid1_stack,
     .user_sp = (ptr_t)pid1_stack,
+    .hart_mask = 0x2,
+    //每个核对应的都有可以跑的
 
     .list = {NULL,NULL}, 
     .status = TASK_RUNNING
@@ -52,8 +56,11 @@ pid_t process_id = 1;
 void do_scheduler(void)
 {   
     spin_lock_acquire(&ready_spin_lock);
+    list_node_t* list_check;
+    int cpu_hartmask;
     // bios_set_timer(get_ticks() + TIMER_INTERVAL);
     current_running = get_current_cpu_id() ? &current_running_1 : &current_running_0;
+    cpu_hartmask = get_current_cpu_id() ? 0x2 : 0x1;
     check_sleeping();
     // TODO: [p2-task3] Check sleep queue to wake up PCBs
 
@@ -67,7 +74,14 @@ void do_scheduler(void)
         (*current_running)->status = TASK_READY;
     } 
     //注意这里如果status为BLOCKED则不用执行上面的操作，因为已经加入到对应lock的block_queue中了
+
+    list_check = ready_queue.next;
     (*current_running) = list_entry(ready_queue.next, pcb_t, list);
+    while((cpu_hartmask & (*current_running)->hart_mask) == 0){
+        list_check = list_check->next;
+        (*current_running) = list_entry(list_check, pcb_t, list);
+    }
+
     list_del(&((*current_running)->list));
     (*current_running)->status = TASK_RUNNING;
     //将当前执行的进程对应的pcb加入ready队列之中，同时将ready队列的最前端进程取下来，由prev_running指向它。
@@ -180,6 +194,7 @@ void do_unblock(list_node_t *pcb_node)
 
 pid_t do_exec(char *name, int argc, char *argv[])
 {
+    current_running = get_current_cpu_id() ? &current_running_1 : &current_running_0;
     /* TODO [P3-TASK1] exec exit kill waitpid ps*/
     for(int i=1;i<task_num;i++){
         // printl("%s %s\n",tasks[i].name,name);
@@ -196,6 +211,7 @@ pid_t do_exec(char *name, int argc, char *argv[])
                     pcb[id].wait_list.prev = &pcb[id].wait_list;
                     pcb[id].wait_list.next = &pcb[id].wait_list;
                     pcb[id].kill = 0;
+                    pcb[id].hart_mask = (*current_running)->hart_mask;
 
                     for(int k = 0;k < TASK_LOCK_MAX;k++){
                         pcb[id].mutex_lock_key[k] = 0;
@@ -350,4 +366,25 @@ int do_process_show()
     }
 
     return add_lines;
+}
+
+
+void do_task_set_p(pid_t pid, int mask){
+    int id = pid - 2;
+    if(id < 0 || id >= NUM_MAX_TASK ){
+        printk("> [Taskset] Pid number not in use. \n\r");
+        return;
+    }
+    if(mask > 3 || mask < 1){
+        printk("> [Taskset] Core number not in use. \n\r");
+        return;
+    }
+    if(pcb[id].status == TASK_EXITED)return;
+    pcb[id].hart_mask = mask;
+}
+
+int do_task_set(int mask,char *name, int argc, char *argv[]){
+    int pid = do_exec(name,argc,argv);
+    do_task_set_p(pid,mask);
+    return pid;
 }

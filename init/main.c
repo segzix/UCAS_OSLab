@@ -243,6 +243,7 @@ static void init_pcb(void)
         pcb[num_pcbs].status = TASK_EXITED;
         pcb[num_pcbs].pid = -1;
         pcb[num_pcbs].kill = 0;
+        pcb[num_pcbs].hart_mask = 0x0;
     }
 
     current_running_0 = &pid0_pcb;
@@ -271,6 +272,7 @@ static void init_shell(void)
     pcb[num_tasks].kill = 0;
     pcb[num_tasks].pid = num_tasks + 2;
     pcb[num_tasks].tid = 0;
+    pcb[num_tasks].hart_mask = 0x3;
     for(int k = 0;k < TASK_LOCK_MAX;k++){
         pcb[num_tasks].mutex_lock_key[k] = 0;
     }
@@ -321,6 +323,9 @@ static void init_syscall(void)
     syscall[SYSCALL_MBOX_CLOSE]     = (long(*)())do_mbox_close;
     syscall[SYSCALL_MBOX_SEND]      = (long(*)())do_mbox_send;
     syscall[SYSCALL_MBOX_RECV]      = (long(*)())do_mbox_recv;
+
+    syscall[SYSCALL_TASK_SET]       = (long(*)())do_task_set;
+    syscall[SYSCALL_TASK_SETP]      = (long(*)())do_task_set_p;
     // syscall[SYSCALL_THREAD_CREATE]  = (long(*)())do_thread_create;
     // syscall[SYSCALL_THREAD_YIELD]   = (long(*)())do_thread_scheduler;
 

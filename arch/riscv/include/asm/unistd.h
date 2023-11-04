@@ -42,4 +42,7 @@
 #define SYSCALL_MBOX_SEND 54
 #define SYSCALL_MBOX_RECV 55
 
+#define SYSCALL_TASK_SET 56
+#define SYSCALL_TASK_SETP 57
+
 #endif

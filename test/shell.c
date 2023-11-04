@@ -101,6 +101,7 @@ void parse_arg(){
 void parse_command(){
 
     int pid;
+    int mask;
 
     if(argc == -1)
         command = EMPTY_COMMAND;
@@ -138,6 +139,7 @@ void parse_command(){
             }
 
             sys_clear(SHELL_BEGIN + 1, SHELL_END - 1);
+            sys_clear(0, SHELL_BEGIN - 1);
             print_location_y = SHELL_BEGIN;
             break;
         case EXEC_COMMAND:
@@ -194,6 +196,17 @@ void parse_command(){
                 check_clear();
                 printf(" \n(QAQ)Task (pid=%d) killed\n", pid);
                 print_location_y++;
+            }
+            break;
+        case TASKSET_COMMAND:
+            if(!strcmp(argv[0], "-p")){
+                mask = atoi(argv[1]);
+                pid = atoi(argv[2]);
+                sys_task_set_p(pid,mask);
+            }
+            else{
+                mask = atoi(argv[0]);
+                sys_task_set(mask,argv[1],argc,argv);
             }
             break;
         default:
