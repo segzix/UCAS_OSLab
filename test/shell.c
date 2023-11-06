@@ -139,7 +139,6 @@ void parse_command(){
             }
 
             sys_clear(SHELL_BEGIN + 1, SHELL_END - 1);
-            sys_clear(0, SHELL_BEGIN - 1);
             print_location_y = SHELL_BEGIN;
             break;
         case EXEC_COMMAND:
