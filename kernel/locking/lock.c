@@ -245,14 +245,8 @@ void do_semaphore_up(int sema_idx){
     spin_lock_acquire(&(semaphore_now->lock));
 
     if(semaphore_now->semaphore_size < 0)
-        // if(semaphore_now->semaphore_queue.next != &(semaphore_now->semaphore_queue))
             do_unblock(semaphore_now->semaphore_queue.next);
     semaphore_now->semaphore_size++;
-
-    // if(semaphore_now->semaphore_queue.next != &(semaphore_now->semaphore_queue))
-    //     do_unblock(semaphore_now->semaphore_queue.next);
-    // else
-    //     semaphore_now->semaphore_size++;
 
     spin_lock_release(&(semaphore_now->lock));
 }
@@ -267,11 +261,6 @@ void do_semaphore_down(int sema_idx){
     if(semaphore_now->semaphore_size < 0)
         do_block(&(*current_running)->list,&semaphore_now->semaphore_queue,&semaphore_now->lock);
 
-    // if(semaphore_now->semaphore_size > 0)
-    //     semaphore_now->semaphore_size--;
-    // if(semaphore_now->semaphore_size == 0)
-    //     do_block(&current_running->list,&semaphore_now->semaphore_queue,&semaphore_now->lock);
-
     spin_lock_release(&(semaphore_now->lock));
 }
 
@@ -280,8 +269,6 @@ void do_semaphore_destroy(int sema_idx){
 
     spin_lock_acquire(&(semaphore_now->lock));
 
-    // semaphore_now->semaphore_queue.prev = &(semaphore_now->semaphore_queue);
-    // semaphore_now->semaphore_queue.next = &(semaphore_now->semaphore_queue);
     while(semaphore_now->semaphore_queue.next != &(semaphore_now->semaphore_queue))
         do_unblock(semaphore_now->semaphore_queue.next);
     semaphore_now->key=-1;
@@ -373,17 +360,13 @@ int do_mbox_send(int mbox_idx, void * msg, int msg_length){
     if(msg_length + mailbox_now->tail <= MAX_MBOX_LENGTH){//如果发现不用循环，直接往后加即可
         memcpy((void*)(mailbox_now->buffer + mailbox_now->tail),msg,msg_length);
         // printl("send buffer=%s,msg=%s,len=%d",msg,((*mailbox_now).buffer + mailbox_now->tail),msg_length);
-        if(mailbox_now->tail + msg_length == MAX_MBOX_LENGTH)
-            mailbox_now->tail = 0;
-        else
-            mailbox_now->tail = mailbox_now->tail + msg_length;
     }
     else{
         int prelen = MAX_MBOX_LENGTH - (mailbox_now->tail);//记录要放在循环数组后面的字符串长度
         memcpy((void*)(mailbox_now->buffer + mailbox_now->tail),msg,prelen);//放在循环数组后面
         memcpy((void*)mailbox_now->buffer,msg+prelen,msg_length-prelen);//放在循环数组前面
-        mailbox_now->tail = msg_length - prelen;
     }
+    mailbox_now->tail = (mailbox_now->tail + msg_length) % MAX_MBOX_LENGTH;
 
     while(mailbox_now->mailbox_recv_queue.next != &(mailbox_now->mailbox_recv_queue))//生产成功唤醒所有消费者
         do_unblock(mailbox_now->mailbox_recv_queue.next);
@@ -409,17 +392,13 @@ int do_mbox_recv(int mbox_idx, void * msg, int msg_length){
     if(mailbox_now->head + msg_length <= MAX_MBOX_LENGTH){//消费是改变头指针，消费完之后看是否需要掉头循环
         memcpy(msg,(void*)(mailbox_now->buffer + mailbox_now->head),msg_length);
         // printl("recv buffer=%s,msg=%s,len=%d",msg,((*mailbox_now).buffer + mailbox_now->head),msg_length);
-        if(mailbox_now->head + msg_length == MAX_MBOX_LENGTH)
-            mailbox_now->head = 0;
-        else
-            mailbox_now->head = mailbox_now->head + msg_length;
     }
     else{
         int prelen = MAX_MBOX_LENGTH - (mailbox_now->head);
         memcpy(msg,(void*)(mailbox_now->buffer + mailbox_now->head),prelen);//数组后
         memcpy(msg+prelen,(void*)mailbox_now->buffer,msg_length-prelen);//数组前
-        mailbox_now->head = msg_length - prelen;
     }
+    mailbox_now->head = (mailbox_now->head + msg_length) % MAX_MBOX_LENGTH;
 
     while(mailbox_now->mailbox_send_queue.next != &(mailbox_now->mailbox_send_queue))//消费成功唤醒所有生产者
         do_unblock(mailbox_now->mailbox_send_queue.next);
