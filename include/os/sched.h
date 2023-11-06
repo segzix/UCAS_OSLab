@@ -105,6 +105,7 @@ typedef struct pcb
     0x03 core 0/1
     */
     int hart_mask;
+    int current_mask;
 
 
 } pcb_t,tcb_t;

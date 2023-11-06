@@ -20,6 +20,7 @@ pcb_t pid0_pcb = {
     .kernel_sp = (ptr_t)pid0_stack,
     .user_sp = (ptr_t)pid0_stack,
     .hart_mask = 0x1,
+    .current_mask = 0x1,
     //每个核对应的都有可以跑的
 
     .list = {NULL,NULL}, 
@@ -31,6 +32,7 @@ pcb_t pid1_pcb = {
     .kernel_sp = (ptr_t)pid1_stack,
     .user_sp = (ptr_t)pid1_stack,
     .hart_mask = 0x2,
+    .current_mask = 0x2,
     //每个核对应的都有可以跑的
 
     .list = {NULL,NULL}, 
@@ -81,6 +83,7 @@ void do_scheduler(void)
         list_check = list_check->next;
         (*current_running) = list_entry(list_check, pcb_t, list);
     }
+    (*current_running)->current_mask = cpu_hartmask;
 
     list_del(&((*current_running)->list));
     (*current_running)->status = TASK_RUNNING;
@@ -347,21 +350,28 @@ int do_process_show()
     while(i < NUM_MAX_TASK){
         switch (pcb[i].status) {
             case TASK_RUNNING:
-                printk("[%d] NAME : %s  PID : %d  STATUS : TASK_RUNNING\n",i,pcb[i].pcb_name,pcb[i].pid);
-                add_lines++;
+                printk("[%d] NAME : %s  PID : %d  STATUS : TASK_RUNNING ",i,pcb[i].pcb_name,pcb[i].pid);
+                if(pcb[i].current_mask == 0x1)
+                    printk("Running on core 0\n");
+                else if(pcb[i].current_mask == 0x2)
+                    printk("Running on core 1\n");
+                printk("hart_mask : %d\n",pcb[i].hart_mask);
+                add_lines+=2;
                 break;
             case TASK_READY:
                 printk("[%d] NAME : %s  PID : %d  STATUS : TASK_READY\n",i,pcb[i].pcb_name,pcb[i].pid);
-                add_lines++;
+                printk("hart_mask : %d\n",pcb[i].hart_mask);
+                add_lines+=2;
                 break;
             case TASK_BLOCKED:
                 printk("[%d] NAME : %s  PID : %d  STATUS : TASK_BLOCKED\n",i,pcb[i].pcb_name,pcb[i].pid);
-                add_lines++;
+                printk("hart_mask : %d\n",pcb[i].hart_mask);
+                add_lines+=2;
                 break;
             default:
                 break;
         }
-        
+
         i++;
     }
 

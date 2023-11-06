@@ -244,6 +244,7 @@ static void init_pcb(void)
         pcb[num_pcbs].pid = -1;
         pcb[num_pcbs].kill = 0;
         pcb[num_pcbs].hart_mask = 0x0;
+        pcb[num_pcbs].current_mask = 0x0;
     }
 
     current_running_0 = &pid0_pcb;
@@ -273,6 +274,7 @@ static void init_shell(void)
     pcb[num_tasks].pid = num_tasks + 2;
     pcb[num_tasks].tid = 0;
     pcb[num_tasks].hart_mask = 0x3;
+    pcb[num_tasks].current_mask = 0x0;
     for(int k = 0;k < TASK_LOCK_MAX;k++){
         pcb[num_tasks].mutex_lock_key[k] = 0;
     }
