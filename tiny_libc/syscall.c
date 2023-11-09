@@ -266,6 +266,7 @@ int sys_mbox_recv(int mbox_idx, void *msg, int msg_length)
     /* TODO: [p3-task2] call invoke_syscall to implement sys_mbox_recv */
 }
 
+<<<<<<< HEAD
 void sys_task_set_p(pid_t pid, int mask)
 {
     invoke_syscall(SYSCALL_TASK_SETP, pid, mask, IGNORE, IGNORE, IGNORE);
@@ -274,5 +275,15 @@ void sys_task_set_p(pid_t pid, int mask)
 int sys_task_set(int mask,char *name, int argc, char *argv[])
 {
     return invoke_syscall(SYSCALL_TASK_SET, mask, name, argc, argv, IGNORE);
+=======
+void* sys_shmpageget(int key)
+{
+    /* TODO: [p4-task4] call invoke_syscall to implement sys_shmpageget */
+}
+
+void sys_shmpagedt(void *addr)
+{
+    /* TODO: [p4-task4] call invoke_syscall to implement sys_shmpagedt */
+>>>>>>> start/Project4-Virtual_Memory_Management
 }
 /************************************************************/

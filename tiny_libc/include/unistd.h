@@ -3,7 +3,7 @@
 
 #include <stdint.h>
 typedef int32_t pid_t;
-
+typedef pid_t pthread_t;
 
 void sys_sleep(uint32_t time);
 void sys_yield(void);
@@ -63,8 +63,15 @@ void sys_mbox_close(int mbox_id);
 int sys_mbox_send(int mbox_idx, void *msg, int msg_length);
 int sys_mbox_recv(int mbox_idx, void *msg, int msg_length);
 
+<<<<<<< HEAD
 void sys_task_set_p(pid_t pid, int mask);
 int sys_task_set(int mask,char *name, int argc, char *argv[]);
+=======
+/* TODO: [P4-task5] shmpageget/dt */
+/* shmpageget/dt */
+void* sys_shmpageget(int key);
+void sys_shmpagedt(void *addr);
+>>>>>>> start/Project4-Virtual_Memory_Management
 /************************************************************/
 
 #endif

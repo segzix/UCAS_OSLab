@@ -2,10 +2,9 @@
 # Project Information
 # -----------------------------------------------------------------------
 
-# <<<<<<< HEAD
-# PROJECT_IDX	= 2
-# =======
-PROJECT_IDX	= 3
+
+PROJECT_IDX	= 4
+
 
 # -----------------------------------------------------------------------
 # Host Linux Variables
@@ -41,6 +40,7 @@ CFLAGS          = -O0 -fno-builtin -nostdlib -nostdinc -Wall -mcmodel=medany -gg
 BOOT_INCLUDE    = -I$(DIR_ARCH)/include
 BOOT_CFLAGS     = $(CFLAGS) $(BOOT_INCLUDE) -Wl,--defsym=TEXT_START=$(BOOTLOADER_ENTRYPOINT) -T riscv.lds
 
+# <<<<<<< HEAD
 
 DECOMPRESS_INCLUDE  = -I$(DIR_DEFLATE) -I$(DIR_ARCH)/include -Iinclude
 DECOMPRESS_CFLAGS   = $(CFLAGS) $(DECOMPRESS_INCLUDE) -Wl,--defsym=TEXT_START=$(DECOMPRESS_ENTRYPOINT) -T riscv.lds
@@ -48,6 +48,10 @@ DECOMPRESS_CFLAGS   = $(CFLAGS) $(DECOMPRESS_INCLUDE) -Wl,--defsym=TEXT_START=$(
 #KERNEL_INCLUDE  = -I$(DIR_ARCH)/include -Iinclude
 KERNEL_INCLUDE  = -I$(DIR_ARCH)/include -Iinclude -Idrivers 
 KERNEL_CFLAGS   = $(CFLAGS) $(KERNEL_INCLUDE) -Wl,--defsym=TEXT_START=$(KERNEL_ENTRYPOINT) -T riscv.lds
+# =======
+# KERNEL_INCLUDE  = -I$(DIR_ARCH)/include -Iinclude -Idrivers
+# KERNEL_CFLAGS   = $(CFLAGS) $(KERNEL_INCLUDE) -Wl,--defsym=TEXT_START=$(KERNEL_ENTRYPOINT) -T riscv.lds 
+# >>>>>>> start/Project4-Virtual_Memory_Management
 
 USER_INCLUDE    = -I$(DIR_TINYLIBC)/include
 USER_CFLAGS     = $(CFLAGS) $(USER_INCLUDE)
@@ -79,9 +83,14 @@ DIR_DEFLATE     = ./tools/deflate
 DIR_DECOMPRESS     = ./decompress
 
 BOOTLOADER_ENTRYPOINT   = 0x50200000
-KERNEL_ENTRYPOINT       = 0x50201000
-USER_ENTRYPOINT         = 0x52000000
+# <<<<<<< HEAD
+# KERNEL_ENTRYPOINT       = 0x50201000
+# USER_ENTRYPOINT         = 0x52000000
 DECOMPRESS_ENTRYPOINT   = 0x53000000
+# =======
+KERNEL_ENTRYPOINT       = 0xffffffc050202000
+USER_ENTRYPOINT         = 0x200000
+# >>>>>>> start/Project4-Virtual_Memory_Management
 
 # -----------------------------------------------------------------------
 # UCAS-OS Kernel Source Files
@@ -94,6 +103,7 @@ SRC_DRIVER  = $(wildcard $(DIR_DRIVERS)/*.c)
 SRC_INIT    = $(wildcard $(DIR_INIT)/*.c)
 SRC_KERNEL  = $(wildcard $(DIR_KERNEL)/*/*.c)
 SRC_LIBS    = $(wildcard $(DIR_LIBS)/*.c)
+# <<<<<<< HEAD
 SRC_STRING  = $(wildcard $(DIR_LIBS)/string.c)
 SRC_DECOMPRESS_1 = $(wildcard $(DIR_DECOMPRESS)/*.c)
 SRC_DECOMPRESS_2 = $(wildcard $(DIR_DECOMPRESS)/*.S)
@@ -101,10 +111,15 @@ SRC_DEFLATE_1 = $(wildcard $(DIR_DEFLATE)/*.c)
 SRC_DEFLATE_2 = $(wildcard $(DIR_DEFLATE)/lib/*.c)
 
 
-SRC_MAIN    = $(SRC_ARCH) $(SRC_INIT) $(SRC_BIOS) $(SRC_DRIVER) $(SRC_KERNEL) $(SRC_LIBS)
-#SRC_MAIN    = $(SRC_ARCH) $(SRC_INIT) $(SRC_BIOS) $(SRC_KERNEL) $(SRC_LIBS)
+# SRC_MAIN    = $(SRC_ARCH) $(SRC_INIT) $(SRC_BIOS) $(SRC_DRIVER) $(SRC_KERNEL) $(SRC_LIBS)
+# SRC_MAIN    = $(SRC_ARCH) $(SRC_INIT) $(SRC_BIOS) $(SRC_KERNEL) $(SRC_LIBS)
 SRC_DECOMPRESS= $(SRC_DECOMPRESS_1) $(SRC_DECOMPRESS_2) $(SRC_DEFLATE_1) $(SRC_DEFLATE_2) $(SRC_BIOS) $(SRC_STRING)
 
+# =======
+SRC_START   = $(wildcard $(DIR_ARCH)/kernel/*.c)
+
+SRC_MAIN    = $(SRC_ARCH) $(SRC_START) $(SRC_INIT) $(SRC_BIOS) $(SRC_DRIVER) $(SRC_KERNEL) $(SRC_LIBS) 
+# >>>>>>> start/Project4-Virtual_Memory_Management
 
 ELF_BOOT    = $(DIR_BUILD)/bootblock
 ELF_MAIN    = $(DIR_BUILD)/main
@@ -181,7 +196,7 @@ $(ELF_BOOT): $(SRC_BOOT) riscv.lds
 	$(CC) $(BOOT_CFLAGS) -o $@ $(SRC_BOOT) -e main
 
 $(ELF_MAIN): $(SRC_MAIN) riscv.lds
-	$(CC) $(KERNEL_CFLAGS) -o $@ $(SRC_MAIN)
+	$(CC) $(KERNEL_CFLAGS) -o $@ $(SRC_MAIN) -e _boot
 
 
 $(ELF_DECOMPRESS): $(SRC_DECOMPRESS) riscv.lds
@@ -198,11 +213,9 @@ $(DIR_BUILD)/%.o: $(DIR_TINYLIBC)/%.c
 
 $(DIR_BUILD)/%: $(DIR_TEST_PROJ)/%.c $(OBJ_CRT0) $(LIB_TINYC) riscv.lds
 	$(CC) $(USER_CFLAGS) -o $@ $(OBJ_CRT0) $< $(USER_LDFLAGS) -Wl,--defsym=TEXT_START=$(USER_ENTRYPOINT) -T riscv.lds
-	$(eval USER_ENTRYPOINT := $(shell python3 -c "print(hex(int('$(USER_ENTRYPOINT)', 16) + int('0x10000', 16)))"))
 
 $(DIR_BUILD)/%: $(DIR_TEST)/%.c $(OBJ_CRT0) $(LIB_TINYC) riscv.lds
 	$(CC) $(USER_CFLAGS) -o $@ $(OBJ_CRT0) $< $(USER_LDFLAGS) -Wl,--defsym=TEXT_START=$(USER_ENTRYPOINT) -T riscv.lds
-	$(eval USER_ENTRYPOINT := $(shell python3 -c "print(hex(int('$(USER_ENTRYPOINT)', 16) + int('0x10000', 16)))"))
 
 elf: $(ELF_BOOT) $(ELF_DECOMPRESS) $(ELF_MAIN) $(LIB_TINYC) $(ELF_USER)
 
