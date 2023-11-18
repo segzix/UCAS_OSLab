@@ -133,15 +133,15 @@ static void create_image(int nfiles, char *files[])
             {
                 fseek(fp, phdr.p_offset, SEEK_SET);
                 if (phdr.p_memsz != 0 && phdr.p_type == PT_LOAD){
-                    fread(kernel_data_buf_temp, sizeof(char), phdr.p_filesz, fp);
-                    kernel_data_buf_temp += phdr.p_filesz;
+                    fread(kernel_data_buf_temp, sizeof(char), phdr.p_memsz, fp);
+                    kernel_data_buf_temp += phdr.p_memsz;
                 }
-                data_size += get_filesz(phdr);
+                data_size += get_memsz(phdr);
             }
             else
             {
                 if (strcmp(*files, "decompress") == 0) 
-                    nbytes_decompress += get_filesz(phdr);
+                    nbytes_decompress += get_memsz(phdr);
                 write_segment(phdr, fp, img, &phyaddr);
             }
             //如果是kernel则先通过write_compress函数写进kernel_data_buf数组里，同时可以得到data_size
@@ -253,7 +253,7 @@ static void write_segment(Elf64_Phdr phdr, FILE *fp, FILE *img, int *phyaddr)
             printf("\t\twriting 0x%04lx bytes\n", phdr.p_filesz);
         }
         fseek(fp, phdr.p_offset, SEEK_SET);
-        while (phdr.p_filesz-- > 0) {
+        while (phdr.p_memsz-- > 0) {
             fputc(fgetc(fp), img);
             (*phyaddr)++;
         }

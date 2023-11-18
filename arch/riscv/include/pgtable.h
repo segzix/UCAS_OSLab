@@ -66,51 +66,68 @@ static inline void set_satp(
 #define _PAGE_PFN_SHIFT 10lu
 
 #define VA_MASK ((1lu << 39) - 1)
+#define PA_MASK ((1lu << 54) - 1)
+#define PA_ATTRIBUTE_MASK ((1lu << 10) - 1)
 
 #define PPN_BITS 9lu
 #define NUM_PTE_ENTRY (1 << PPN_BITS)
+
+#define KVA_OFFSET 0xffffffc000000000lu//内核虚地址相对于实地址的偏移
 
 typedef uint64_t PTE;
 
 /* Translation between physical addr and kernel virtual addr */
 static inline uintptr_t kva2pa(uintptr_t kva)
 {
+    return kva - KVA_OFFSET;
     /* TODO: [P4-task1] */
 }
 
 static inline uintptr_t pa2kva(uintptr_t pa)
 {
+    return pa + KVA_OFFSET;
     /* TODO: [P4-task1] */
 }
 
 /* get physical page addr from PTE 'entry' */
 static inline uint64_t get_pa(PTE entry)
 {
+    return ((entry & PA_MASK) >> 10) << 12;//物理页表的地址
     /* TODO: [P4-task1] */
 }
 
 /* Get/Set page frame number of the `entry` */
 static inline long get_pfn(PTE entry)
 {
+    return (entry & PA_MASK) >> 10;
     /* TODO: [P4-task1] */
 }
 static inline void set_pfn(PTE *entry, uint64_t pfn)
 {
+    uint64_t mask = PA_MASK ^ PA_ATTRIBUTE_MASK;
+    *entry |= mask & (pfn << 10);
     /* TODO: [P4-task1] */
 }
 
 /* Get/Set attribute(s) of the `entry` */
 static inline long get_attribute(PTE entry, uint64_t mask)
 {
+    return entry & mask;
     /* TODO: [P4-task1] */
 }
 static inline void set_attribute(PTE *entry, uint64_t bits)
 {
+    *entry |= bits;
     /* TODO: [P4-task1] */
 }
 
 static inline void clear_pgdir(uintptr_t pgdir_addr)
 {
+    uint64_t *pgdir = (uint64_t *)pgdir_addr;
+    for(int i = 0; i < 512; i++){
+        *pgdir = 0;
+        pgdir++;
+    }
     /* TODO: [P4-task1] */
 }
 
