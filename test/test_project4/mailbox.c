@@ -212,7 +212,7 @@ int main(int argc, char* argv[])
         // use this thread as send thread
         send_thread((void*)(unsigned long)id);
 
-        pthread_join(recv);
+        // pthread_join(recv);
     }
 
     return 0;

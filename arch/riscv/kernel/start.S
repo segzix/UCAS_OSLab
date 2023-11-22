@@ -9,6 +9,9 @@
 /* maybe you need another stack for booting? */
 .equ boot_stack_top_base, 0x50202000
 
+.equ kernel_stack_for_boot, 		0x50900000
+.equ kernel_stack1_for_boot,   0x508ff000
+
 .section ".bootkernel_entry","ax"
 ENTRY(_boot)
   /*
@@ -20,10 +23,16 @@ ENTRY(_boot)
   csrw CSR_SIE, zero
   csrw CSR_SIP, zero
 
-  la sp, boot_stack_top_base
+  csrr a0, CSR_MHARTID
+  bnez a0, secondary
 
-  csrr a0, CSR_MHARTID 
+  la sp, kernel_stack_for_boot
+  // this will never return
+  call boot_kernel
 
+  secondary:
+
+  la sp, kernel_stack1_for_boot
   // this will never return
   call boot_kernel
 

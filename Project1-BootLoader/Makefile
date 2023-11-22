@@ -38,7 +38,7 @@ BOOT_INCLUDE    = -I$(DIR_ARCH)/include
 BOOT_CFLAGS     = $(CFLAGS) $(BOOT_INCLUDE) -Wl,--defsym=TEXT_START=$(BOOTLOADER_ENTRYPOINT) -T riscv.lds
 
 DECOMPRESS_INCLUDE  = -I$(DIR_DEFLATE) -I$(DIR_ARCH)/include -Iinclude
-DECOMPRESS_CFLAGS   = $(CFLAGS) $(DECOMPRESS_INCLUDE) -Wl,--defsym=TEXT_START=$(USER_ENTRYPOINT) -T riscv.lds
+DECOMPRESS_CFLAGS   = $(CFLAGS) $(DECOMPRESS_INCLUDE) -Wl,--defsym=TEXT_START=$(DECOMPRESS_ENTRYPOINT) -T riscv.lds
 
 KERNEL_INCLUDE  = -I$(DIR_ARCH)/include -Iinclude
 KERNEL_CFLAGS   = $(CFLAGS) $(KERNEL_INCLUDE) -Wl,--defsym=TEXT_START=$(KERNEL_ENTRYPOINT) -T riscv.lds
@@ -68,8 +68,9 @@ DIR_DEFLATE     = ./tools/deflate
 DIR_DECOMPRESS     = ./decompress
 
 BOOTLOADER_ENTRYPOINT   = 0x50200000
-KERNEL_ENTRYPOINT       = 0x50201000
-USER_ENTRYPOINT         = 0x52000000
+KERNEL_ENTRYPOINT       = 0xffffffc050202000
+USER_ENTRYPOINT         = 0x10000
+DECOMPRESS_ENTRYPOINT   = 0x53000000
 
 # -----------------------------------------------------------------------
 # UCAS-OS Kernel Source Files

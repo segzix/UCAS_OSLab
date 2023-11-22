@@ -16,14 +16,16 @@
 #include <assert.h>
 #include <type.h>
 #include <csr.h>
+#include <pgtable.h>
 
-#define USER_ADDR 0x52000000
+#define USER_ADDR 0xffffffc052000000
 #define VERSION_BUF 50
-#define task_info_addr 0x502001fc
-#define KERNEL_STACK 0x50501000
+#define task_info_addr 0xffffffc0502001fc//对于block中的数据
+// #define KERNEL_STACK 0xffffffc050501000
 
 uint16_t task_num;
 uint16_t num_threads;
+//uint16_t swap_block_id;//换进磁盘的地址
 uint16_t num_tasks;//记录已经有过的进程数
 int version = 2; // version must between 0 and 9
 char buf[VERSION_BUF];
@@ -99,6 +101,8 @@ static void init_task_info(void)
     task_info_block_offset  = task_info_block_phyaddr % SECTOR_SIZE;
     //得到task_info的一系列信息，下面从sd卡读到内存中
 
+    //swap_block_id = task_info_block_id + task_info_block_num;
+
     bios_sd_read(TASK_MEM_BASE, task_info_block_num, task_info_block_id);
     memcpy(tasks, TASK_MEM_BASE + task_info_block_offset, task_info_block_size);
     //将task_info数组拷贝到tasks数组中
@@ -110,21 +114,23 @@ static void init_task_info(void)
 /************************************************************/
 void init_pcb_stack(
     ptr_t kernel_stack, ptr_t user_stack, ptr_t entry_point,
-    pcb_t *pcb,int argc, char *argv[])
+    pcb_t *pcb,int argc, char *argv[])//这里的userstack是虚地址，并且是内核平坦映射下的虚地址
 {
     int i;
     
     regs_context_t *pt_regs =
         (regs_context_t *)(kernel_stack - sizeof(regs_context_t));
     uintptr_t argv_base = user_stack - sizeof(uintptr_t)*(argc + 1);
+    pcb->user_sp = pcb->user_sp - sizeof(uintptr_t)*(argc + 1);
 
     //准备将该进程运行时的一些需要写寄存器的值全部放入栈中
     pt_regs->regs[1]    = (reg_t)entry_point;             //ra
     pt_regs->regs[4]    = (reg_t)pcb;                     //tp
     pt_regs->regs[10]   = (reg_t)argc;                    //a0寄存器，命令行参数长度
-    pt_regs->regs[11]   = argv_base;
+    // pt_regs->regs[11]   = argv_base;
+    pt_regs->regs[11]   = pcb->user_sp;//这里是传的命令行参数的地址(后面user_sp还得减)
     pt_regs->sepc       = (reg_t)entry_point;             //sepc
-    pt_regs->sstatus    = (reg_t)(SR_SPIE & ~SR_SPP);     //sstatus
+    pt_regs->sstatus    = (reg_t)((SR_SPIE & ~SR_SPP) | SR_SUM);     //sstatus
     pt_regs->sbadaddr   = 0;
     pt_regs->scause     = 0;
 
@@ -151,39 +157,54 @@ void init_pcb_stack(
     for(i=0; i<argc; i++){
         uint32_t len = strlen(argv[i]);
         user_sp_now = user_sp_now - len - 1;
+        pcb->user_sp = pcb->user_sp - len - 1;
 
-        (*argv_ptr) = user_sp_now;
+        (*argv_ptr) = pcb->user_sp;
         strcpy((char*)user_sp_now,argv[i]);
         argv_ptr++;
     }
     (*argv_ptr) = 0;
+
+    //  uint64_t user_sp_va = argv_va_base;
+    //                 uint64_t user_sp_pa = argv_pa_base;
+    //                 uintptr_t * argv_ptr = (ptr_t)argv_va_base;
+    //                 for(int i=0; i<argc; i++){
+    //                     uint32_t len = strlen(argv[i]);
+    //                     user_sp_va = user_sp_va - len - 1;
+    //                     user_sp_pa = user_sp_pa - len - 1;
+    //                     (*argv_ptr) = user_sp_pa;
+    //                     strcpy(user_sp_va,argv[i]);
+    //                     argv_ptr ++;
+    //                 }
     // int user_stack_size =  user_stack - user_sp_now;
     // int siz_alignment = ((user_stack_size/16) + !(user_stack_size%128==0))*16;
     // user_sp_now = user_stack - siz_alignment;
 
-    user_sp_now = user_sp_now & (~0xf);
+    // user_sp_now = user_sp_now & (~0xf);
+    pcb->user_sp = pcb->user_sp & (~0xf);
 
-    pt_regs->regs[2]  = (reg_t)user_sp_now;     //sp
-    pcb->user_sp=(reg_t)user_sp_now;
+    pt_regs->regs[2]  = (reg_t)pcb->user_sp;     //sp
+    // pcb->user_sp=(reg_t)user_sp_now;
 
     pcb->kernel_sp = (reg_t)pt_switchto;
 }
 
 void init_tcb_stack(
-    ptr_t kernel_stack, ptr_t user_stack, ptr_t entry_point, ptr_t rank_id,
-    tcb_t *tcb)
+    ptr_t kernel_stack, ptr_t user_stack, ptr_t entry_point,
+    tcb_t *tcb,int arg)
 {
     regs_context_t *pt_regs =
         (regs_context_t *)(kernel_stack - sizeof(regs_context_t));
     //准备将该进程运行时的一些需要写寄存器的值全部放入栈中
-    pt_regs->regs[1] = (reg_t)entry_point;             //ra
-    pt_regs->regs[2] = (reg_t)user_stack;              //sp
-    pt_regs->regs[4] = (reg_t)tcb;                     //tp
-    pt_regs->regs[10]= (reg_t)rank_id;                 //a0传参
-    pt_regs->sepc    = (reg_t)entry_point;             //sepc
-    pt_regs->sstatus = (reg_t)SR_SPIE;                 //sstatus
+    pt_regs->regs[1]    = (reg_t)entry_point;             //ra
+    pt_regs->regs[2]    = (reg_t)user_stack;              //sp//注意这个地方由于不需要放命令行参数因此直接将用户虚地址放进来
+    pt_regs->regs[4]    = (reg_t)tcb;                     //tp
+    pt_regs->regs[10]   = (reg_t)arg;                     //a0传参
+    pt_regs->sepc       = (reg_t)entry_point;             //sepc
+    pt_regs->sstatus    = (reg_t)((SR_SPIE & ~SR_SPP) | SR_SUM);     //sstatus
+    pt_regs->sbadaddr   = 0;
+    pt_regs->scause     = 0;
 
-    tcb->kernel_sp -= sizeof(regs_context_t);
      /* TODO: [p2-task3] initialization of registers on kernel stack
       * HINT: sp, ra, sepc, sstatus
       * NOTE: To run the task in user mode, you should set corresponding bits
@@ -199,9 +220,9 @@ void init_tcb_stack(
         (switchto_context_t *)((ptr_t)pt_regs - sizeof(switchto_context_t));
     //初始化该进程控制块中的sp指针
     pt_switchto->regs[0] = (reg_t)ret_from_exception;    //ra
-    pt_switchto->regs[1] = (reg_t)(tcb->kernel_sp);      //sp
+    pt_switchto->regs[1] = (reg_t)(pt_regs);      //sp
 
-    tcb->kernel_sp -= sizeof(switchto_context_t);
+    tcb->kernel_sp = pt_switchto;
 }
 
 // static void init_pcb(void)
@@ -251,36 +272,71 @@ static void init_pcb(void)
     current_running_1 = &pid1_pcb;
 }
 
-static void init_memory(void)
+static void init_page_general(void)
 {
-    int mem_tasks; 
+    /* TODO: [p2-task1] load needed tasks and init their corresponding PCB */
+
+    int num_pages; 
     
-    for(mem_tasks = 0; mem_tasks < task_num; mem_tasks++)
-        load_task_img(mem_tasks);
+    for(num_pages = 0; num_pages < PAGE_NUM; num_pages++){
+
+        page_general[num_pages].valid = 0;
+
+        page_general[num_pages].pin = 0;
+        page_general[num_pages].using = 0;
+        page_general[num_pages].kva = num_pages * PAGE_SIZE + FREEMEM_KERNEL;
+
+        page_general[num_pages].pid = -1;
+        page_general[num_pages].pgdir = -1;
+        page_general[num_pages].va = -1;
+
+         page_general[num_pages].table_not = 0;//这一项专门用来判断是不是页表项
+    }
 
 }
+// static void init_memory(void)
+// {
+//     int mem_tasks; 
+    
+//     for(mem_tasks = 0; mem_tasks < task_num; mem_tasks++)
+//         load_task_img(mem_tasks);
+
+// }
 //初始时将所有的程序加载到内存中来
 
 static void init_shell(void)
 {
-    
+    uintptr_t kva_user_stack;
+
+    pcb[num_tasks].recycle = 0;
+    pcb[num_tasks].pgdir = allocPage(1,1,0,1,2);//分配根目录页//这里的给出的用户映射的虚地址没有任何意义  //这里是2因为能确定是shell
+    clear_pgdir(pcb[num_tasks].pgdir); //清空根目录页
+    share_pgtable(pcb[num_tasks].pgdir,pa2kva(PGDIR_PA));//内核地址映射拷贝
+    load_task_img(num_tasks,pcb[num_tasks].pgdir,2);//load进程并且为给进程建立好地址映射
     //pcb[num_tasks].kernel_sp = KERNEL_STACK + (num_tasks + 1) * 0x1000;
     //pcb[num_tasks].user_sp = pcb[num_tasks].kernel_sp;
-    pcb[num_tasks].kernel_sp = allocKernelPage(1) + PAGE_SIZE;
-    pcb[num_tasks].user_sp   = allocUserPage(1) + PAGE_SIZE;
+
+    pcb[num_tasks].kernel_sp = allocPage(1,1,0,0,2) + 1 * PAGE_SIZE;//不是页表，但是要被pin住//只要没有所谓的用户对应的地址，va全部放0
+    pcb[num_tasks].user_sp   = USER_STACK_ADDR;
+
+    kva_user_stack = alloc_page_helper(pcb[num_tasks].user_sp - PAGE_SIZE, pcb[num_tasks].pgdir,1,2) + 1 * PAGE_SIZE;//比栈地址低的一张物理页
+    alloc_page_helper(pcb[num_tasks].user_sp - 2*PAGE_SIZE, pcb[num_tasks].pgdir,1,2);//比栈地址低的第二张物理页
+
     pcb[num_tasks].wait_list.prev = &pcb[num_tasks].wait_list;
     pcb[num_tasks].wait_list.next = &pcb[num_tasks].wait_list;
     pcb[num_tasks].kill = 0;
+    pcb[num_tasks].truepid = num_tasks + 2;
     pcb[num_tasks].pid = num_tasks + 2;
     pcb[num_tasks].tid = 0;
+    pcb[num_tasks].thread_num = 0;
     pcb[num_tasks].hart_mask = 0x3;
     pcb[num_tasks].current_mask = 0x0;
     for(int k = 0;k < TASK_LOCK_MAX;k++){
         pcb[num_tasks].mutex_lock_key[k] = 0;
     }
     strcpy(pcb[num_tasks].pcb_name, "shell");
-    init_pcb_stack( pcb[num_tasks].kernel_sp, pcb[num_tasks].user_sp, 
-                    tasks[num_tasks].task_entrypoint, &pcb[num_tasks],0,0);
+    init_pcb_stack( pcb[num_tasks].kernel_sp, kva_user_stack, 
+                    tasks[num_tasks].task_entrypoint, &pcb[num_tasks],0,0);//记住这里的使用内核的映射去初始化栈的
 
     list_add(&pcb[num_tasks].list, &ready_queue);
     pcb[num_tasks].status = TASK_READY; 
@@ -328,6 +384,7 @@ static void init_syscall(void)
 
     syscall[SYSCALL_TASK_SET]       = (long(*)())do_task_set;
     syscall[SYSCALL_TASK_SETP]      = (long(*)())do_task_set_p;
+    syscall[SYSCALL_THREAD_CREATE]  = (long(*)())do_thread_create;
     // syscall[SYSCALL_THREAD_CREATE]  = (long(*)())do_thread_create;
     // syscall[SYSCALL_THREAD_YIELD]   = (long(*)())do_thread_scheduler;
 
@@ -338,7 +395,7 @@ static void init_syscall(void)
 int main(void)
 {
     if(get_current_cpu_id() == 0){
-        lock_kernel();
+        // lock_kernel();
         // Init jump table provided by kernel and bios(ΦωΦ)
         init_jmptab();
 
@@ -347,8 +404,13 @@ int main(void)
 
         // Init Process Control Blocks |•'-'•) ✧
         // init_pcb();
-        init_memory();
+        // init_memory();
         init_pcb();
+        init_locks();
+        init_barriers();
+        init_semaphores();
+        init_mbox();
+        init_page_general();
 
         current_running = &current_running_0;
 
@@ -359,10 +421,6 @@ int main(void)
         time_base = bios_read_fdt(TIMEBASE);
 
         // Init lock mechanism o(´^｀)o
-        init_locks();
-        init_barriers();
-        init_semaphores();
-        init_mbox();
         printk("> [INIT] Lock mechanism initialization succeeded.\n");
 
         // Init interrupt (^_^)
@@ -390,7 +448,7 @@ int main(void)
         //   and then execute them.
 
         // Infinite while loop, where CPU stays in a low-power state (QAQQQQQQQQQQQ)
-        unlock_kernel();
+        // unlock_kernel();
         while (1)
         {
             // If you do non-preemptive scheduling, it's used to surrender control
@@ -402,14 +460,15 @@ int main(void)
         }
     }
     else{
-        lock_kernel();
+        // lock_kernel();
         current_running = &current_running_1;
         setup_exception();
         // lock_kernel();
         bios_set_timer(get_ticks() + TIMER_INTERVAL);
         // unlock_kernel();
         enable_interrupt();
-        unlock_kernel();
+        //clean_temp_page(PGDIR_PA);//清空临时映射
+        // unlock_kernel();
         while(1){
             enable_preempt();
             asm volatile("wfi");

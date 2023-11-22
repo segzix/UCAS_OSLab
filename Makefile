@@ -42,7 +42,7 @@ BOOT_CFLAGS     = $(CFLAGS) $(BOOT_INCLUDE) -Wl,--defsym=TEXT_START=$(BOOTLOADER
 
 # <<<<<<< HEAD
 
-DECOMPRESS_INCLUDE  = -I$(DIR_DEFLATE) -I$(DIR_ARCH)/include -Iinclude
+DECOMPRESS_INCLUDE  = -I$(DIR_DEFLATE) -I$(DIR_ARCH)/include #-Iinclude
 DECOMPRESS_CFLAGS   = $(CFLAGS) $(DECOMPRESS_INCLUDE) -Wl,--defsym=TEXT_START=$(DECOMPRESS_ENTRYPOINT) -T riscv.lds
 
 #KERNEL_INCLUDE  = -I$(DIR_ARCH)/include -Iinclude
@@ -89,7 +89,7 @@ BOOTLOADER_ENTRYPOINT   = 0x50200000
 DECOMPRESS_ENTRYPOINT   = 0x53000000
 # =======
 KERNEL_ENTRYPOINT       = 0xffffffc050202000
-USER_ENTRYPOINT         = 0x200000
+USER_ENTRYPOINT         = 0x10000
 # >>>>>>> start/Project4-Virtual_Memory_Management
 
 # -----------------------------------------------------------------------
@@ -113,7 +113,7 @@ SRC_DEFLATE_2 = $(wildcard $(DIR_DEFLATE)/lib/*.c)
 
 # SRC_MAIN    = $(SRC_ARCH) $(SRC_INIT) $(SRC_BIOS) $(SRC_DRIVER) $(SRC_KERNEL) $(SRC_LIBS)
 # SRC_MAIN    = $(SRC_ARCH) $(SRC_INIT) $(SRC_BIOS) $(SRC_KERNEL) $(SRC_LIBS)
-SRC_DECOMPRESS= $(SRC_DECOMPRESS_1) $(SRC_DECOMPRESS_2) $(SRC_DEFLATE_1) $(SRC_DEFLATE_2) $(SRC_BIOS) $(SRC_STRING)
+SRC_DECOMPRESS= $(SRC_DECOMPRESS_1) $(SRC_DECOMPRESS_2) $(SRC_DEFLATE_1) $(SRC_DEFLATE_2) #$(SRC_BIOS) $(SRC_STRING)
 
 # =======
 SRC_START   = $(wildcard $(DIR_ARCH)/kernel/*.c)
@@ -229,12 +229,7 @@ $(ELF_CREATEIMAGE): $(SRC_CREATEIMAGE) $(SRC_DEFLATE_1) $(SRC_DEFLATE_2)
 	$(HOST_CC) $(SRC_CREATEIMAGE) $(SRC_DEFLATE_1) $(SRC_DEFLATE_2) -o $@ -ggdb -Wall -I$(DIR_DEFLATE) -I$(DIR_ARCH)/include -DFREESTANDING
 
 image: $(ELF_CREATEIMAGE) $(ELF_BOOT) $(ELF_DECOMPRESS) $(ELF_MAIN) $(ELF_USER)
-# =======
-# $(ELF_CREATEIMAGE): $(SRC_CREATEIMAGE)
-# 	$(HOST_CC) $(SRC_CREATEIMAGE) -o $@ -ggdb -Wall
-
-# image: $(ELF_CREATEIMAGE) $(ELF_BOOT) $(ELF_MAIN) $(ELF_USER)
-# >>>>>>> start/Project3-Interactive_OS_and_Process_Management
-	cd $(DIR_BUILD) && ./$(<F) --extended $(filter-out $(<F), $(^F))
+	cd $(DIR_BUILD) && ./$(<F) --extended $(filter-out $(<F), $(^F)) 
+#&& dd if=//dev/zero of=image oflag=append conv=notrunc bs=512MB count=2
 
 .PHONY: image

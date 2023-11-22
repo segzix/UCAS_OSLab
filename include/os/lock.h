@@ -138,6 +138,27 @@ void do_mbox_close(int mbox_idx);
 int do_mbox_send(int mbox_idx, void * msg, int msg_length);
 int do_mbox_recv(int mbox_idx, void * msg, int msg_length);
 
+// #define MAX_MBOX_LENGTH (64)
+
+// typedef struct mailbox
+// {
+//     // TODO [P3-TASK2 mailbox]
+//     list_head send_block_queue;
+//     list_head recv_block_queue;
+//     int buffer_head;
+//     int buffer_tail;
+//     spin_lock_t lock;
+//     int usnr;
+//     char key[32];
+//     char mbox_buf[MAX_MBOX_LENGTH];
+// } mailbox_t;
+
+// #define MBOX_NUM 16
+// void init_mbox();
+// int do_mbox_open(char *name);
+// void do_mbox_close(int mbox_idx);
+// int do_mbox_send(int mbox_idx, char * msg, int msg_length);
+// int do_mbox_recv(int mbox_idx, char * msg, int msg_length);
 /************************************************************/
 
 #endif

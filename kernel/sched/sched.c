@@ -6,14 +6,16 @@
 #include <os/time.h>
 #include <os/mm.h>
 #include <os/task.h>
+#include <os/loader.h>
 #include <screen.h>
 #include <printk.h>
 #include <assert.h>
+#include <pgtable.h>
 
 pcb_t pcb[NUM_MAX_TASK];
 tcb_t tcb[NUM_MAX_TASK];
-const ptr_t pid0_stack = INIT_KERNEL_STACK + PAGE_SIZE;
-const ptr_t pid1_stack = INIT_KERNEL_STACK + 2*PAGE_SIZE;
+const ptr_t pid0_stack = 0xffffffc050900000;
+const ptr_t pid1_stack = 0xffffffc0508ff000;
 pcb_t pid0_pcb = {
     .pid = 0,
     .tid = 0,
@@ -23,6 +25,8 @@ pcb_t pid0_pcb = {
     .current_mask = 0x1,
     //每个核对应的都有可以跑的
 
+    .pgdir = PGDIR_PA + KVA_OFFSET,
+    .recycle = 0,
     .list = {NULL,NULL}, 
     .status = TASK_RUNNING
 };
@@ -35,6 +39,8 @@ pcb_t pid1_pcb = {
     .current_mask = 0x2,
     //每个核对应的都有可以跑的
 
+    .pgdir = PGDIR_PA + KVA_OFFSET,
+    .recycle = 0,
     .list = {NULL,NULL}, 
     .status = TASK_RUNNING
 };
@@ -55,6 +61,17 @@ pcb_t * current_running_1;
 pid_t process_id = 1;
 //初始进程pid号为1，为内核进程
 
+void clean_temp_page(uint64_t pgdir_addr){
+    PTE * pgdir = pgdir_addr;
+    for(uint64_t va = 0x50000000lu; va < 0x51000000lu; va += 0x200000lu){
+        va &= VA_MASK;
+        uint64_t vpn2 =
+            va >> (NORMAL_PAGE_SHIFT + PPN_BITS + PPN_BITS);//根目录页中的临时映射清空
+        pgdir[vpn2] = 0;
+    }
+
+}
+
 void do_scheduler(void)
 {   
     spin_lock_acquire(&ready_spin_lock);
@@ -64,6 +81,16 @@ void do_scheduler(void)
     current_running = get_current_cpu_id() ? &current_running_1 : &current_running_0;
     cpu_hartmask = get_current_cpu_id() ? 0x2 : 0x1;
     check_sleeping();
+
+    if((*current_running)->pid == 2){
+        for(unsigned i = 0;i < NUM_MAX_TASK;i++){
+            if((pcb[i].pid != 2) && pcb[i].recycle && pcb[i].status == TASK_EXITED){
+                free_all_pagemapping(pcb[i].pgdir);
+                free_all_pagetable(pcb[i].pgdir);
+                pcb[i].recycle = 0;
+            }
+        }
+    }
     // TODO: [p2-task3] Check sleep queue to wake up PCBs
 
     /************************************************************/
@@ -99,57 +126,61 @@ void do_scheduler(void)
     // 将当前执行进程的screen_cursor修改一下？
 
     // TODO: [p2-task1] Modify the current_running pointer.
-    spin_lock_release(&ready_spin_lock);
-
-    switch_to(prev_running, (*current_running));
-    // TODO: [p2-task1] switch_to current_running
-
-}
-
-void do_thread_scheduler(void)
-{   
-    // TODO: [p2-task3] Check sleep queue to wake up PCBs
-
-    spin_lock_acquire(&ready_spin_lock);
-    current_running = get_current_cpu_id() ? &current_running_1 : &current_running_0;
-    /************************************************************/
-    /* Do not touch this comment. Reserved for future projects. */
-    /************************************************************/
-    list_node_t* list_check;
-    pcb_t* prev_running = (*current_running);
-
-    if((*current_running)->status == TASK_RUNNING){
-        list_add(&((*current_running)->list), &ready_queue);
-        (*current_running)->status = TASK_READY;
-    } 
-    //注意这里如果status为BLOCKED则不用执行上面的操作，因为已经加入到对应lock的block_queue中了
-    list_check = ready_queue.next;
-    (*current_running) = list_entry(list_check, pcb_t, list);
-
-    while(((*current_running)->pid != prev_running->pid) || ((*current_running)->tid == 0) || ((*current_running)->tid ==  prev_running->tid)){
-        list_check = list_check->next;
-        (*current_running) = list_entry(list_check, pcb_t, list);
-    }
-    list_del(&((*current_running)->list));
-    (*current_running)->status = TASK_RUNNING;
-    //将当前执行的进程对应的pcb加入ready队列之中，同时将ready队列的最前端进程取下来，由prev_running指向它。
-    //注意将两个pcb的进程状态修改。
-
-    process_id = (*current_running)->pid;
-    //修改当前执行进程ID
-
-    /*vt100_move_cursor(current_running->cursor_x, current_running->cursor_y);
-    screen_cursor_x = current_running->cursor_x;
-    screen_cursor_y = current_running->cursor_y;*/
-    // 将当前执行进程的screen_cursor修改一下？
-
-    // TODO: [p2-task1] Modify the current_running pointer.
-    spin_lock_release(&ready_spin_lock);
+    set_satp(SATP_MODE_SV39, (*current_running)->pid, kva2pa((*current_running)->pgdir) >> NORMAL_PAGE_SHIFT);
+    local_flush_tlb_all();
+    local_flush_icache_all();
     
+    spin_lock_release(&ready_spin_lock);
+
     switch_to(prev_running, (*current_running));
     // TODO: [p2-task1] switch_to current_running
 
 }
+
+// void do_thread_scheduler(void)
+// {   
+//     // TODO: [p2-task3] Check sleep queue to wake up PCBs
+
+//     spin_lock_acquire(&ready_spin_lock);
+//     current_running = get_current_cpu_id() ? &current_running_1 : &current_running_0;
+//     /************************************************************/
+//     /* Do not touch this comment. Reserved for future projects. */
+//     /************************************************************/
+//     list_node_t* list_check;
+//     pcb_t* prev_running = (*current_running);
+
+//     if((*current_running)->status == TASK_RUNNING){
+//         list_add(&((*current_running)->list), &ready_queue);
+//         (*current_running)->status = TASK_READY;
+//     } 
+//     //注意这里如果status为BLOCKED则不用执行上面的操作，因为已经加入到对应lock的block_queue中了
+//     list_check = ready_queue.next;
+//     (*current_running) = list_entry(list_check, pcb_t, list);
+
+//     while(((*current_running)->pid != prev_running->pid) || ((*current_running)->tid == 0) || ((*current_running)->tid ==  prev_running->tid)){
+//         list_check = list_check->next;
+//         (*current_running) = list_entry(list_check, pcb_t, list);
+//     }
+//     list_del(&((*current_running)->list));
+//     (*current_running)->status = TASK_RUNNING;
+//     //将当前执行的进程对应的pcb加入ready队列之中，同时将ready队列的最前端进程取下来，由prev_running指向它。
+//     //注意将两个pcb的进程状态修改。
+
+//     process_id = (*current_running)->pid;
+//     //修改当前执行进程ID
+
+//     /*vt100_move_cursor(current_running->cursor_x, current_running->cursor_y);
+//     screen_cursor_x = current_running->cursor_x;
+//     screen_cursor_y = current_running->cursor_y;*/
+//     // 将当前执行进程的screen_cursor修改一下？
+
+//     // TODO: [p2-task1] Modify the current_running pointer.
+//     spin_lock_release(&ready_spin_lock);
+    
+//     switch_to(prev_running, (*current_running));
+//     // TODO: [p2-task1] switch_to current_running
+
+// }
 
 void do_sleep(uint32_t sleep_time)
 {
@@ -197,6 +228,8 @@ void do_unblock(list_node_t *pcb_node)
 
 pid_t do_exec(char *name, int argc, char *argv[])
 {
+    uintptr_t kva_user_stack;
+
     current_running = get_current_cpu_id() ? &current_running_1 : &current_running_0;
     /* TODO [P3-TASK1] exec exit kill waitpid ps*/
     for(int i=1;i<task_num;i++){
@@ -204,17 +237,38 @@ pid_t do_exec(char *name, int argc, char *argv[])
         if(strcmp(tasks[i].task_name,name) == 0){
             for(int id=0; id < NUM_MAX_TASK; id++){
                 if(pcb[id].status == TASK_EXITED){
-                    pcb[id].kernel_sp  = allocKernelPage(1) + PAGE_SIZE;
-                    pcb[id].user_sp    = allocUserPage(1) +   PAGE_SIZE;
+
+                    pcb[id].recycle = 0;
+                    pcb[id].pgdir = allocPage(1,1,0,1,id+2);//分配根目录页//这里的给出的用户映射的虚地址没有任何意义
+                    clear_pgdir(pcb[id].pgdir); //清空根目录页
+                    share_pgtable(pcb[id].pgdir,pa2kva(PGDIR_PA));//内核地址映射拷贝
+                    load_task_img(i,pcb[id].pgdir,id+2);//load进程并且为给进程建立好地址映射(这一步实际上包括了建立好除了根目录页的所有页表以及除了栈以外的所有映射)
+
+
+                    pcb[id].kernel_sp  = allocPage(1,1,0,0,id+2) + 1 * PAGE_SIZE;//这里的给出的用户映射的虚地址没有任何意义
+                    pcb[id].user_sp    = USER_STACK_ADDR;
+
+                    kva_user_stack = alloc_page_helper(pcb[id].user_sp - PAGE_SIZE, pcb[id].pgdir,1,id+2) + 1 * PAGE_SIZE;//比栈地址低的一张物理页
+                    alloc_page_helper(pcb[id].user_sp - 2*PAGE_SIZE, pcb[id].pgdir,1,id+2);//比栈地址低的第二张物理页
+                    // uintptr_t va = alloc_page_helper(pcb[id].user_sp - PAGE_SIZE, pcb[id].pgdir) + PAGE_SIZE;
+                    //内核对应的映射到这张物理页的地址，后面对于该用户栈的操作全部通过内核映射表进行
+                    //并且考虑到后面要加一个东西导致真实的
+                    //这列应该可以直接用用户的也页表映射去访问
+                    // pcb[id].kernel_sp  = allocKernelPage(1) + PAGE_SIZE;
+                    // pcb[id].user_sp    = allocUserPage(1) +   PAGE_SIZE;
                     pcb[id].cursor_x   = 0;
                     pcb[id].cursor_y   = 0;
                     pcb[id].wakeup_time = 0;
+                    pcb[id].truepid = id + 2;
                     pcb[id].pid = id + 2;
                     pcb[id].tid = 0;
+                    pcb[id].thread_num = 0;
                     pcb[id].wait_list.prev = &pcb[id].wait_list;
                     pcb[id].wait_list.next = &pcb[id].wait_list;
                     pcb[id].kill = 0;
                     pcb[id].hart_mask = (*current_running)->hart_mask;
+
+                    // clean_temp_page(pcb[id].pgdir);
 
                     for(int k = 0;k < TASK_LOCK_MAX;k++){
                         pcb[id].mutex_lock_key[k] = 0;
@@ -222,7 +276,7 @@ pid_t do_exec(char *name, int argc, char *argv[])
 
                     memcpy((void*)pcb[id].pcb_name, (void*)tasks[i].task_name, 32);
                     // load_task_img(tasks[i].name);
-                    init_pcb_stack( pcb[id].kernel_sp,pcb[id].user_sp,
+                    init_pcb_stack( pcb[id].kernel_sp,kva_user_stack,
                                     tasks[i].task_entrypoint,&pcb[id],argc,argv);
                     // printl("%d\n",pcb[id].user_sp);
 
@@ -238,11 +292,86 @@ pid_t do_exec(char *name, int argc, char *argv[])
     return 0;
 }
 
+
+
+
+void do_thread_create(pid_t *thread, void *thread_entrypoint, void *arg){
+    uintptr_t kva_user_stack;
+    // int id = tasknum;
+    // pcb[id].pid = id + 1;
+    // pcb[id].kernel_sp = allocKernelPage(1) + 1 * PAGE_SIZE;
+    // pcb[id].user_sp   = allocUserPage(1) +   1 * PAGE_SIZE;
+    // pcb[id].status = TASK_READY;
+    // pcb[id].cursor_x = 0;
+    // pcb[id].cursor_y = 0;
+    // pcb[id].wakeup_time = 0;
+    // init_pcb_stack(pcb[id].kernel_sp,pcb[id].user_sp,entrypoint,pcb+id,0,NULL);
+    // list_add(&(pcb[id].list),&ready_queue);
+    current_running = get_current_cpu_id()? &current_running_1 : &current_running_0;
+    int id;
+    for(id = 0; id < NUM_MAX_TASK; id++){
+        if(pcb[id].status == TASK_EXITED){
+            (*current_running)->thread_num ++;
+            pcb[id].tid = (*current_running)->thread_num;
+
+            pcb[id].recycle = 0;
+            pcb[id].pgdir = (*current_running)->pgdir;
+
+            pcb[id].kernel_sp  = allocPage(1,1,0,0,id+2) + 1 * PAGE_SIZE;//这里的给出的用户映射的虚地址没有任何意义
+            pcb[id].user_sp    = USER_STACK_ADDR + 2 * PAGE_SIZE * pcb[id].tid;//必须是分配两页用户栈
+
+            kva_user_stack = alloc_page_helper(pcb[id].user_sp - PAGE_SIZE, pcb[id].pgdir,1,id+2) + 1 * PAGE_SIZE;//比栈地址低的一张物理页
+            alloc_page_helper(pcb[id].user_sp - 2*PAGE_SIZE, pcb[id].pgdir,1,id+2);//比栈地址低的第二张物理页
+            // uintptr_t va = alloc_page_helper(pcb[id].user_sp - PAGE_SIZE, pcb[id].pgdir) + PAGE_SIZE;
+            //内核对应的映射到这张物理页的地址，后面对于该用户栈的操作全部通过内核映射表进行
+            //并且考虑到后面要加一个东西导致真实的
+            //这列应该可以直接用用户的也页表映射去访问
+            // pcb[id].kernel_sp  = allocKernelPage(1) + PAGE_SIZE;
+            // pcb[id].user_sp    = allocUserPage(1) +   PAGE_SIZE;
+            pcb[id].cursor_x   = 0;
+            pcb[id].cursor_y   = 0;
+            pcb[id].wakeup_time = 0;
+            pcb[id].truepid = (*current_running)->truepid;
+            pcb[id].pid = id + 2;
+            pcb[id].thread_num = 0;
+            pcb[id].wait_list.prev = &pcb[id].wait_list;
+            pcb[id].wait_list.next = &pcb[id].wait_list;
+            pcb[id].kill = 0;
+            pcb[id].hart_mask = (*current_running)->hart_mask;
+
+            // clean_temp_page(pcb[id].pgdir);
+
+            for(int k = 0;k < TASK_LOCK_MAX;k++){
+                pcb[id].mutex_lock_key[k] = 0;
+            }
+
+            ptr_t entry_point = (ptr_t)thread_entrypoint;
+
+            memcpy((void*)pcb[id].pcb_name, (void*)(*current_running)->pcb_name, 32);
+            // load_task_img(tasks[i].name);
+            init_tcb_stack( pcb[id].kernel_sp,pcb[id].user_sp,
+                            entry_point,&pcb[id],(uint64_t)arg);//这里直接传用户的虚地址即可
+            // printl("%d\n",pcb[id].user_sp);
+
+
+            list_add(&(pcb[id].list),&ready_queue);
+            *thread = pcb[id].pid;
+
+            pcb[id].status     = TASK_READY;
+
+            num_tasks++;
+            return ;
+        }
+    }
+    return;
+}
+
 void do_exit(void)
 {
     int i;
     current_running = get_current_cpu_id() ? &current_running_1 : &current_running_0;
     (*current_running)->status = TASK_EXITED;
+    (*current_running)->recycle = 1;
 
     for(i = 0;i < TASK_LOCK_MAX;i++){
         if((*current_running)->mutex_lock_key[i] != 0)
@@ -327,20 +456,20 @@ pid_t do_getpid(){
     return (*current_running)->pid;
 }
 
-void do_thread_create(uint64_t addr,uint64_t thread_id)
-{
-    current_running = get_current_cpu_id() ? &current_running_1 : &current_running_0;
-    tcb[num_threads].kernel_sp = allocKernelPage(1) + PAGE_SIZE;
-    tcb[num_threads].user_sp   = allocUserPage(1)   + PAGE_SIZE;
-    list_add(&tcb[num_threads].list, &ready_queue);
-    tcb[num_threads].pid = (*current_running)->pid;
-    tcb[num_threads].tid = thread_id+1;
-    tcb[num_threads].status = TASK_READY;
+// void do_thread_create(uint64_t addr,uint64_t thread_id)
+// {
+//     current_running = get_current_cpu_id() ? &current_running_1 : &current_running_0;
+//     tcb[num_threads].kernel_sp = allocKernelPage(1) + PAGE_SIZE;
+//     tcb[num_threads].user_sp   = allocUserPage(1)   + PAGE_SIZE;
+//     list_add(&tcb[num_threads].list, &ready_queue);
+//     tcb[num_threads].pid = (*current_running)->pid;
+//     tcb[num_threads].tid = thread_id+1;
+//     tcb[num_threads].status = TASK_READY;
         
-    init_tcb_stack( tcb[num_threads].kernel_sp, tcb[num_threads].user_sp, 
-                    addr, thread_id, &tcb[num_threads]); 
-    num_threads++;
-}
+//     init_tcb_stack( tcb[num_threads].kernel_sp, tcb[num_threads].user_sp, 
+//                     addr, thread_id, &tcb[num_threads]); 
+//     num_threads++;
+// }
 
 int do_process_show()
 {

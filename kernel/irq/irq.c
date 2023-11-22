@@ -1,3 +1,4 @@
+#include "os/smp.h"
 #include <os/irq.h>
 #include <os/time.h>
 #include <os/sched.h>
@@ -6,12 +7,16 @@
 #include <printk.h>
 #include <assert.h>
 #include <screen.h>
+#include <os/mm.h>
+#include <pgtable.h>
+// #include <stdint.h>
 
 handler_t irq_table[IRQC_COUNT];
 handler_t exc_table[EXCC_COUNT];
 
 void interrupt_helper(regs_context_t *regs, uint64_t stval, uint64_t scause)
 {
+    //lock_kernel();
 
     current_running = get_current_cpu_id() ? &current_running_1 : &current_running_0;
     if((*current_running)->kill == 1)
@@ -30,6 +35,7 @@ void interrupt_helper(regs_context_t *regs, uint64_t stval, uint64_t scause)
     //stval传递为interrupt值，确定类型
     // TODO: [p2-task3] & [p2-task4] interrupt handler.
     // call corresponding handler by the value of `scause`
+    //unlock_kernel();
 
 }
 
@@ -50,9 +56,9 @@ void init_exception()
     exc_table[EXCC_BREAKPOINT]      = (handler_t)handle_other;
     exc_table[EXCC_LOAD_ACCESS]     = (handler_t)handle_other;
     exc_table[EXCC_STORE_ACCESS]    = (handler_t)handle_other;
-    exc_table[EXCC_INST_PAGE_FAULT] = (handler_t)handle_other;
-    exc_table[EXCC_LOAD_PAGE_FAULT] = (handler_t)handle_other;
-    exc_table[EXCC_STORE_PAGE_FAULT]= (handler_t)handle_other;
+    exc_table[EXCC_INST_PAGE_FAULT] = (handler_t)handle_pagefault_access;
+    exc_table[EXCC_LOAD_PAGE_FAULT] = (handler_t)handle_pagefault_access;
+    exc_table[EXCC_STORE_PAGE_FAULT]= (handler_t)handle_pagefault_store;
     /* TODO: [p2-task3] initialize exc_table */
     /* NOTE: handle_syscall, handle_other, etc.*/
 
@@ -94,4 +100,110 @@ void handle_other(regs_context_t *regs, uint64_t stval, uint64_t scause)
     printk("sepc: 0x%lx\n\r", regs->sepc);
     printk("tval: 0x%lx cause: 0x%lx\n", stval, scause);
     assert(0);
+}
+
+void handle_pagefault_access(regs_context_t *regs, uint64_t stval, uint64_t scause)
+{
+    current_running = get_current_cpu_id() ? &current_running_1 : &current_running_0;
+    uint16_t search_block_id;//从磁盘中取出时的扇区号
+    PTE * search_PTE_swap;
+
+    search_PTE_swap = search_and_set_PTE(stval,(*current_running)->pgdir,(*current_running)->pid);//找寻到对应的页表项
+    
+    
+    if(*search_PTE_swap % 2 == 1){//p位有效
+        set_attribute(search_PTE_swap, get_attribute(*search_PTE_swap,PA_ATTRIBUTE_MASK) |_PAGE_PRESENT |_PAGE_ACCESSED);
+    }
+    else{
+        if((*search_PTE_swap & _PAGE_SOFT)){//软件位有，则是在硬盘上
+            search_block_id = (uint16_t)get_pfn(*search_PTE_swap);//确定扇区上的扇区号
+            uint64_t kva = allocPage(1,0,stval,0,(*current_running)->pid);//分配出一块空间,并且这里肯定不是页表，也不用被pin住
+
+            bios_sd_read(kva2pa(kva), 8, search_block_id);
+
+            set_pfn(search_PTE_swap,kva2pa(kva) >> NORMAL_PAGE_SHIFT);//
+            set_attribute(search_PTE_swap,_PAGE_PRESENT | _PAGE_READ | _PAGE_WRITE | _PAGE_EXEC
+                                    |_PAGE_ACCESSED| _PAGE_DIRTY| _PAGE_USER);
+            //将硬盘中的内容读到内存中(内存中可能被换出的内容在allocpage中已经被换出)，然后再将页表映射建立好
+        }
+        else{//软件位无，则需要新分配物理页
+            uint64_t kva = allocPage(1,0,stval,0,(*current_running)->pid);//分配出一块空间
+
+            set_pfn(search_PTE_swap,kva2pa(kva) >> NORMAL_PAGE_SHIFT);//
+            set_attribute(search_PTE_swap,_PAGE_PRESENT | _PAGE_READ | _PAGE_WRITE | _PAGE_EXEC
+                                    |_PAGE_ACCESSED| _PAGE_DIRTY| _PAGE_USER);
+            //将硬盘中的内容读到内存中(内存中可能被换出的内容在allocpage中已经被换出)，然后再将页表映射建立好
+        }
+    }
+
+    local_flush_tlb_all();
+    // for(int i=0; i<=sw_top; i++){
+    //     if(sw_pool[i].valid && pid == sw_pool[i].pid && ((stval >> 12) << 12) == sw_pool[i].va){
+    //         uint64_t kva = allocPage(1);
+    //         uint64_t bias = padding_ADDR/512;
+    //         bios_sdread(kva2pa(kva), 8, bias + 8*i);
+    //         PTE * pmd3 = sw_pool[i].pmd3;
+    //         set_pfn(pmd3,kva2pa(kva) >> NORMAL_PAGE_SHIFT);
+    //         set_attribute(pmd3,_PAGE_PRESENT | _PAGE_READ | _PAGE_WRITE | _PAGE_EXEC
+    //                          |_PAGE_ACCESSED| _PAGE_DIRTY| _PAGE_USER);
+    //         local_flush_tlb_all();
+    //         sw_pool[i].valid = 0;
+    //         if(i == sw_top){
+    //             sw_top --;
+    //         }
+    //         printl("retain swap page successful! %ld\n",sw_pool[i].va);
+    //         if(am_siz < 4096){
+    //             am_pool[am_tail].pid = (*current_running)->pid;
+    //             am_pool[am_tail].pa = kva2pa(kva);
+    //             am_pool[am_tail].pmd3 = pmd3;
+    //             am_pool[am_tail].va = ((stval >> 12) << 12);
+    //             am_pool[am_tail].valid = 1;
+    //             am_tail++;
+    //             if(am_tail == 4096)
+    //                 am_tail = 0;
+    //             am_siz++;
+    //         }
+    //         return;
+    //     }
+    // }
+
+    // alloc_page_helper(stval,(*current_running)->pgdir,1);
+    // local_flush_tlb_all();
+}
+
+void handle_pagefault_store(regs_context_t *regs, uint64_t stval, uint64_t scause)
+{
+    current_running = get_current_cpu_id() ? &current_running_1 : &current_running_0;
+    uint16_t search_block_id;//从磁盘中取出时的扇区号
+    PTE * search_PTE_swap;
+
+    search_PTE_swap = search_and_set_PTE(stval,(*current_running)->pgdir,(*current_running)->pid);
+    
+    if(*search_PTE_swap % 2 == 1){//p位有效
+        set_attribute(search_PTE_swap, get_attribute(*search_PTE_swap,PA_ATTRIBUTE_MASK) |_PAGE_PRESENT |_PAGE_ACCESSED| _PAGE_DIRTY);
+    }
+    else{
+        if((*search_PTE_swap & _PAGE_SOFT)){//软件位有，则是在硬盘上
+            search_block_id = (uint16_t)get_pfn(*search_PTE_swap);//确定扇区上的扇区号
+            uint64_t kva = allocPage(1,0,stval,0,(*current_running)->pid);//分配出一块空间
+
+            bios_sd_read(kva2pa(kva), 8, search_block_id);
+
+            set_pfn(search_PTE_swap,kva2pa(kva) >> NORMAL_PAGE_SHIFT);//
+            set_attribute(search_PTE_swap,_PAGE_PRESENT | _PAGE_READ | _PAGE_WRITE | _PAGE_EXEC
+                                    |_PAGE_ACCESSED| _PAGE_DIRTY| _PAGE_USER);
+            //将硬盘中的内容读到内存中(内存中可能被换出的内容在allocpage中已经被换出)，然后再将页表映射建立好
+        }
+        else{//软件位无，则需要新分配物理页
+            uint64_t kva = allocPage(1,0,stval,0,(*current_running)->pid);//分配出一块空间
+
+            set_pfn(search_PTE_swap,kva2pa(kva) >> NORMAL_PAGE_SHIFT);//
+            set_attribute(search_PTE_swap,_PAGE_PRESENT | _PAGE_READ | _PAGE_WRITE | _PAGE_EXEC
+                                    |_PAGE_ACCESSED| _PAGE_DIRTY| _PAGE_USER);
+            //将硬盘中的内容读到内存中(内存中可能被换出的内容在allocpage中已经被换出)，然后再将页表映射建立好
+        }
+    }
+
+    local_flush_tlb_all();
+    //这里相当于也是完成了一次啊allocpage_helper的工作
 }

@@ -40,14 +40,35 @@
 // #define FREEMEM_USER INIT_USER_STACK
 // =======
 #define INIT_KERNEL_STACK 0xffffffc052000000
-#define FREEMEM_KERNEL (INIT_KERNEL_STACK+PAGE_SIZE)
+#define FREEMEM_KERNEL (INIT_KERNEL_STACK+PAGE_SIZE)//由这里开始内核自由分配
+#define TEMP_PAGE_START 0x50000000
+#define PAGE_NUM 128
 // >>>>>>> start/Project4-Virtual_Memory_Management
 
 /* Rounding; only works for n = power of two */
 #define ROUND(a, n)     (((((uint64_t)(a))+(n)-1)) & ~((n)-1))
 #define ROUNDDOWN(a, n) (((uint64_t)(a)) & ~((n)-1))
 
-extern ptr_t allocPage(int numPage);
+typedef struct page_allocated{
+    int valid;//是否被分配，已经被分配则置为1
+    
+    int pin;//如果置成1，则该页不允许被换出
+    int using;//如果是共享内存，该变量记录有多少个进程正在共享
+
+    uintptr_t kva;//对应的内核虚地址
+
+    int pid;//对应的进程号
+    uintptr_t pgdir;//对应进程的根目录页
+    uintptr_t va;//对应进程对该物理地址的虚地址
+    int table_not;//这一项专门用来判断是不是页表项
+}page_allocated;
+
+extern ptr_t allocPage(int numPage,int pin,uintptr_t va,int table_not,int pid);
+void free_all_pagemapping(ptr_t baseAddr);
+void free_all_pagetable(ptr_t baseAddr);
+void free_all_pageframe(ptr_t baseAddr);
+extern uint16_t swap_block_id;
+extern page_allocated page_general[PAGE_NUM];
 // TODO [P4-task1] */
 void freePage(ptr_t baseAddr);
 
@@ -65,7 +86,9 @@ extern ptr_t allocLargePage(int numPage);
 // TODO [P4-task1] */
 extern void* kmalloc(size_t size);
 extern void share_pgtable(uintptr_t dest_pgdir, uintptr_t src_pgdir);
-extern uintptr_t alloc_page_helper(uintptr_t va, uintptr_t pgdir);
+extern uintptr_t alloc_page_helper(uintptr_t va, uintptr_t pgdir, int pin,int pid);
+PTE * search_and_set_PTE(uintptr_t va, uintptr_t pgdir,int pid);
+PTE * search_PTE(uintptr_t va, uintptr_t pgdir);
 
 // TODO [P4-task4]: shm_page_get/dt */
 uintptr_t shm_page_get(int key);

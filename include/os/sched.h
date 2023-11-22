@@ -74,8 +74,10 @@ typedef struct pcb
 
 
     /* process id */
+    pid_t truepid;//这个字段用来标记如果是线程，它是由哪个线程启的
     pid_t pid;
     tid_t tid;
+    unsigned thread_num;
 
     ptr_t kernel_stack_base;
     ptr_t user_stack_base;
@@ -107,6 +109,9 @@ typedef struct pcb
     int hart_mask;
     int current_mask;
 
+    /* pgdir */
+    uintptr_t pgdir;
+    unsigned recycle;
 
 } pcb_t,tcb_t;
 
@@ -118,8 +123,8 @@ void init_pcb_stack(
     ptr_t kernel_stack, ptr_t user_stack, ptr_t entry_point,
     pcb_t *pcb,int argc, char *argv[]);
 void init_tcb_stack(
-    ptr_t kernel_stack, ptr_t user_stack, ptr_t entry_point, ptr_t rank_id,
-    tcb_t *tcb);
+    ptr_t kernel_stack, ptr_t user_stack, ptr_t entry_point, 
+    tcb_t *tcb,int arg);
 
 
 
@@ -148,6 +153,7 @@ extern pcb_t pid1_pcb;
 extern const ptr_t pid0_stack;
 extern const ptr_t pid1_stack;
 
+void clean_temp_page(uint64_t pgdir_addr);
 extern void switch_to(pcb_t *prev, pcb_t *next);
 void do_scheduler(void);
 // void do_thread_scheduler(void);
@@ -173,7 +179,8 @@ extern pid_t do_getpid();
 void do_task_set_p(pid_t pid, int mask);
 int do_task_set(int mask,char *name, int argc, char *argv[]);
 
-void do_thread_create(uint64_t addr,uint64_t thread_id);
+// void do_thread_create(pid_t *thread, void *thread_entrypoint, void *arg);
+void do_thread_create(pid_t *thread, void *thread_entrypoint, void *arg);
 /************************************************************/
 
 #endif

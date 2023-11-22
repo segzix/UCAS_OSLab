@@ -105,7 +105,7 @@ static inline long get_pfn(PTE entry)
 static inline void set_pfn(PTE *entry, uint64_t pfn)
 {
     uint64_t mask = PA_MASK ^ PA_ATTRIBUTE_MASK;
-    *entry |= mask & (pfn << 10);
+    *entry = (mask & (pfn << 10)) | (~mask & *entry);
     /* TODO: [P4-task1] */
 }
 
@@ -117,7 +117,8 @@ static inline long get_attribute(PTE entry, uint64_t mask)
 }
 static inline void set_attribute(PTE *entry, uint64_t bits)
 {
-    *entry |= bits;
+
+    *entry = ((*entry >> 10) << 10) | bits;
     /* TODO: [P4-task1] */
 }
 

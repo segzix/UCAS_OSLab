@@ -142,10 +142,10 @@ void parse_command(){
             print_location_y = SHELL_BEGIN;
             break;
         case EXEC_COMMAND:
-            if((argc > 2) || (argc < 1)){
+            if((argc > 5) || (argc < 1)){
                 check_clear();
 
-                if(argc > 2)
+                if(argc > 5)
                     printf(" \n(QAQ)Too many arguments!\n");
                 else if(argc < 1)
                     printf(" \n(QAQ)Too few arguments!\n");
@@ -160,10 +160,11 @@ void parse_command(){
             else 
                 printf("\nInfo: execute task name not found\n");
             print_location_y++;
-            
-            if (argc == 2 && (*(char*)argv[1]) != '&')
-                sys_waitpid(pid);
             break;
+            
+            // if ((*(char*)argv[argc - 1]) != '&')
+            //     sys_waitpid(pid);
+            // break;
         case KILL_COMMAND:
             if(argc > 1){
                 check_clear();
