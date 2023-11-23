@@ -22,6 +22,8 @@ typedef struct consensus_vars {
 
 int is_first(consensus_vars_t *vars)
 {
+    // unsigned long my = vars->magic_number;
+    // vars->magic_number = MAGIC;
     unsigned long my = atomic_exchange_d(&vars->magic_number, MAGIC);
     return my != MAGIC;
 }

@@ -229,7 +229,6 @@ $(ELF_CREATEIMAGE): $(SRC_CREATEIMAGE) $(SRC_DEFLATE_1) $(SRC_DEFLATE_2)
 	$(HOST_CC) $(SRC_CREATEIMAGE) $(SRC_DEFLATE_1) $(SRC_DEFLATE_2) -o $@ -ggdb -Wall -I$(DIR_DEFLATE) -I$(DIR_ARCH)/include -DFREESTANDING
 
 image: $(ELF_CREATEIMAGE) $(ELF_BOOT) $(ELF_DECOMPRESS) $(ELF_MAIN) $(ELF_USER)
-	cd $(DIR_BUILD) && ./$(<F) --extended $(filter-out $(<F), $(^F)) 
-#&& dd if=//dev/zero of=image oflag=append conv=notrunc bs=512MB count=2
+	cd $(DIR_BUILD) && ./$(<F) --extended $(filter-out $(<F), $(^F)) && dd if=//dev/zero of=image oflag=append conv=notrunc bs=512MB count=2
 
 .PHONY: image

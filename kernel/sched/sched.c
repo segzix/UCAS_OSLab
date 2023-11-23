@@ -240,7 +240,7 @@ pid_t do_exec(char *name, int argc, char *argv[])
 
                     pcb[id].recycle = 0;
                     pcb[id].pgdir = allocPage(1,1,0,1,id+2);//分配根目录页//这里的给出的用户映射的虚地址没有任何意义
-                    clear_pgdir(pcb[id].pgdir); //清空根目录页
+                    //clear_pgdir(pcb[id].pgdir); //清空根目录页
                     share_pgtable(pcb[id].pgdir,pa2kva(PGDIR_PA));//内核地址映射拷贝
                     load_task_img(i,pcb[id].pgdir,id+2);//load进程并且为给进程建立好地址映射(这一步实际上包括了建立好除了根目录页的所有页表以及除了栈以外的所有映射)
 

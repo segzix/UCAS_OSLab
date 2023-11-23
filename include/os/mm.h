@@ -42,7 +42,8 @@
 #define INIT_KERNEL_STACK 0xffffffc052000000
 #define FREEMEM_KERNEL (INIT_KERNEL_STACK+PAGE_SIZE)//由这里开始内核自由分配
 #define TEMP_PAGE_START 0x50000000
-#define PAGE_NUM 128
+#define PAGE_NUM 256
+#define SHARE_PAGE_NUM 32
 // >>>>>>> start/Project4-Virtual_Memory_Management
 
 /* Rounding; only works for n = power of two */
@@ -63,12 +64,23 @@ typedef struct page_allocated{
     int table_not;//这一项专门用来判断是不是页表项
 }page_allocated;
 
+typedef struct share_page{
+    int valid;//是否被分配，已经被分配则置为1
+    
+    int key;
+    int using;
+    int pin;//如果置成1，则该页不允许被换出
+
+    uintptr_t kva;//对应的内核虚地址
+}share_page;
+
 extern ptr_t allocPage(int numPage,int pin,uintptr_t va,int table_not,int pid);
 void free_all_pagemapping(ptr_t baseAddr);
 void free_all_pagetable(ptr_t baseAddr);
 void free_all_pageframe(ptr_t baseAddr);
 extern uint16_t swap_block_id;
 extern page_allocated page_general[PAGE_NUM];
+extern share_page share_pages[SHARE_PAGE_NUM];
 // TODO [P4-task1] */
 void freePage(ptr_t baseAddr);
 
@@ -88,7 +100,7 @@ extern void* kmalloc(size_t size);
 extern void share_pgtable(uintptr_t dest_pgdir, uintptr_t src_pgdir);
 extern uintptr_t alloc_page_helper(uintptr_t va, uintptr_t pgdir, int pin,int pid);
 PTE * search_and_set_PTE(uintptr_t va, uintptr_t pgdir,int pid);
-PTE * search_PTE(uintptr_t va, uintptr_t pgdir);
+uintptr_t search_PTE(uintptr_t kva, uintptr_t pgdir,int pid);
 
 // TODO [P4-task4]: shm_page_get/dt */
 uintptr_t shm_page_get(int key);

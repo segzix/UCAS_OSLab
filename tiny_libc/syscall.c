@@ -279,11 +279,13 @@ int sys_task_set(int mask,char *name, int argc, char *argv[])
 
 void* sys_shmpageget(int key)
 {
+    return invoke_syscall(SYSCALL_SHM_GET, key, IGNORE, IGNORE, IGNORE, IGNORE);
     /* TODO: [p4-task4] call invoke_syscall to implement sys_shmpageget */
 }
 
 void sys_shmpagedt(void *addr)
 {
+    invoke_syscall(SYSCALL_SHM_DT, addr, IGNORE, IGNORE, IGNORE, IGNORE);
     /* TODO: [p4-task4] call invoke_syscall to implement sys_shmpagedt */
 }
 

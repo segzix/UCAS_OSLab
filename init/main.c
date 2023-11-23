@@ -294,6 +294,25 @@ static void init_page_general(void)
     }
 
 }
+
+static void init_share_page(void)
+{
+    /* TODO: [p2-task1] load needed tasks and init their corresponding PCB */
+
+    int share_num; 
+    
+    for(share_num = 0; share_num < SHARE_PAGE_NUM; share_num++){
+
+        share_pages[share_num].valid = 0;
+
+        share_pages[share_num].key = -1;
+        share_pages[share_num].pin = 0;
+        share_pages[share_num].using = 0;
+
+        share_pages[share_num].kva = (share_num + PAGE_NUM) * PAGE_SIZE + FREEMEM_KERNEL;
+    }
+
+}
 // static void init_memory(void)
 // {
 //     int mem_tasks; 
@@ -310,7 +329,7 @@ static void init_shell(void)
 
     pcb[num_tasks].recycle = 0;
     pcb[num_tasks].pgdir = allocPage(1,1,0,1,2);//分配根目录页//这里的给出的用户映射的虚地址没有任何意义  //这里是2因为能确定是shell
-    clear_pgdir(pcb[num_tasks].pgdir); //清空根目录页
+    //clear_pgdir(pcb[num_tasks].pgdir); //清空根目录页
     share_pgtable(pcb[num_tasks].pgdir,pa2kva(PGDIR_PA));//内核地址映射拷贝
     load_task_img(num_tasks,pcb[num_tasks].pgdir,2);//load进程并且为给进程建立好地址映射
     //pcb[num_tasks].kernel_sp = KERNEL_STACK + (num_tasks + 1) * 0x1000;
@@ -382,9 +401,9 @@ static void init_syscall(void)
     syscall[SYSCALL_MBOX_SEND]      = (long(*)())do_mbox_send;
     syscall[SYSCALL_MBOX_RECV]      = (long(*)())do_mbox_recv;
 
-    syscall[SYSCALL_TASK_SET]       = (long(*)())do_task_set;
-    syscall[SYSCALL_TASK_SETP]      = (long(*)())do_task_set_p;
-    syscall[SYSCALL_THREAD_CREATE]  = (long(*)())do_thread_create;
+    syscall[SYSCALL_SHM_GET]        = (long(*)())shm_page_get;
+    syscall[SYSCALL_SHM_DT]         = (long(*)())shm_page_dt;
+
     // syscall[SYSCALL_THREAD_CREATE]  = (long(*)())do_thread_create;
     // syscall[SYSCALL_THREAD_YIELD]   = (long(*)())do_thread_scheduler;
 
@@ -411,6 +430,7 @@ int main(void)
         init_semaphores();
         init_mbox();
         init_page_general();
+        init_share_page();
 
         current_running = &current_running_0;
 
