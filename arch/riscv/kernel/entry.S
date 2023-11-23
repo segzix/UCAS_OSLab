@@ -69,6 +69,8 @@
   //保存以上四个寄存器
   csrr t0, CSR_SSCRATCH
   sd t0, OFFSET_REG_SP(sp)
+
+  //sd sp, PCB_KERNEL_SP(tp)
   //sscratch暂存sp，现在存回到栈中
 
   /* TODO: [p2-task3] save sstatus, sepc, stval and scause on kernel stack */

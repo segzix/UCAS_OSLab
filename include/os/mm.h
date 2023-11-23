@@ -105,6 +105,7 @@ uintptr_t search_PTE(uintptr_t kva, uintptr_t pgdir,int pid);
 // TODO [P4-task4]: shm_page_get/dt */
 uintptr_t shm_page_get(int key);
 void shm_page_dt(uintptr_t addr);
+pid_t do_fork();
 
 
 

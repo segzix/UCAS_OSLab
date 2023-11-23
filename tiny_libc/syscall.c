@@ -289,6 +289,12 @@ void sys_shmpagedt(void *addr)
     /* TODO: [p4-task4] call invoke_syscall to implement sys_shmpagedt */
 }
 
+pid_t sys_fork()
+{
+    return invoke_syscall(SYSCALL_FORK, IGNORE, IGNORE, IGNORE, IGNORE, IGNORE);
+    /* TODO: [p4-task4] call invoke_syscall to implement sys_shmpagedt */
+}
+
 void pthread_create(pthread_t *thread,void (*start_routine)(void*),void *arg){
     invoke_syscall(SYSCALL_THREAD_CREATE,(uintptr_t)thread,(uintptr_t)start_routine,(uintptr_t)arg,IGNORE,IGNORE);
 }

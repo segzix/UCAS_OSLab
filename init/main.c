@@ -403,6 +403,7 @@ static void init_syscall(void)
 
     syscall[SYSCALL_SHM_GET]        = (long(*)())shm_page_get;
     syscall[SYSCALL_SHM_DT]         = (long(*)())shm_page_dt;
+    syscall[SYSCALL_FORK]           = (long(*)())do_fork;
 
     // syscall[SYSCALL_THREAD_CREATE]  = (long(*)())do_thread_create;
     // syscall[SYSCALL_THREAD_YIELD]   = (long(*)())do_thread_scheduler;

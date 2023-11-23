@@ -56,5 +56,6 @@
 #define SYSCALL_TASK_SET 8
 #define SYSCALL_TASK_SETP 9
 #define SYSCALL_THREAD_CREATE 10
+#define SYSCALL_FORK 11
 
 #endif

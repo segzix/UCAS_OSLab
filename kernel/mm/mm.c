@@ -4,11 +4,13 @@
 #include <os/sched.h>
 #include <os/kernel.h>
 // #include <stdint.h>
+// #include <stdint.h>
 
 // NOTE: A/C-core
 static ptr_t kernMemCurr = FREEMEM_KERNEL;
 page_allocated page_general[PAGE_NUM];
 share_page share_pages[SHARE_PAGE_NUM];
+extern void ret_from_exception();
 // unsigned page_head = 0;
 
 //用户给出一个虚地址和根目录页，将映射全部建立好(如果已经有映射则不用建立)，最终返回末级页表的地址
@@ -30,7 +32,8 @@ PTE * search_and_set_PTE(uintptr_t va, uintptr_t pgdir,int pid)
         // alloc second - level page
         pgdir_t[vpn2] = 0;
         set_pfn(&pgdir_t[vpn2], kva2pa(allocPage(1,1,va,1,pid)) >> NORMAL_PAGE_SHIFT);//allocpage作为内核中的函数是虚地址，此时为二级页表分配了空间
-        set_attribute(&pgdir_t[vpn2],_PAGE_PRESENT | _PAGE_USER | _PAGE_ACCESSED | _PAGE_DIRTY);
+        //set_attribute(&pgdir_t[vpn2],_PAGE_PRESENT | _PAGE_USER | _PAGE_ACCESSED | _PAGE_DIRTY);
+        set_attribute(&pgdir_t[vpn2],_PAGE_PRESENT);
         //clear_pgdir(pa2kva(get_pa(pgdir_t[vpn2])));//事实上就是将刚刚allocpage的页清空
     }
 
@@ -40,7 +43,8 @@ PTE * search_and_set_PTE(uintptr_t va, uintptr_t pgdir,int pid)
         // alloc third - level page
         pmd[vpn1] = 0;
         set_pfn(&pmd[vpn1], kva2pa(allocPage(1,1,va,1,pid)) >> NORMAL_PAGE_SHIFT);//这里分配出去的时页表页，并且一定会被pin住
-        set_attribute(&pmd[vpn1],_PAGE_PRESENT | _PAGE_USER | _PAGE_ACCESSED | _PAGE_DIRTY);
+        //set_attribute(&pgdir_t[vpn2],_PAGE_PRESENT | _PAGE_USER | _PAGE_ACCESSED | _PAGE_DIRTY);
+        set_attribute(&pmd[vpn1],_PAGE_PRESENT);
         //clear_pgdir(pa2kva(get_pa(pmd[vpn1])));
     }
 
@@ -67,7 +71,7 @@ uintptr_t search_PTE(uintptr_t kva, uintptr_t pgdir,int pid)//这个函数只会
             // alloc second - level page
             pgdir_t[vpn2] = 0;
             set_pfn(&pgdir_t[vpn2], kva2pa(allocPage(1,1,0,1,pid)) >> NORMAL_PAGE_SHIFT);//allocpage作为内核中的函数是虚地址，此时为二级页表分配了空间
-            set_attribute(&pgdir_t[vpn2],_PAGE_PRESENT | _PAGE_USER | _PAGE_ACCESSED | _PAGE_DIRTY);
+            set_attribute(&pgdir_t[vpn2],_PAGE_PRESENT);
             //clear_pgdir(pa2kva(get_pa(pgdir_t[vpn2])));//事实上就是将刚刚allocpage的页清空
         }
         else 
@@ -80,7 +84,7 @@ uintptr_t search_PTE(uintptr_t kva, uintptr_t pgdir,int pid)//这个函数只会
             // alloc third - level page
                 pmd[vpn1] = 0;
                 set_pfn(&pmd[vpn1], kva2pa(allocPage(1,1,0,1,pid)) >> NORMAL_PAGE_SHIFT);//这里分配出去的时页表页，并且一定会被pin住
-                set_attribute(&pmd[vpn1],_PAGE_PRESENT | _PAGE_USER | _PAGE_ACCESSED | _PAGE_DIRTY);
+                set_attribute(&pmd[vpn1],_PAGE_PRESENT);
                 //clear_pgdir(pa2kva(get_pa(pmd[vpn1])));
             }
             else 
@@ -93,8 +97,10 @@ uintptr_t search_PTE(uintptr_t kva, uintptr_t pgdir,int pid)//这个函数只会
                 // alloc third - level page
                     pmd2[vpn0] = 0;
                     set_pfn(&pmd2[vpn0], kva2pa(kva) >> NORMAL_PAGE_SHIFT);//这里分配出去的时页表页，并且一定会被pin住
+                    // set_attribute(&pmd2[vpn0],_PAGE_PRESENT | _PAGE_READ | _PAGE_WRITE | _PAGE_EXEC
+                    //          | _PAGE_ACCESSED| _PAGE_DIRTY| _PAGE_USER);
                     set_attribute(&pmd2[vpn0],_PAGE_PRESENT | _PAGE_READ | _PAGE_WRITE | _PAGE_EXEC
-                             | _PAGE_ACCESSED| _PAGE_DIRTY| _PAGE_USER);
+                                                            | _PAGE_USER);
                     //clear_pgdir(pa2kva(get_pa(pmd2[vpn0])));
 
                     va = (vpn2 << (NORMAL_PAGE_SHIFT + PPN_BITS + PPN_BITS)) |
@@ -526,8 +532,10 @@ uintptr_t alloc_page_helper(uintptr_t va, uintptr_t pgdir, int pin,int pid)//用
     uint64_t pa = kva2pa(allocPage(1,pin,va,0,pid));//为给页表项分配出一个物理页，并且根据传参确定是否pin住
     
     set_pfn(set_PTE,(pa >> NORMAL_PAGE_SHIFT));
+    // set_attribute(set_PTE,_PAGE_PRESENT | _PAGE_READ | _PAGE_WRITE | _PAGE_EXEC
+    //                          | _PAGE_ACCESSED| _PAGE_DIRTY| _PAGE_USER);
     set_attribute(set_PTE,_PAGE_PRESENT | _PAGE_READ | _PAGE_WRITE | _PAGE_EXEC
-                             | _PAGE_ACCESSED| _PAGE_DIRTY| _PAGE_USER);
+                                        | _PAGE_USER);
     // printl("vpn2 %d %d vpn1 %d %d vpn0 %d %d pa %d | %d %d %d\n",vpn2,&pgdir_t[vpn2],vpn1,&pmd[vpn1],vpn0,&pmd2[vpn0],pa,pgdir_t[vpn2],pmd[vpn1],pmd2[vpn0]);                         
     
     // if(swap && am_siz < 4096){
@@ -649,3 +657,217 @@ void shm_page_dt(uintptr_t addr)
     // }
     // TODO [P4-task4] shm_page_dt:
 }
+
+void copy_pagetable(uintptr_t dest_pgdir,uintptr_t src_pgdir,int pid){
+    PTE * src_pgdir_t = (PTE *)src_pgdir;
+    PTE * dest_pgdir_t = (PTE *)dest_pgdir;
+    // uint64_t vpn2 = (va   >> (NORMAL_PAGE_SHIFT + PPN_BITS + PPN_BITS));//页目录虚地址
+    // uint64_t vpn1 = (vpn2 << PPN_BITS) ^
+    //                 (va   >> (NORMAL_PAGE_SHIFT + PPN_BITS));//二级页表虚地址
+    // uint64_t vpn0 = (vpn2 << (PPN_BITS + PPN_BITS)) ^
+    //                 (vpn1 << (PPN_BITS)) ^
+    //                 (va   >> (NORMAL_PAGE_SHIFT));//三级页表虚地址
+    
+    for(unsigned vpn2 = 0;vpn2 < (NUM_PTE_ENTRY >> 1);vpn2++){
+        if(src_pgdir_t[vpn2] % 2 != 0){//页表对应的p位是1,则需要进行拷贝
+            // printl("IN ! %d\n",pgdir_t[vpn2]);
+            // alloc second - level page
+            dest_pgdir_t[vpn2] = 0;
+            set_pfn(&dest_pgdir_t[vpn2], kva2pa(allocPage(1,1,0,1,pid)) >> NORMAL_PAGE_SHIFT);//allocpage作为内核中的函数是虚地址，此时为二级页表分配了空间
+            set_attribute(&dest_pgdir_t[vpn2],_PAGE_PRESENT);
+            //clear_pgdir(pa2kva(get_pa(pgdir_t[vpn2])));//事实上就是将刚刚allocpage的页清空
+        }
+        else 
+            continue;
+
+        for(unsigned vpn1 = 0;vpn1 < 512;vpn1++){
+            PTE *src_pmd = (PTE *)pa2kva(get_pa(src_pgdir_t[vpn2]));
+            PTE *dest_pmd = (PTE *)pa2kva(get_pa(dest_pgdir_t[vpn2]));
+    
+            if(src_pmd[vpn1] % 2 != 0){//然后对二级页表的虚地址进行操作//可能会出现前面几级页表一样，最后一级不一样
+            // alloc third - level page
+                dest_pmd[vpn1] = 0;
+                set_pfn(&dest_pmd[vpn1], kva2pa(allocPage(1,1,0,1,pid)) >> NORMAL_PAGE_SHIFT);//这里分配出去的时页表页，并且一定会被pin住
+                set_attribute(&dest_pmd[vpn1],_PAGE_PRESENT);
+                //clear_pgdir(pa2kva(get_pa(pmd[vpn1])));
+            }
+            else 
+                continue;
+
+            for(unsigned vpn0 = 0;vpn0 < 512;vpn0++){
+                PTE *src_pmd2 = (PTE *)pa2kva(get_pa(src_pmd[vpn1]));
+                PTE *dest_pmd2 = (PTE *)pa2kva(get_pa(dest_pmd[vpn1]));
+
+                if(src_pmd2[vpn0] % 2 != 0){//然后对二级页表的虚地址进行操作//可能会出现前面几级页表一样，最后一级不一样
+                // alloc third - level page
+                    dest_pmd2[vpn0] = 0;
+                    set_pfn(&dest_pmd2[vpn0], get_pa(src_pmd2[vpn0]) >> NORMAL_PAGE_SHIFT);//这里最后一级建立映射，把源的物理地址放进去即可
+                    // set_attribute(&pmd2[vpn0],_PAGE_PRESENT | _PAGE_READ | _PAGE_WRITE | _PAGE_EXEC
+                    //          | _PAGE_ACCESSED| _PAGE_DIRTY| _PAGE_USER);
+                    set_attribute(&dest_pmd2[vpn0],get_attribute(src_pmd2[vpn0],PA_ATTRIBUTE_MASK) & ~_PAGE_WRITE);
+                    //clear_pgdir(pa2kva(get_pa(pmd2[vpn0])));
+
+                    uint32_t node_index = (pa2kva(get_pa(src_pmd2[vpn0])) - FREEMEM_KERNEL)/PAGE_SIZE;
+                    page_general[node_index].using++;//对应的物理页的使用数量会增加！
+                    // va = (vpn2 << (NORMAL_PAGE_SHIFT + PPN_BITS + PPN_BITS)) |
+                    //      (vpn1 << (NORMAL_PAGE_SHIFT + PPN_BITS)) |
+                    //      (vpn0 << (NORMAL_PAGE_SHIFT));
+
+                    // return va;
+                    
+                }
+                else 
+                    continue; 
+            }
+        }
+    }
+
+    //printk("search PTE error");
+    return;
+}
+
+pid_t do_fork(){
+
+    current_running = get_current_cpu_id() ? &current_running_1 : &current_running_0;
+
+    for(int id=0; id < NUM_MAX_TASK; id++){
+        if(pcb[id].status == TASK_EXITED){
+
+            pcb[id].recycle = 0;
+            pcb[id].pgdir = allocPage(1,1,0,1,id+2);//分配根目录页//这里的给出的用户映射的虚地址没有任何意义
+            //clear_pgdir(pcb[id].pgdir); //清空根目录页
+            // share_pgtable(pcb[id].pgdir,pa2kva(PGDIR_PA));//内核地址映射拷贝
+            // load_task_img(i,pcb[id].pgdir,id+2);//load进程并且为给进程建立好地址映射(这一步实际上包括了建立好除了根目录页的所有页表以及除了栈以外的所有映射)
+            share_pgtable(pcb[id].pgdir,pa2kva(PGDIR_PA));//内核地址映射拷贝
+            copy_pagetable(pcb[id].pgdir,(*current_running)->pgdir,id+2);
+
+            pcb[id].kernel_sp  = allocPage(1,1,0,0,id+2) + 1 * PAGE_SIZE;//这里的给出的用户映射的虚地址没有任何意义
+            pcb[id].user_sp    = (*current_running)->user_sp;
+
+            // kva_user_stack = alloc_page_helper(pcb[id].user_sp - PAGE_SIZE, pcb[id].pgdir,1,id+2) + 1 * PAGE_SIZE;//比栈地址低的一张物理页
+            // alloc_page_helper(pcb[id].user_sp - 2*PAGE_SIZE, pcb[id].pgdir,1,id+2);//比栈地址低的第二张物理页
+            // uintptr_t va = alloc_page_helper(pcb[id].user_sp - PAGE_SIZE, pcb[id].pgdir) + PAGE_SIZE;
+            //内核对应的映射到这张物理页的地址，后面对于该用户栈的操作全部通过内核映射表进行
+            //并且考虑到后面要加一个东西导致真实的
+            //这列应该可以直接用用户的也页表映射去访问
+            // pcb[id].kernel_sp  = allocKernelPage(1) + PAGE_SIZE;
+            // pcb[id].user_sp    = allocUserPage(1) +   PAGE_SIZE;
+            pcb[id].cursor_x   = 0;
+            pcb[id].cursor_y   = 0;
+            pcb[id].wakeup_time = 0;
+            pcb[id].truepid = id + 2;
+            pcb[id].pid = id + 2;
+            pcb[id].tid = 0;
+            pcb[id].thread_num = 0;
+            pcb[id].wait_list.prev = &pcb[id].wait_list;
+            pcb[id].wait_list.next = &pcb[id].wait_list;
+            pcb[id].kill = 0;
+            pcb[id].hart_mask = (*current_running)->hart_mask;
+
+            // clean_temp_page(pcb[id].pgdir);
+
+            for(int k = 0;k < TASK_LOCK_MAX;k++){
+                pcb[id].mutex_lock_key[k] = 0;
+            }
+
+            memcpy((void*)pcb[id].pcb_name, (void*)(*current_running)->pcb_name, 32);
+            // load_task_img(tasks[i].name);
+
+
+            regs_context_t *pt_regs = (regs_context_t *)(pcb[id].kernel_sp - sizeof(regs_context_t));
+
+            uintptr_t src_kernel_sp_start = (*current_running)->kernel_sp - sizeof(regs_context_t);//这个时候kernel_sp只减去了pt_regs一段
+            uintptr_t dest_kernel_sp_start = (uintptr_t)pt_regs;
+
+            memcpy((void*)dest_kernel_sp_start, (void*)src_kernel_sp_start, sizeof(regs_context_t));
+            //准备将该进程运行时的一些需要写寄存器的值全部放入栈中
+            pt_regs->regs[4]    = (reg_t)(&pcb[id]);                     //tp
+            pt_regs->regs[10]   = (reg_t)0;
+
+            switchto_context_t *pt_switchto = (switchto_context_t *)((ptr_t)pt_regs - sizeof(switchto_context_t));
+            pt_switchto->regs[0] = (reg_t)ret_from_exception;
+            pt_switchto->regs[1] = (reg_t)(pt_regs);      //sp
+
+            pcb[id].kernel_sp = (reg_t)pt_switchto;
+
+
+            list_add(&(pcb[id].list),&ready_queue);
+            pcb[id].status     = TASK_READY;
+            num_tasks++;
+
+            return pcb[id].pid;
+        }
+    }
+}
+
+// pid_t do_fork()
+// {
+//     int i, j;
+//     char buff[32];
+//     for (i = 0; i < NUM_MAX_TASK; i++){
+//         if (pcb[i].status == TASK_EXITED){
+//             pcb[i].kill = 0;
+//             pcb[i].pid = i+2;
+//             pcb[i].status = TASK_READY;
+//             break;
+//         }
+//     }
+//     if (i == NUM_MAX_TASK)
+//         return 0;
+    
+//     uint64_t kernel_stack = (uint64_t)allocPage(1,1,0,0,i+2) + PAGE_SIZE;
+//     pcb[i].kernel_stack_base = kernel_stack - PAGE_SIZE;
+    
+//     regs_context_t *father_pt_regs = current_running[get_current_cpu_id()]->kernel_sp - sizeof(regs_context_t);
+//     regs_context_t *son_pt_regs    = (regs_context_t *)(kernel_stack - sizeof(regs_context_t));
+//     memcpy((uint8_t*)son_pt_regs, (uint8_t*)father_pt_regs, sizeof(regs_context_t));
+//     son_pt_regs->regs[4]  = &pcb[i];  
+//     son_pt_regs->regs[10] = 0;
+    
+//     switchto_context_t *son_pt_switchto = (switchto_context_t *)((uint64_t)son_pt_regs - sizeof(switchto_context_t));
+//     pcb[i].kernel_sp = (uint64_t)son_pt_switchto;
+//     son_pt_switchto->regs[0] = ret_from_exception;
+//     son_pt_switchto->regs[1] = (uint64_t)son_pt_switchto;
+    
+//     PTE* son_pgdir = (PTE*)allocPage(1,1,0,1,i+2);
+//     pcb[i].pgdir = (uint64_t)son_pgdir;
+//     share_pgtable(son_pgdir, (PTE*)pa2kva(PGDIR_PA));
+    
+//     PTE* father_pgdir = (PTE*)current_running[get_current_cpu_id()]->pgdir;
+//     for (uint64_t i = 0; i < (NUM_PTE_ENTRY >> 1); i++){
+//         if (father_pgdir[i] & _PAGE_PRESENT){
+//             PTE* son_pmd = (PTE*)allocPage(1,1,0,1,pcb[i].pid);
+//             set_pfn(&son_pgdir[i], kva2pa((uint64_t)son_pmd) >> NORMAL_PAGE_SHIFT);
+//             set_attribute(&son_pgdir[i], _PAGE_PRESENT);
+//             PTE* father_pmd = (PTE*)pa2kva(get_pfn(father_pgdir[i]));
+//             for (uint64_t j = 0; j < NUM_PTE_ENTRY; j++){
+//                 if (father_pmd[j] & _PAGE_PRESENT){
+//                     PTE* son_pgt = (PTE*)allocPage(1,1,0,1,pcb[i].pid);
+//                     set_pfn(&son_pmd[j], kva2pa((uint64_t)son_pgt) >> NORMAL_PAGE_SHIFT);
+//                     set_attribute(&son_pmd[j], _PAGE_PRESENT);
+//                     PTE* father_pgt = (PTE*)pa2kva(get_pfn(father_pmd[j]));
+//                     for (uint64_t k = 0; k < NUM_PTE_ENTRY; k++){
+//                         if (father_pgt[k] & _PAGE_PRESENT){
+//                             memcpy((uint8_t*)&son_pgt[k], (uint8_t*)&father_pgt[k], sizeof(uint64_t));
+//                             uint64_t perm = get_attribute(son_pgt[k],PA_ATTRIBUTE_MASK);
+//                             set_attribute(&son_pgt[k], perm & ~_PAGE_WRITE);
+//                         }
+//                         else{
+//                             continue;
+//                         }
+//                     }
+//                 }
+//                 else{
+//                     continue;
+//                 }
+//             }
+//         }
+//         else{
+//             continue;
+//         }
+//     }
+    
+//     list_add(&ready_queue, &pcb[i].list);
+    
+//     return pcb[i].pid;
+// }

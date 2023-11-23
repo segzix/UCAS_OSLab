@@ -73,6 +73,7 @@ void* sys_shmpageget(int key);
 void sys_shmpagedt(void *addr);
 int pthread_join(pid_t thread);
 void pthread_create(pthread_t *thread,void (*start_routine)(void*),void *arg);
+pid_t sys_fork();
 
 /************************************************************/
 

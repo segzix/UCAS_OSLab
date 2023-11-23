@@ -10,6 +10,7 @@
 #include <os/mm.h>
 #include <pgtable.h>
 // #include <stdint.h>
+// #include <stdint.h>
 
 handler_t irq_table[IRQC_COUNT];
 handler_t exc_table[EXCC_COUNT];
@@ -112,7 +113,7 @@ void handle_pagefault_access(regs_context_t *regs, uint64_t stval, uint64_t scau
     
     
     if(*search_PTE_swap % 2 == 1){//p位有效
-        set_attribute(search_PTE_swap, get_attribute(*search_PTE_swap,PA_ATTRIBUTE_MASK) |_PAGE_PRESENT |_PAGE_ACCESSED);
+        set_attribute(search_PTE_swap, get_attribute(*search_PTE_swap,PA_ATTRIBUTE_MASK) |_PAGE_PRESENT |_PAGE_ACCESSED |_PAGE_READ);
     }
     else{
         if((*search_PTE_swap & _PAGE_SOFT)){//软件位有，则是在硬盘上
@@ -123,7 +124,7 @@ void handle_pagefault_access(regs_context_t *regs, uint64_t stval, uint64_t scau
 
             set_pfn(search_PTE_swap,kva2pa(kva) >> NORMAL_PAGE_SHIFT);//
             set_attribute(search_PTE_swap,_PAGE_PRESENT | _PAGE_READ | _PAGE_WRITE | _PAGE_EXEC
-                                    |_PAGE_ACCESSED| _PAGE_DIRTY| _PAGE_USER);
+                                        |_PAGE_ACCESSED | _PAGE_USER);
             //将硬盘中的内容读到内存中(内存中可能被换出的内容在allocpage中已经被换出)，然后再将页表映射建立好
         }
         else{//软件位无，则需要新分配物理页
@@ -131,7 +132,7 @@ void handle_pagefault_access(regs_context_t *regs, uint64_t stval, uint64_t scau
 
             set_pfn(search_PTE_swap,kva2pa(kva) >> NORMAL_PAGE_SHIFT);//
             set_attribute(search_PTE_swap,_PAGE_PRESENT | _PAGE_READ | _PAGE_WRITE | _PAGE_EXEC
-                                    |_PAGE_ACCESSED| _PAGE_DIRTY| _PAGE_USER);
+                                        |_PAGE_ACCESSED | _PAGE_USER);
             //将硬盘中的内容读到内存中(内存中可能被换出的内容在allocpage中已经被换出)，然后再将页表映射建立好
         }
     }
@@ -180,7 +181,24 @@ void handle_pagefault_store(regs_context_t *regs, uint64_t stval, uint64_t scaus
     search_PTE_swap = search_and_set_PTE(stval,(*current_running)->pgdir,(*current_running)->pid);
     
     if(*search_PTE_swap % 2 == 1){//p位有效
-        set_attribute(search_PTE_swap, get_attribute(*search_PTE_swap,PA_ATTRIBUTE_MASK) |_PAGE_PRESENT |_PAGE_ACCESSED| _PAGE_DIRTY);
+        if(*search_PTE_swap & _PAGE_WRITE)
+            ;
+        else {
+            uint64_t src_kva = pa2kva(get_pa(*search_PTE_swap));//已经找到的表项，将其中的物理地址提取出来
+            uint64_t dest_kva = allocPage(1,1,stval,0,(*current_running)->pid);//分配出一块空间
+
+            memcpy(dest_kva, src_kva, PAGE_SIZE);
+
+            //bios_sd_read(kva2pa(kva), 8, search_block_id);
+
+            set_pfn(search_PTE_swap,kva2pa(dest_kva) >> NORMAL_PAGE_SHIFT);//
+
+            uint32_t node_index = (src_kva - FREEMEM_KERNEL)/PAGE_SIZE;
+            page_general[node_index].using--;//对应的物理页的使用数量会增加！
+            screen_move_cursor(0,4);
+            printk("doing copy_on_write!");
+        }
+        set_attribute(search_PTE_swap, get_attribute(*search_PTE_swap,PA_ATTRIBUTE_MASK) |_PAGE_PRESENT |_PAGE_ACCESSED |_PAGE_READ |_PAGE_DIRTY |_PAGE_WRITE);
     }
     else{
         if((*search_PTE_swap & _PAGE_SOFT)){//软件位有，则是在硬盘上
