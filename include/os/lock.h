@@ -132,6 +132,7 @@ typedef struct mailbox
 spin_lock_t mailbox_init_lock;
 
 #define MBOX_NUM 16
+extern mailbox_t mailboxs[MBOX_NUM];
 void init_mbox();
 int do_mbox_open(char *name);
 void do_mbox_close(int mbox_idx);

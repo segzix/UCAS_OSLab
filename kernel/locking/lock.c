@@ -1,11 +1,17 @@
 #include <os/lock.h>
 #include <os/sched.h>
 #include <os/list.h>
-#include <os/string.h>
 #include <atomic.h>
 #include <os/string.h>
 
 mutex_lock_t mlocks[LOCK_NUM];
+
+// void memcpy_lock(uint8_t *dest, const uint8_t *src, uint32_t len)
+// {
+//     for (; len != 0; len--) {
+//         *dest++ = *src++;
+//     }
+// }
 
 void init_locks(void)
 {
@@ -353,6 +359,9 @@ int do_mbox_send(int mbox_idx, void * msg, int msg_length){
 
     while(msg_length + mailbox_now->siz > MAX_MBOX_LENGTH){//生产者发现当前空余量已经不够生产
         block++;
+
+        printl("\nadd (%s %d) to mboxs[%d] (%s) send_queue\n",(*current_running)->pcb_name,(*current_running)->pid,mbox_idx,mailbox_now->name);
+
         do_block(&(*current_running)->list, &mailbox_now->mailbox_send_queue, &mailbox_now->lock);
     }
         
@@ -385,13 +394,14 @@ int do_mbox_recv(int mbox_idx, void * msg, int msg_length){
 
     while(mailbox_now->siz < msg_length){
         block++;
+        printl("\nadd (%s %d) to mboxs[%d] (%s) recv_queue\n",(*current_running)->pcb_name,(*current_running)->pid,mbox_idx,mailbox_now->name);
         do_block(&(*current_running)->list, &mailbox_now->mailbox_recv_queue, &mailbox_now->lock);
     }
 
     mailbox_now->siz -= msg_length;
     if(mailbox_now->head + msg_length <= MAX_MBOX_LENGTH){//消费是改变头指针，消费完之后看是否需要掉头循环
+        //printl("recv buffer=%s,msg=%s,len=%d",msg,((*mailbox_now).buffer + mailbox_now->head),msg_length);
         memcpy(msg,(void*)(mailbox_now->buffer + mailbox_now->head),msg_length);
-        // printl("recv buffer=%s,msg=%s,len=%d",msg,((*mailbox_now).buffer + mailbox_now->head),msg_length);
     }
     else{
         int prelen = MAX_MBOX_LENGTH - (mailbox_now->head);

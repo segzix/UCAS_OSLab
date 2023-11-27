@@ -42,7 +42,7 @@
 #define INIT_KERNEL_STACK 0xffffffc052000000
 #define FREEMEM_KERNEL (INIT_KERNEL_STACK+PAGE_SIZE)//由这里开始内核自由分配
 #define TEMP_PAGE_START 0x50000000
-#define PAGE_NUM 256
+#define PAGE_NUM 512
 #define SHARE_PAGE_NUM 32
 // >>>>>>> start/Project4-Virtual_Memory_Management
 

@@ -144,6 +144,8 @@ void recv_thread(void *arg)
         if(len == remain_size) break;
         sys_sleep(1);
     }
+
+    sys_exit();
 }
 
 void send_thread(void *arg)
@@ -212,7 +214,7 @@ int main(int argc, char* argv[])
         // use this thread as send thread
         send_thread((void*)(unsigned long)id);
 
-        // pthread_join(recv);
+        pthread_join(recv);
     }
 
     return 0;

@@ -153,7 +153,7 @@ ENTRY(disable_preempt)
 ENDPROC(disable_preempt)
 
 ENTRY(enable_interrupt)
-  li t0, SR_SIE
+  li t0, SR_SIE | SR_SUM
   csrs CSR_SSTATUS, t0
   jr ra
 ENDPROC(enable_interrupt)

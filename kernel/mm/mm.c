@@ -154,9 +154,10 @@ void clear_pagearray(uint32_t node_index){
 
 unsigned swap_out(){//swapout函数只负责选中一页然后换出，不负责将某一页重新填入或者分配出去
 
-    static swap_block_id = 0x200;
+    static unsigned swap_block_id = 0x200;
+    static unsigned swap_index = 0;
     PTE * swap_PTE;//将要换出去的物理页对应的表项
-    for(unsigned i = 0;i < PAGE_NUM;i++)
+    for(unsigned i = swap_index;i < PAGE_NUM;i = (i+1)%PAGE_NUM)
     {
         if(!page_general[i].pin && !page_general[i].table_not){
             page_general[i].valid = 0;
@@ -177,6 +178,7 @@ unsigned swap_out(){//swapout函数只负责选中一页然后换出，不负责
             bios_sd_write(kva2pa(page_general[i].kva),8,swap_block_id);//将物理地址和所写的扇区号传入
             swap_block_id += 8;//扇区号加8
 
+            swap_index = i;
             return i;//返回数组中的下标
         }
     }

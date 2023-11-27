@@ -23,6 +23,7 @@ pcb_t pid0_pcb = {
     .user_sp = (ptr_t)pid0_stack,
     .hart_mask = 0x1,
     .current_mask = 0x1,
+    .pcb_name = "pid0",
     //每个核对应的都有可以跑的
 
     .pgdir = PGDIR_PA + KVA_OFFSET,
@@ -37,6 +38,7 @@ pcb_t pid1_pcb = {
     .user_sp = (ptr_t)pid1_stack,
     .hart_mask = 0x2,
     .current_mask = 0x2,
+    .pcb_name = "pid1",
     //每个核对应的都有可以跑的
 
     .pgdir = PGDIR_PA + KVA_OFFSET,
@@ -84,7 +86,7 @@ void do_scheduler(void)
 
     if((*current_running)->pid == 2){
         for(unsigned i = 0;i < NUM_MAX_TASK;i++){
-            if((pcb[i].pid != 2) && pcb[i].recycle && pcb[i].status == TASK_EXITED){
+            if((pcb[i].pid != 2) && pcb[i].recycle && pcb[i].status == TASK_EXITED && !pcb[i].tid){
                 free_all_pagemapping(pcb[i].pgdir);
                 free_all_pagetable(pcb[i].pgdir);
                 pcb[i].recycle = 0;
@@ -120,6 +122,87 @@ void do_scheduler(void)
     process_id = (*current_running)->pid;
     //修改当前执行进程ID
 
+    list_node_t* list_debug = ready_queue.next;
+    printl("ready_queue: ");
+    while(list_debug != &ready_queue){
+        pcb_t* pcb_debug = list_entry(list_debug, pcb_t, list);
+        printl("%s:%d  ",pcb_debug->pcb_name,pcb_debug->pid);
+        list_debug = list_debug->next;
+    }
+    printl("\n");
+
+    list_debug = sleep_queue.next;
+    printl("sleep_queue:");
+    while(list_debug != &sleep_queue){
+        pcb_t* pcb_debug = list_entry(list_debug, pcb_t, list);
+        printl("%s %d  ",pcb_debug->pcb_name,pcb_debug->pid);
+        list_debug = list_debug->next;
+    }
+    printl("\n");
+
+    list_debug = mailboxs[0].mailbox_send_queue.next;
+    printl("mboxs[0].send_queue:");
+    while(list_debug != &mailboxs[0].mailbox_send_queue){
+        pcb_t* pcb_debug = list_entry(list_debug, pcb_t, list);
+        printl("%s %d  ",pcb_debug->pcb_name,pcb_debug->pid);
+        list_debug = list_debug->next;
+    }
+    printl("\n");
+
+    list_debug = mailboxs[0].mailbox_recv_queue.next;
+    printl("mboxs[0].recv_queue:");
+    while(list_debug != &mailboxs[0].mailbox_recv_queue){
+        pcb_t* pcb_debug = list_entry(list_debug, pcb_t, list);
+        printl("%s %d  ",pcb_debug->pcb_name,pcb_debug->pid);
+        list_debug = list_debug->next;
+    }
+    printl("\n");
+
+    list_debug = mailboxs[1].mailbox_send_queue.next;
+    printl("mboxs[1].send_queue:");
+    while(list_debug != &mailboxs[1].mailbox_send_queue){
+        pcb_t* pcb_debug = list_entry(list_debug, pcb_t, list);
+        printl("%s %d  ",pcb_debug->pcb_name,pcb_debug->pid);
+        list_debug = list_debug->next;
+    }
+    printl("\n");
+
+    list_debug = mailboxs[1].mailbox_recv_queue.next;
+    printl("mboxs[1].recv_queue:");
+    while(list_debug != &mailboxs[1].mailbox_recv_queue){
+        pcb_t* pcb_debug = list_entry(list_debug, pcb_t, list);
+        printl("%s %d  ",pcb_debug->pcb_name,pcb_debug->pid);
+        list_debug = list_debug->next;
+    }
+    printl("\n");
+
+    list_debug = mailboxs[2].mailbox_send_queue.next;
+    printl("mboxs[2].send_queue:");
+    while(list_debug != &mailboxs[2].mailbox_send_queue){
+        pcb_t* pcb_debug = list_entry(list_debug, pcb_t, list);
+        printl("%s %d  ",pcb_debug->pcb_name,pcb_debug->pid);
+        list_debug = list_debug->next;
+    }
+    printl("\n");
+
+    list_debug = mailboxs[2].mailbox_recv_queue.next;
+    printl("mboxs[2].recv_queue:");
+    while(list_debug != &mailboxs[2].mailbox_recv_queue){
+        pcb_t* pcb_debug = list_entry(list_debug, pcb_t, list);
+        printl("%s %d  ",pcb_debug->pcb_name,pcb_debug->pid);
+        list_debug = list_debug->next;
+    }
+    printl("\n");
+
+    printl("current running:(%s %d)",(*current_running)->pcb_name,(*current_running)->pid);
+    printl("\n\n");   
+    // printl("ready_queue:\n");
+    // while(list_debug != &ready_queue){
+    //     pcb_t* pcb_debug = list_entry(list_debug, pcb_t, list);
+    //     printl("%s:%d  ",pcb_debug->pcb_name,pcb_debug->pid);
+    //     list_debug = list_debug->next;
+    // }
+    // printl("\n");
     /*vt100_move_cursor(current_running->cursor_x, current_running->cursor_y);
     screen_cursor_x = current_running->cursor_x;
     screen_cursor_y = current_running->cursor_y;*/
@@ -189,6 +272,7 @@ void do_sleep(uint32_t sleep_time)
     spin_lock_acquire(&sleep_spin_lock);
     current_running = get_current_cpu_id() ? &current_running_1 : &current_running_0;
     (*current_running)->wakeup_time = get_timer() + sleep_time;
+    printl("\nadd (%s %d) to sleep_queue\n",(*current_running)->pcb_name,(*current_running)->pid);
     do_block(&(*current_running)->list, &sleep_queue,&sleep_spin_lock);
     spin_lock_release(&sleep_spin_lock);
     //do_scheduler();
