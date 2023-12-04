@@ -91,6 +91,7 @@ void do_scheduler(void)
                 free_all_pagetable(pcb[i].pgdir);
                 pcb[i].recycle = 0;
             }
+            //当前是shell,并且经过了exit需要被回收，同时不是子线程，同时shell的不允许被回收
         }
     }
     // TODO: [p2-task3] Check sleep queue to wake up PCBs
@@ -122,80 +123,80 @@ void do_scheduler(void)
     process_id = (*current_running)->pid;
     //修改当前执行进程ID
 
-    list_node_t* list_debug = ready_queue.next;
-    printl("ready_queue: ");
-    while(list_debug != &ready_queue){
-        pcb_t* pcb_debug = list_entry(list_debug, pcb_t, list);
-        printl("%s:%d  ",pcb_debug->pcb_name,pcb_debug->pid);
-        list_debug = list_debug->next;
-    }
-    printl("\n");
+    // list_node_t* list_debug = ready_queue.next;
+    // printl("ready_queue: ");
+    // while(list_debug != &ready_queue){
+    //     pcb_t* pcb_debug = list_entry(list_debug, pcb_t, list);
+    //     printl("%s:%d  ",pcb_debug->pcb_name,pcb_debug->pid);
+    //     list_debug = list_debug->next;
+    // }
+    // printl("\n");
 
-    list_debug = sleep_queue.next;
-    printl("sleep_queue:");
-    while(list_debug != &sleep_queue){
-        pcb_t* pcb_debug = list_entry(list_debug, pcb_t, list);
-        printl("%s %d  ",pcb_debug->pcb_name,pcb_debug->pid);
-        list_debug = list_debug->next;
-    }
-    printl("\n");
+    // list_debug = sleep_queue.next;
+    // printl("sleep_queue:");
+    // while(list_debug != &sleep_queue){
+    //     pcb_t* pcb_debug = list_entry(list_debug, pcb_t, list);
+    //     printl("%s %d  ",pcb_debug->pcb_name,pcb_debug->pid);
+    //     list_debug = list_debug->next;
+    // }
+    // printl("\n");
 
-    list_debug = mailboxs[0].mailbox_send_queue.next;
-    printl("mboxs[0].send_queue:");
-    while(list_debug != &mailboxs[0].mailbox_send_queue){
-        pcb_t* pcb_debug = list_entry(list_debug, pcb_t, list);
-        printl("%s %d  ",pcb_debug->pcb_name,pcb_debug->pid);
-        list_debug = list_debug->next;
-    }
-    printl("\n");
+    // list_debug = mailboxs[0].mailbox_send_queue.next;
+    // printl("mboxs[0].send_queue:");
+    // while(list_debug != &mailboxs[0].mailbox_send_queue){
+    //     pcb_t* pcb_debug = list_entry(list_debug, pcb_t, list);
+    //     printl("%s %d  ",pcb_debug->pcb_name,pcb_debug->pid);
+    //     list_debug = list_debug->next;
+    // }
+    // printl("\n");
 
-    list_debug = mailboxs[0].mailbox_recv_queue.next;
-    printl("mboxs[0].recv_queue:");
-    while(list_debug != &mailboxs[0].mailbox_recv_queue){
-        pcb_t* pcb_debug = list_entry(list_debug, pcb_t, list);
-        printl("%s %d  ",pcb_debug->pcb_name,pcb_debug->pid);
-        list_debug = list_debug->next;
-    }
-    printl("\n");
+    // list_debug = mailboxs[0].mailbox_recv_queue.next;
+    // printl("mboxs[0].recv_queue:");
+    // while(list_debug != &mailboxs[0].mailbox_recv_queue){
+    //     pcb_t* pcb_debug = list_entry(list_debug, pcb_t, list);
+    //     printl("%s %d  ",pcb_debug->pcb_name,pcb_debug->pid);
+    //     list_debug = list_debug->next;
+    // }
+    // printl("\n");
 
-    list_debug = mailboxs[1].mailbox_send_queue.next;
-    printl("mboxs[1].send_queue:");
-    while(list_debug != &mailboxs[1].mailbox_send_queue){
-        pcb_t* pcb_debug = list_entry(list_debug, pcb_t, list);
-        printl("%s %d  ",pcb_debug->pcb_name,pcb_debug->pid);
-        list_debug = list_debug->next;
-    }
-    printl("\n");
+    // list_debug = mailboxs[1].mailbox_send_queue.next;
+    // printl("mboxs[1].send_queue:");
+    // while(list_debug != &mailboxs[1].mailbox_send_queue){
+    //     pcb_t* pcb_debug = list_entry(list_debug, pcb_t, list);
+    //     printl("%s %d  ",pcb_debug->pcb_name,pcb_debug->pid);
+    //     list_debug = list_debug->next;
+    // }
+    // printl("\n");
 
-    list_debug = mailboxs[1].mailbox_recv_queue.next;
-    printl("mboxs[1].recv_queue:");
-    while(list_debug != &mailboxs[1].mailbox_recv_queue){
-        pcb_t* pcb_debug = list_entry(list_debug, pcb_t, list);
-        printl("%s %d  ",pcb_debug->pcb_name,pcb_debug->pid);
-        list_debug = list_debug->next;
-    }
-    printl("\n");
+    // list_debug = mailboxs[1].mailbox_recv_queue.next;
+    // printl("mboxs[1].recv_queue:");
+    // while(list_debug != &mailboxs[1].mailbox_recv_queue){
+    //     pcb_t* pcb_debug = list_entry(list_debug, pcb_t, list);
+    //     printl("%s %d  ",pcb_debug->pcb_name,pcb_debug->pid);
+    //     list_debug = list_debug->next;
+    // }
+    // printl("\n");
 
-    list_debug = mailboxs[2].mailbox_send_queue.next;
-    printl("mboxs[2].send_queue:");
-    while(list_debug != &mailboxs[2].mailbox_send_queue){
-        pcb_t* pcb_debug = list_entry(list_debug, pcb_t, list);
-        printl("%s %d  ",pcb_debug->pcb_name,pcb_debug->pid);
-        list_debug = list_debug->next;
-    }
-    printl("\n");
+    // list_debug = mailboxs[2].mailbox_send_queue.next;
+    // printl("mboxs[2].send_queue:");
+    // while(list_debug != &mailboxs[2].mailbox_send_queue){
+    //     pcb_t* pcb_debug = list_entry(list_debug, pcb_t, list);
+    //     printl("%s %d  ",pcb_debug->pcb_name,pcb_debug->pid);
+    //     list_debug = list_debug->next;
+    // }
+    // printl("\n");
 
-    list_debug = mailboxs[2].mailbox_recv_queue.next;
-    printl("mboxs[2].recv_queue:");
-    while(list_debug != &mailboxs[2].mailbox_recv_queue){
-        pcb_t* pcb_debug = list_entry(list_debug, pcb_t, list);
-        printl("%s %d  ",pcb_debug->pcb_name,pcb_debug->pid);
-        list_debug = list_debug->next;
-    }
-    printl("\n");
+    // list_debug = mailboxs[2].mailbox_recv_queue.next;
+    // printl("mboxs[2].recv_queue:");
+    // while(list_debug != &mailboxs[2].mailbox_recv_queue){
+    //     pcb_t* pcb_debug = list_entry(list_debug, pcb_t, list);
+    //     printl("%s %d  ",pcb_debug->pcb_name,pcb_debug->pid);
+    //     list_debug = list_debug->next;
+    // }
+    // printl("\n");
 
-    printl("current running:(%s %d)",(*current_running)->pcb_name,(*current_running)->pid);
-    printl("\n\n");   
+    // printl("current running:(%s %d)",(*current_running)->pcb_name,(*current_running)->pid);
+    // printl("\n\n");   
     // printl("ready_queue:\n");
     // while(list_debug != &ready_queue){
     //     pcb_t* pcb_debug = list_entry(list_debug, pcb_t, list);
@@ -487,22 +488,6 @@ int do_kill(pid_t pid)
         pcb[id].kill = 1;
         return 1;
     } 
-
-    // if(id < 0 || id >= NUM_MAX_TASK || pcb[id].status == TASK_EXITED){
-    //     printk("\n> [Kill] Pid number not in use. \n\r");
-    //     return 0;
-    // }
-    // if(id == 0){
-    //     printk("\n> [Kill] Can not kill the shell. \n\r");
-    //     return 0;
-    // }
-    // if(pcb[id].status != TASK_RUNNING){
-    //     list_del(&(pcb[id].list));
-    //     while(pcb[id].wait_list.prev != &(pcb[id].wait_list))
-    //         do_unblock(pcb[id].wait_list.prev);
-    // }
-    // pcb[id].status = TASK_EXITED;
-    // return 1;
 }
 int do_waitpid(pid_t pid)
 {
@@ -512,17 +497,6 @@ int do_waitpid(pid_t pid)
         if((pcb[id].pid == pid) && (pcb[id].status != TASK_EXITED))
             break;
     }
-    // if(id < 0 || id >= NUM_MAX_TASK ){
-    //     printk("> [Waitpid] Pid number not in use. \n\r");
-    //     return 0;
-    // }
-    // if(id == 0){
-    //     printk("> [Waitpid] Can not wait the shell to kill. \n\r");
-    //     return 0;
-    // }
-    // if(pcb[id].status == TASK_EXITED){
-    //     return 0;
-    // }
 
     if(id == NUM_MAX_TASK)
         return 0;
@@ -563,7 +537,7 @@ int do_process_show()
     while(i < NUM_MAX_TASK){
         switch (pcb[i].status) {
             case TASK_RUNNING:
-                printk("[%d] NAME : %s  PID : %d  STATUS : TASK_RUNNING ",i,pcb[i].pcb_name,pcb[i].pid);
+                printk("[%d] NAME : %s  PID : %d TID : %d TRUEPID : %d STATUS : TASK_RUNNING ",i,pcb[i].pcb_name,pcb[i].pid,pcb[i].tid,pcb[i].truepid);
                 if(pcb[i].current_mask == 0x1)
                     printk("Running on core 0\n");
                 else if(pcb[i].current_mask == 0x2)
@@ -572,12 +546,12 @@ int do_process_show()
                 add_lines+=2;
                 break;
             case TASK_READY:
-                printk("[%d] NAME : %s  PID : %d  STATUS : TASK_READY\n",i,pcb[i].pcb_name,pcb[i].pid);
+                printk("[%d] NAME : %s  PID : %d TID : %d TRUEPID : %d STATUS : TASK_READY\n",i,pcb[i].pcb_name,pcb[i].pid,pcb[i].tid,pcb[i].truepid);
                 printk("hart_mask : %d\n",pcb[i].hart_mask);
                 add_lines+=2;
                 break;
             case TASK_BLOCKED:
-                printk("[%d] NAME : %s  PID : %d  STATUS : TASK_BLOCKED\n",i,pcb[i].pcb_name,pcb[i].pid);
+                printk("[%d] NAME : %s  PID : %d TID : %d TRUEPID : %d STATUS : TASK_BLOCKED\n",i,pcb[i].pcb_name,pcb[i].pid,pcb[i].tid,pcb[i].truepid);
                 printk("hart_mask : %d\n",pcb[i].hart_mask);
                 add_lines+=2;
                 break;

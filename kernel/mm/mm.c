@@ -176,9 +176,11 @@ unsigned swap_out(){//swapout函数只负责选中一页然后换出，不负责
             local_flush_tlb_all();
 
             bios_sd_write(kva2pa(page_general[i].kva),8,swap_block_id);//将物理地址和所写的扇区号传入
-            swap_block_id += 8;//扇区号加8
 
-            swap_index = i;
+            printl("\npage[%d](kva : 0x%x) has been swapped to block id[%d]\n",i,page_general[i].kva,swap_block_id);
+
+            swap_block_id += 8;//扇区号加8
+            swap_index = (i+1)%PAGE_NUM;//从下一个开始算起，为fifo算法
             return i;//返回数组中的下标
         }
     }

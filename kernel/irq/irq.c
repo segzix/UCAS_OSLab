@@ -213,12 +213,18 @@ void handle_pagefault_store(regs_context_t *regs, uint64_t stval, uint64_t scaus
             //将硬盘中的内容读到内存中(内存中可能被换出的内容在allocpage中已经被换出)，然后再将页表映射建立好
         }
         else{//软件位无，则需要新分配物理页
-            uint64_t kva = allocPage(1,0,stval,0,(*current_running)->pid);//分配出一块空间
+            if(stval >= 0xffffffc000000000){
+                screen_move_cursor(0,7);
+                printk("address fault !");
+                do_exit();
+            }else{
+                uint64_t kva = allocPage(1,0,stval,0,(*current_running)->pid);//分配出一块空间
 
-            set_pfn(search_PTE_swap,kva2pa(kva) >> NORMAL_PAGE_SHIFT);//
-            set_attribute(search_PTE_swap,_PAGE_PRESENT | _PAGE_READ | _PAGE_WRITE | _PAGE_EXEC
+                set_pfn(search_PTE_swap,kva2pa(kva) >> NORMAL_PAGE_SHIFT);//
+                set_attribute(search_PTE_swap,_PAGE_PRESENT | _PAGE_READ | _PAGE_WRITE | _PAGE_EXEC
                                     |_PAGE_ACCESSED| _PAGE_DIRTY| _PAGE_USER);
             //将硬盘中的内容读到内存中(内存中可能被换出的内容在allocpage中已经被换出)，然后再将页表映射建立好
+            }
         }
     }
 

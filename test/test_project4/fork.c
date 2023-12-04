@@ -8,13 +8,13 @@ pid_t add_num(int num)
     if ((pid = sys_fork())){
         for(unsigned long i = 0;i < wait_time;i++);
         sys_move_cursor(0, 0);
-        printf("This is from father: ");
+        printf("This is from father[pid %d]: ",sys_getpid());
         printf("num = %d", num);
     }
     else{
         sys_move_cursor(0, 1);
         num++;
-        printf("This is from son: ");
+        printf("This is from son[pid %d]: ",sys_getpid());
         printf("num = %d", num);
     }
     return pid;
