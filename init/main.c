@@ -1,3 +1,29 @@
+/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *  * * * * * * * * * * *
+ *            Copyright (C) 2018 Institute of Computing Technology, CAS
+ *               Author : Han Shukai (email : hanshukai@ict.ac.cn)
+ * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *  * * * * * * * * * * *
+ *         The kernel's entry, where most of the initialization work is done.
+ * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *  * * * * * * * * * * *
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy of this
+ * software and associated documentation files (the "Software"), to deal in the Software
+ * without restriction, including without limitation the rights to use, copy, modify,
+ * merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit
+ * persons to whom the Software is furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in
+ * all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+ * THE SOFTWARE.
+ *
+ * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *  * * * * * * * * * * */
+
 #include <common.h>
 #include <asm.h>
 #include <asm/unistd.h>
@@ -10,8 +36,10 @@
 #include <os/string.h>
 #include <os/mm.h>
 #include <os/time.h>
+#include <os/ioremap.h>
 #include <sys/syscall.h>
 #include <screen.h>
+#include <e1000.h>
 #include <printk.h>
 #include <assert.h>
 #include <type.h>
@@ -433,16 +461,44 @@ int main(void)
         init_page_general();
         init_share_page();
 
+// <<<<<<< HEAD
         current_running = &current_running_0;
+// =======
+        // Read Flatten Device Tree (｡•ᴗ-)_
+        time_base = bios_read_fdt(TIMEBASE);
+        e1000 = (volatile uint8_t *)bios_read_fdt(EHTERNET_ADDR);
+        uint64_t plic_addr = bios_read_fdt(PLIC_ADDR);
+        uint32_t nr_irqs = (uint32_t)bios_read_fdt(NR_IRQS);
+        printk("> [INIT] e1000: %lx, plic_addr: %lx, nr_irqs: %lx.\n", e1000, plic_addr, nr_irqs);
+
+        // IOremap
+        plic_addr = (uintptr_t)ioremap((uint64_t)plic_addr, 0x4000 * NORMAL_PAGE_SIZE);
+        e1000 = (uint8_t *)ioremap((uint64_t)e1000, 8 * NORMAL_PAGE_SIZE);
+        printk("> [INIT] IOremap initialization succeeded.\n");
+// >>>>>>> 44b6afb9d17c726a4c190ffe4d7083ed3d511bd6
+
+// <<<<<<< HEAD
+        // Init lock mechanism o(´^｀)o
+        printk("> [INIT] Lock mechanism initialization succeeded.\n");
+// =======
+        // TODO: [p5-task3] Init plic
+        // plic_init(plic_addr, nr_irqs);
+        // printk("> [INIT] PLIC initialized successfully. addr = 0x%lx, nr_irqs=0x%x\n", plic_addr, nr_irqs);
+
+        // Init network device
+        e1000_init();
+        printk("> [INIT] E1000 device initialized successfully.\n");
+
+        // Init system call table (0_0)
+        init_syscall();
+        printk("> [INIT] System call initialized successfully.\n");
+// >>>>>>> 44b6afb9d17c726a4c190ffe4d7083ed3d511bd6
 
         init_shell();
         printk("> [INIT] PCB initialization succeeded.\n");
 
         // Read CPU frequency (｡•ᴗ-)_
         time_base = bios_read_fdt(TIMEBASE);
-
-        // Init lock mechanism o(´^｀)o
-        printk("> [INIT] Lock mechanism initialization succeeded.\n");
 
         // Init interrupt (^_^)
         init_exception();

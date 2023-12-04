@@ -49,6 +49,12 @@ void handle_irq_timer(regs_context_t *regs, uint64_t stval, uint64_t scause)
     // Note: use bios_set_timer to reset the timer and remember to reschedule
 }
 
+void handle_irq_ext(regs_context_t *regs, uint64_t stval, uint64_t scause)
+{
+    // TODO: [p5-task3] external interrupt handler.
+    // Note: plic_claim and plic_complete will be helpful ...
+}
+
 void init_exception()
 {
     exc_table[EXCC_SYSCALL]         = (handler_t)handle_syscall;

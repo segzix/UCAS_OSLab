@@ -71,10 +71,17 @@ int sys_task_set(int mask,char *name, int argc, char *argv[]);
 /* shmpageget/dt */
 void* sys_shmpageget(int key);
 void sys_shmpagedt(void *addr);
+<<<<<<< HEAD
 int pthread_join(pid_t thread);
 void pthread_create(pthread_t *thread,void (*start_routine)(void*),void *arg);
 pid_t sys_fork();
 
+=======
+
+/* net send and recv */
+int sys_net_send(void *txpacket, int length);
+int sys_net_recv(void *rxbuffer, int pkt_num, int *pkt_lens);
+>>>>>>> 44b6afb9d17c726a4c190ffe4d7083ed3d511bd6
 /************************************************************/
 
 #endif
