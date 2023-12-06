@@ -8,7 +8,10 @@
 #include <assert.h>
 #include <screen.h>
 #include <os/mm.h>
+#include <os/net.h>
 #include <pgtable.h>
+#include <plic.h>
+#include <e1000.h>
 // #include <stdint.h>
 // #include <stdint.h>
 
@@ -22,6 +25,10 @@ void interrupt_helper(regs_context_t *regs, uint64_t stval, uint64_t scause)
     current_running = get_current_cpu_id() ? &current_running_1 : &current_running_0;
     if((*current_running)->kill == 1)
         do_exit();
+
+    uint32_t head = e1000_read_reg(e1000,E1000_RDH);
+    uint32_t tail = e1000_read_reg(e1000,E1000_RDT);
+    printl("head : %u tail : %u\n",head,tail);
 
     if(scause & (1UL << 63)){
         scause = scause & (~(1UL << 63));
@@ -51,6 +58,14 @@ void handle_irq_timer(regs_context_t *regs, uint64_t stval, uint64_t scause)
 
 void handle_irq_ext(regs_context_t *regs, uint64_t stval, uint64_t scause)
 {
+    uint32_t plic_ID = plic_claim();
+
+    if(plic_ID == 33 || plic_ID == 2)
+        net_handle_irq();
+    else 
+        handle_other(regs, stval, scause);
+
+    plic_complete(plic_ID);
     // TODO: [p5-task3] external interrupt handler.
     // Note: plic_claim and plic_complete will be helpful ...
 }
@@ -76,7 +91,7 @@ void init_exception()
     irq_table[IRQC_S_TIMER] = (handler_t)handle_irq_timer;
     irq_table[IRQC_M_TIMER] = (handler_t)handle_other;
     irq_table[IRQC_U_EXT] = (handler_t)handle_other;
-    irq_table[IRQC_S_EXT] = (handler_t)handle_other;
+    irq_table[IRQC_S_EXT] = (handler_t)handle_irq_ext;
     irq_table[IRQC_M_EXT] = (handler_t)handle_other;
     /* TODO: [p2-task4] initialize irq_table */
     /* NOTE: handle_int, handle_other, etc.*/

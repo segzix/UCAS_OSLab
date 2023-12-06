@@ -7,8 +7,8 @@
 #include <assert.h>
 #include <pgtable.h>
 
-static LIST_HEAD(send_block_queue);
-static LIST_HEAD(recv_block_queue);
+LIST_HEAD(send_block_queue);
+LIST_HEAD(recv_block_queue);
 static spin_lock_t send_block_spin_lock = {UNLOCKED};
 static spin_lock_t recv_block_spin_lock = {UNLOCKED};
 
@@ -50,7 +50,7 @@ static void e1000_reset(void)
     latency(1);
 
 	/* Clear interrupt mask to stop board from generating interrupts */
-    e1000_write_reg(e1000, E1000_IMC, 0xffffffff);
+    //e1000_write_reg(e1000, E1000_IMC, 0xffffffff);
 
     /* Clear any pending interrupt events. */
     while (0 != e1000_read_reg(e1000, E1000_ICR)) ;
@@ -63,12 +63,9 @@ static void e1000_configure_tx(void)
 {
     /* TODO: [p5-task1] Initialize tx descriptors */
     for(int i=0; i<TXDESCS; i++){
-        tx_desc_array[i].addr= (uint32_t)kva2pa((uintptr_t)(tx_pkt_buffer[i]));
-        tx_desc_array[i].cmd = 0;
-        // tx_desc_array[i].status = 0;
+        tx_desc_array[i].addr   = (uint32_t)kva2pa((uintptr_t)(tx_pkt_buffer[i]));
+        tx_desc_array[i].cmd    = E1000_TXD_CMD_EOP | E1000_TXD_CMD_RS;
         tx_desc_array[i].status = E1000_TXD_STAT_DD;
-        tx_desc_array[i].cmd|=(1<<0);//EOP
-        tx_desc_array[i].cmd|=(1<<3);//RS
     }
 
     /* TODO: [p5-task1] Set up the Tx descriptor base address and length */
@@ -124,18 +121,26 @@ static void e1000_configure_rx(void)
     for(int i=0; i<RXDESCS; i++){
         rx_desc_array[i].addr = (uint32_t)kva2pa((uintptr_t)(rx_pkt_buffer[i]));
         rx_desc_array[i].status = 0;
+        rx_desc_array[i].csum = 0;
+        rx_desc_array[i].status = 0;
+        rx_desc_array[i].errors = 0;
+        rx_desc_array[i].special = 0;
         // rx_desc_array[i].status |= (0<<1);//EOP
     }
 
     /* TODO: [p5-task2] Set up the Rx descriptor base address and length */
     
-    uint32_t LOW  = (uint32_t)(((uint64_t)kva2pa(rx_desc_array)) & 0xffffffff);
-    uint32_t HIGH = (uint32_t)(((uint64_t)kva2pa(rx_desc_array)) >> 32); 
-    uint32_t SIZE = 16*RXDESCS;
+    // uint32_t LOW  = (uint32_t)(((uint64_t)kva2pa(rx_desc_array)) & 0xffffffff);
+    // uint32_t HIGH = (uint32_t)(((uint64_t)kva2pa(rx_desc_array)) >> 32); 
+    // uint32_t SIZE = 16*RXDESCS;
     
-    e1000_write_reg(e1000,E1000_RDBAL,LOW);
-    e1000_write_reg(e1000,E1000_RDBAH,HIGH);
-    e1000_write_reg(e1000,E1000_RDLEN,SIZE);
+    // e1000_write_reg(e1000,E1000_RDBAL,LOW);
+    // e1000_write_reg(e1000,E1000_RDBAH,HIGH);
+    // e1000_write_reg(e1000,E1000_RDLEN,SIZE);
+
+    e1000_write_reg(e1000, E1000_RDBAH, kva2pa((uint64_t)rx_desc_array) >> 32);
+    e1000_write_reg(e1000, E1000_RDBAL, kva2pa((uint64_t)rx_desc_array) << 32 >> 32);
+    e1000_write_reg(e1000, E1000_RDLEN, sizeof(rx_desc_array));
 
     /* TODO: [p5-task2] Set up the HW Rx Head and Tail descriptor pointers */
 
@@ -145,13 +150,11 @@ static void e1000_configure_rx(void)
     /* TODO: [p5-task2] Program the Receive Control Register */
 
     uint32_t RCTL_write = E1000_RCTL_EN    | 
-                          E1000_RCTL_BAM   |
-                          ~E1000_RCTL_BSEX |
-                          E1000_RCTL_SZ_2048
-                          ;
+                          E1000_RCTL_BAM   ;
 
     e1000_write_reg(e1000,E1000_RCTL,RCTL_write);
 
+    e1000_write_reg(e1000, E1000_IMS, E1000_IMS_RXDMT0);
     /* TODO: [p5-task4] Enable RXDMT0 Interrupt */
 
     local_flush_dcache();
@@ -235,13 +238,12 @@ int e1000_transmit(void *txpacket, int length)
     tail = (tail + 1) % TXDESCS;//注意在进入这个函数的时候，tail指向的位置一定是可以写入的
     //只不过往后走可能不能写入了，那么这个时候需要被阻塞，并且不可以把新的tail指针写入
 
-    // spin_lock_acquire(&send_block_spin_lock);
+    spin_lock_acquire(&send_block_spin_lock);
     while(!(tx_desc_array[tail].status & E1000_TXD_STAT_DD)){
-        // e1000_block_send();
-        // do_block(&(*current_running)->list, &send_block_queue,&send_block_spin_lock);
-        ;
+        e1000_write_reg(e1000, E1000_IMS, E1000_IMS_TXQE);
+        do_block(&(*current_running)->list, &send_block_queue,&send_block_spin_lock);
     }
-    // spin_lock_release(&send_block_spin_lock);
+    spin_lock_release(&send_block_spin_lock);
 
     e1000_write_reg(e1000,E1000_TDT,tail);
 
@@ -264,17 +266,17 @@ int e1000_poll(void *rxbuffer)
 
     tail = (tail + 1) % RXDESCS;//看下一个是不是有效的，如果有效说明可以读出来
 
-    // spin_lock_acquire(&recv_block_spin_lock);
+    spin_lock_acquire(&recv_block_spin_lock);
     while(!(rx_desc_array[tail].status & E1000_RXD_STAT_DD)){//如果DD位有效的，则说明这里已经被硬件置过，在这种情况下是可以往后走的
-        // e1000_block_recv();
-        // do_block(&(*current_running)->list, &recv_block_queue,&recv_block_spin_lock);
-        ;
+        // e1000_write_reg(e1000, E1000_IMS, E1000_IMS_RXDMT0);
+        do_block(&(*current_running)->list, &recv_block_queue,&recv_block_spin_lock);
     }
-    // spin_lock_release(&recv_block_spin_lock);
+    spin_lock_release(&recv_block_spin_lock);
     
     uint32_t len = rx_desc_array[tail].length;
     memcpy(rxbuffer,(void*)rx_pkt_buffer[tail],len);
-    rx_desc_array[tail].status &= ~(E1000_TXD_STAT_DD);
+    rx_desc_array[tail].status = 0;
+    rx_desc_array[tail].length = 0;
     
     // nxt = (nxt + 1) % RXDESCS;
 

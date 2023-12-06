@@ -31,6 +31,7 @@
 #ifndef _E1000_HW_H_
 #define _E1000_HW_H_
 
+#include "os/list.h"
 #include <type.h>
 #include <io.h>
 
@@ -39,6 +40,9 @@
 #define RXDESCS 64          // Number of rx descriptors
 #define TX_PKT_SIZE 2048
 #define RX_PKT_SIZE 2048
+
+extern list_head send_block_queue;
+extern list_head recv_block_queue;
 
 /* E1000 I/O wrapper functions */
 static inline void

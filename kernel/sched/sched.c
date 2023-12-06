@@ -7,6 +7,7 @@
 #include <os/mm.h>
 #include <os/task.h>
 #include <os/loader.h>
+#include <os/net.h>
 #include <screen.h>
 #include <printk.h>
 #include <assert.h>
