@@ -45,6 +45,7 @@
 #include <type.h>
 #include <csr.h>
 #include <pgtable.h>
+#include <os/net.h>
 
 #define USER_ADDR 0xffffffc052000000
 #define VERSION_BUF 50
@@ -434,6 +435,8 @@ static void init_syscall(void)
     syscall[SYSCALL_FORK]           = (long(*)())do_fork;
 
     syscall[SYSCALL_THREAD_CREATE]  = (long(*)())do_thread_create;
+    syscall[SYSCALL_NET_SEND]       = (long(*)())do_net_send;
+    syscall[SYSCALL_NET_RECV]       = (long(*)())do_net_recv;
     // syscall[SYSCALL_THREAD_YIELD]   = (long(*)())do_thread_scheduler;
 
     // TODO: [p2-task3] initialize system call table.
@@ -466,7 +469,7 @@ int main(void)
 // =======
         // Read Flatten Device Tree (｡•ᴗ-)_
         time_base = bios_read_fdt(TIMEBASE);
-        e1000 = (volatile uint8_t *)bios_read_fdt(EHTERNET_ADDR);
+        e1000 = (volatile uint8_t *)bios_read_fdt(ETHERNET_ADDR);
         uint64_t plic_addr = bios_read_fdt(PLIC_ADDR);
         uint32_t nr_irqs = (uint32_t)bios_read_fdt(NR_IRQS);
         printk("> [INIT] e1000: %lx, plic_addr: %lx, nr_irqs: %lx.\n", e1000, plic_addr, nr_irqs);
