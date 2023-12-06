@@ -46,6 +46,7 @@
 #include <csr.h>
 #include <pgtable.h>
 #include <os/net.h>
+#include <plic.h>
 
 #define USER_ADDR 0xffffffc052000000
 #define VERSION_BUF 50
@@ -485,8 +486,8 @@ int main(void)
         printk("> [INIT] Lock mechanism initialization succeeded.\n");
 // =======
         // TODO: [p5-task3] Init plic
-        // plic_init(plic_addr, nr_irqs);
-        // printk("> [INIT] PLIC initialized successfully. addr = 0x%lx, nr_irqs=0x%x\n", plic_addr, nr_irqs);
+        plic_init(plic_addr, nr_irqs);
+        printk("> [INIT] PLIC initialized successfully. addr = 0x%lx, nr_irqs=0x%x\n", plic_addr, nr_irqs);
 
         // Init network device
         e1000_init();

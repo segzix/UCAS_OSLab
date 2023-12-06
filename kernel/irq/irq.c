@@ -27,8 +27,12 @@ void interrupt_helper(regs_context_t *regs, uint64_t stval, uint64_t scause)
         do_exit();
 
     uint32_t head = e1000_read_reg(e1000,E1000_RDH);
-    uint32_t tail = e1000_read_reg(e1000,E1000_RDT);
-    printl("head : %u tail : %u\n",head,tail);
+    // uint32_t tail = e1000_read_reg(e1000,E1000_RDT);
+    // uint32_t icr  = e1000_read_reg(e1000,E1000_ICR);
+    // uint32_t ics  = e1000_read_reg(e1000,E1000_ICS);
+    // uint32_t ims  = e1000_read_reg(e1000,E1000_IMS);
+    // uint32_t imc  = e1000_read_reg(e1000,E1000_IMC);
+    // printl("head : %x tail : %x icr : %x ics : %x ims : %x imc : %x scause : %lx\n",head,tail,icr,ics,ims,imc,scause);
 
     if(scause & (1UL << 63)){
         scause = scause & (~(1UL << 63));
@@ -60,10 +64,16 @@ void handle_irq_ext(regs_context_t *regs, uint64_t stval, uint64_t scause)
 {
     uint32_t plic_ID = plic_claim();
 
-    if(plic_ID == 33 || plic_ID == 2)
+    if(plic_ID == PLIC_E1000_QEMU_IRQ || plic_ID == PLIC_E1000_PYNQ_IRQ){
+        printl("plic_ID : %d cpu_ID : %d",plic_ID,get_current_cpu_id());
         net_handle_irq();
-    else 
+    }
+    else if(plic_ID == 0)
+        return;
+    else {
+        printl("plic_ID : %d cpu_ID : %d",plic_ID,get_current_cpu_id());
         handle_other(regs, stval, scause);
+    }
 
     plic_complete(plic_ID);
     // TODO: [p5-task3] external interrupt handler.

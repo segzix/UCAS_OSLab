@@ -41,13 +41,13 @@ int do_net_recv(void *rxbuffer, int pkt_num, int *pkt_lens)
 void e1000_handle_txpe(void){
     while(send_block_queue.next != &send_block_queue)
         do_unblock(send_block_queue.next);
-    // e1000_write_reg(e1000, E1000_IMC, E1000_IMC_TXQE);
+    e1000_write_reg(e1000, E1000_IMC, E1000_IMC_TXQE);
 }
 
 void e1000_handle_rxdmt0(void){
     while(recv_block_queue.next != &recv_block_queue)
         do_unblock(recv_block_queue.next);
-    // e1000_write_reg(e1000, E1000_IMC, E1000_IMC_RXDMT0);
+    e1000_write_reg(e1000, E1000_IMC, E1000_IMC_RXDMT0);
 }
 
 void net_handle_irq(void)
@@ -55,9 +55,7 @@ void net_handle_irq(void)
     uint32_t ICR_ID = e1000_read_reg(e1000,E1000_ICR);
     if(ICR_ID & E1000_ICR_TXQE)
         e1000_handle_txpe();
-    else if(ICR_ID & E1000_ICR_RXDMT0)
+    if(ICR_ID & E1000_ICR_RXDMT0)
         e1000_handle_rxdmt0();
-    else
-        ;
     // TODO: [p5-task3] Handle interrupts from network device
 }

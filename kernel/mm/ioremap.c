@@ -12,7 +12,7 @@ void *ioremap(unsigned long phys_addr, unsigned long size)
     PTE* pgdir_t = (PTE *)pa2kva(PGDIR_PA);
     uint64_t vpn2 = (va   >> (NORMAL_PAGE_SHIFT + PPN_BITS + PPN_BITS));//页目录虚地址
     
-    set_pfn(&pgdir_t[vpn2], phys_addr >> NORMAL_PAGE_SHIFT);//allocpage作为内核中的函数是虚地址，此时为二级页表分配了空间
+    set_pfn(&pgdir_t[vpn2], (phys_addr & ~(ONE_G_SIZE-1)) >> NORMAL_PAGE_SHIFT);//allocpage作为内核中的函数是虚地址，此时为二级页表分配了空间
     //set_attribute(&pgdir_t[vpn2],_PAGE_PRESENT | _PAGE_USER | _PAGE_ACCESSED | _PAGE_DIRTY);
     set_attribute(&pgdir_t[vpn2],_PAGE_PRESENT | _PAGE_READ | _PAGE_WRITE | _PAGE_EXEC
                                 |_PAGE_ACCESSED| _PAGE_DIRTY);
@@ -22,7 +22,7 @@ void *ioremap(unsigned long phys_addr, unsigned long size)
 
     local_flush_tlb_all();
     
-    return (void*)(io_base - ONE_G_SIZE);
+    return (void*)(io_base - ONE_G_SIZE + (phys_addr & (ONE_G_SIZE-1)));
 }
 
 void iounmap(void *io_addr)
