@@ -154,7 +154,7 @@ static void e1000_configure_rx(void)
 
     e1000_write_reg(e1000,E1000_RCTL,RCTL_write);
 
-    // e1000_write_reg(e1000, E1000_IMS, E1000_IMS_RXDMT0);
+    e1000_write_reg(e1000, E1000_IMS, E1000_IMS_RXDMT0);
     /* TODO: [p5-task4] Enable RXDMT0 Interrupt */
 
     local_flush_dcache();
@@ -268,7 +268,7 @@ int e1000_poll(void *rxbuffer)
 
     spin_lock_acquire(&recv_block_spin_lock);
     while(!(rx_desc_array[tail].status & E1000_RXD_STAT_DD)){//如果DD位有效的，则说明这里已经被硬件置过，在这种情况下是可以往后走的
-        e1000_write_reg(e1000, E1000_IMS, E1000_IMS_RXDMT0);
+        // e1000_write_reg(e1000, E1000_IMS, E1000_IMS_RXDMT0);
         do_block(&(*current_running)->list, &recv_block_queue,&recv_block_spin_lock);
     }
     spin_lock_release(&recv_block_spin_lock);

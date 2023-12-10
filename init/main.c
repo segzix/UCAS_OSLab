@@ -438,6 +438,7 @@ static void init_syscall(void)
     syscall[SYSCALL_THREAD_CREATE]  = (long(*)())do_thread_create;
     syscall[SYSCALL_NET_SEND]       = (long(*)())do_net_send;
     syscall[SYSCALL_NET_RECV]       = (long(*)())do_net_recv;
+    syscall[SYSCALL_NET_RECV_STREAM]= (long(*)())do_net_recv_stream;
     // syscall[SYSCALL_THREAD_YIELD]   = (long(*)())do_thread_scheduler;
 
     // TODO: [p2-task3] initialize system call table.
@@ -511,6 +512,8 @@ int main(void)
         // Init system call table (0_0)
         init_syscall();
         printk("> [INIT] System call initialized successfully.\n");
+
+        init_stream();
 
         // Init screen (QAQ)
         init_screen();

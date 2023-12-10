@@ -84,6 +84,8 @@ void do_scheduler(void)
     current_running = get_current_cpu_id() ? &current_running_1 : &current_running_0;
     cpu_hartmask = get_current_cpu_id() ? 0x2 : 0x1;
     check_sleeping();
+    do_resend_RSD();
+    do_resend_ACK();
 
     if((*current_running)->pid == 2){
         for(unsigned i = 0;i < NUM_MAX_TASK;i++){
