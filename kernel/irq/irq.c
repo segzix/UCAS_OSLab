@@ -65,13 +65,11 @@ void handle_irq_ext(regs_context_t *regs, uint64_t stval, uint64_t scause)
     uint32_t plic_ID = plic_claim();
 
     if(plic_ID == PLIC_E1000_QEMU_IRQ || plic_ID == PLIC_E1000_PYNQ_IRQ){
-        printl("plic_ID : %d cpu_ID : %d",plic_ID,get_current_cpu_id());
         net_handle_irq();
     }
     else if(plic_ID == 0)
         return;
     else {
-        printl("plic_ID : %d cpu_ID : %d",plic_ID,get_current_cpu_id());
         handle_other(regs, stval, scause);
     }
 

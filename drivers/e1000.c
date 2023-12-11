@@ -72,7 +72,8 @@ static void e1000_configure_tx(void)
     
     uint32_t LOW  = (uint32_t)(((uint64_t)kva2pa(tx_desc_array)) & 0xffffffff);
     uint32_t HIGH = (uint32_t)(((uint64_t)kva2pa(tx_desc_array)) >> 32); 
-    uint32_t SIZE = 16*TXDESCS;
+    // uint32_t SIZE = 16*TXDESCS;
+    uint32_t SIZE = sizeof(tx_desc_array);
     
     e1000_write_reg(e1000,E1000_TDBAL,LOW);
     e1000_write_reg(e1000,E1000_TDBAH,HIGH);
@@ -122,11 +123,11 @@ static void e1000_configure_rx(void)
         rx_desc_array[i].addr = (uint32_t)kva2pa((uintptr_t)(rx_pkt_buffer[i]));
         rx_desc_array[i].status = 0;
         rx_desc_array[i].csum = 0;
-        rx_desc_array[i].status = 0;
+        rx_desc_array[i].length = 0;
         rx_desc_array[i].errors = 0;
         rx_desc_array[i].special = 0;
         // rx_desc_array[i].status |= (0<<1);//EOP
-    }
+    }//全部清空
 
     /* TODO: [p5-task2] Set up the Rx descriptor base address and length */
     

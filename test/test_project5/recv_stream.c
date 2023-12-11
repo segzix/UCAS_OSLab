@@ -2,10 +2,9 @@
 
 #include <stdint.h>
 #include <string.h>
-#include <sys/stat.h>
 #include <unistd.h>
 #include <stdio.h>
-#define  BUFFER_NUM 14880
+#define  BUFFER_NUM 19534
 char buffer[BUFFER_NUM];
 
 uint16_t fletcher16(uint8_t *data, int n){
@@ -21,12 +20,8 @@ uint16_t fletcher16(uint8_t *data, int n){
 }
 
 int main(void){
-    struct stat st;
-    stat("/home/stu/chengzixuan21a/build/main", &st);
-    printf("File size: %ld bytes\n", st.st_size);
-    
-    // int nbytes = BUFFER_NUM;
-    int nbytes = st.st_size;
+    int nbytes = BUFFER_NUM;
+    //int nbytes = phdr->p_memsz;
 
     // sys_net_recv_stream(buffer, &nbytes);
     sys_net_recv_stream(buffer, &nbytes);

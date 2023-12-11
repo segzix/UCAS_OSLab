@@ -1,3 +1,4 @@
+#include "screen.h"
 #include <e1000.h>
 #include <type.h>
 #include <os/sched.h>
@@ -44,6 +45,8 @@ char resend_buffer[RESEND_BUFFER_NUM];
 char resend_head[RESEND_HEAD_NUM];
 uint64_t resend_ACK_time;
 uint64_t resend_RSD_time;
+
+static int ACK_valid;//为1时才允许发送ACK
 
 int do_net_send(void *txpacket, int length)
 {
@@ -100,6 +103,7 @@ void init_stream(void){
 
     resend_ACK_time = get_timer();
     resend_RSD_time = get_timer();
+    // ACK_valid = 1;
 }
 
 void do_resend_RSD(){
@@ -128,26 +132,32 @@ void do_resend_RSD(){
 
 void do_resend_ACK()
 {
-    if(resend_ACK_time - get_timer() >= ACK_TIME_GAP){
-        uint32_t resend_RSD_seq = stream_buffer_array[0].seq + stream_buffer_array[0].length;
-        uint32_t resend_RSD_length = stream_buffer_array[0].length;
+    if((resend_ACK_time - get_timer() >= ACK_TIME_GAP) && ACK_valid){
+        uint32_t resend_ACK_seq = stream_buffer_array[0].seq + stream_buffer_array[0].length;
+        if(resend_ACK_seq == 0)
+            ;
+        else 
+            resend_ACK_seq--;
+
+        uint32_t resend_ACK_length = stream_buffer_array[0].length;
 
         memcpy((void*)resend_buffer, (void*)resend_head, RESEND_HEAD_NUM);
 
         resend_buffer[MAGIC_NUM_SEGMENT_OFFSET] = MAGIC_NUM;
         resend_buffer[FLAGS_SEGMENT_OFFSET] = _ACK;
 
-        *(uint8_t*)(resend_buffer + LENGTH_SEGMENT_OFFSET) = ((resend_RSD_length & 0x0000ff00) >> 8);
-        *(uint8_t*)(resend_buffer + LENGTH_SEGMENT_OFFSET + 1) = ((resend_RSD_length & 0x000000ff) >> 0);
+        *(uint8_t*)(resend_buffer + LENGTH_SEGMENT_OFFSET) = ((resend_ACK_length & 0x0000ff00) >> 8);
+        *(uint8_t*)(resend_buffer + LENGTH_SEGMENT_OFFSET + 1) = ((resend_ACK_length & 0x000000ff) >> 0);
 
-        *(uint8_t*)(resend_buffer + SEQ_SEGMENT_OFFSET) = ((resend_RSD_seq & 0xff000000) >> 24);
-        *(uint8_t*)(resend_buffer + SEQ_SEGMENT_OFFSET + 1) = ((resend_RSD_seq & 0x00ff0000) >> 16);
-        *(uint8_t*)(resend_buffer + SEQ_SEGMENT_OFFSET + 2) = ((resend_RSD_seq & 0x0000ff00) >> 8);
-        *(uint8_t*)(resend_buffer + SEQ_SEGMENT_OFFSET + 3) = ((resend_RSD_seq & 0x000000ff) >> 0);
+        *(uint8_t*)(resend_buffer + SEQ_SEGMENT_OFFSET) = ((resend_ACK_seq & 0xff000000) >> 24);
+        *(uint8_t*)(resend_buffer + SEQ_SEGMENT_OFFSET + 1) = ((resend_ACK_seq & 0x00ff0000) >> 16);
+        *(uint8_t*)(resend_buffer + SEQ_SEGMENT_OFFSET + 2) = ((resend_ACK_seq & 0x0000ff00) >> 8);
+        *(uint8_t*)(resend_buffer + SEQ_SEGMENT_OFFSET + 3) = ((resend_ACK_seq & 0x000000ff) >> 0);
 
         e1000_transmit(resend_buffer,RESEND_BUFFER_NUM);
         resend_ACK_time += ACK_TIME_GAP;
-        printl("ACK : %u\n",resend_RSD_seq);
+        printl("ACK : %u\n",resend_ACK_seq);
+        ACK_valid = 0;
     }
 }
 
@@ -160,6 +170,7 @@ int do_net_recv_stream(void *buffer, int *nbytes)
     while(current_bytes){
 
         int lennow = e1000_poll(temp_buffer);//先暂时拷贝到这个字符数组中
+        ACK_valid = 1;
 
         char * start_buffer = temp_buffer + START_OFFSET;//数据包头开始的地方
         char * data_buffer = temp_buffer + SIZE_SEGMENT_OFFSET;//数据段开始的地方
@@ -180,6 +191,10 @@ int do_net_recv_stream(void *buffer, int *nbytes)
         uint64_t now_tail = now_seq + now_len;//通过上述方式，求得当前得到的字符buffer对应的数据包的起始地址和尾地址
 
         if(now_magic == MAGIC_NUM){//判断是对应的包才进入下面的判断
+            if(now_seq == 0){
+                screen_move_cursor(0, 0);
+                printk("SIZE : %u\n",*(uint32_t*)data_buffer);
+            }
 
             memcpy((void*)resend_head, (void*)temp_buffer, RESEND_HEAD_NUM);//拷贝包头
 
@@ -283,6 +298,12 @@ int do_net_recv_stream(void *buffer, int *nbytes)
                 current_bytes -= (stream_buffer_array[node_index_p_overlap].length - general_old_length);
             }
         }
+
+        printl("now_seq : %u now_length : %u\n",now_seq,now_len);
+        for(int i = 0,j = 0;i != -1;i = stream_buffer_array[i].next,j++){
+            printl("%d : stream_buffer_array[%d] seq : %u length : %u\n",j,i,stream_buffer_array[i].seq,stream_buffer_array[i].length);
+        }//循环获得之前这些就有节点加起来的长度，后面用新的长度减去旧的长度
+        printl("\n");
     }
 
     return 0;

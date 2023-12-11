@@ -285,7 +285,7 @@ static void write_segment(Elf64_Phdr phdr, FILE *fp, FILE *img, int *phyaddr)
             printf("\t\twriting 0x%04lx bytes\n", phdr.p_filesz);
         }
         fseek(fp, phdr.p_offset, SEEK_SET);
-        while (phdr.p_filesz-- > 0) {
+        while (phdr.p_memsz-- > 0) {
             fputc(fgetc(fp), img);
             (*phyaddr)++;
         }
