@@ -16,8 +16,9 @@
 #define _RSD (1lu << 1)
 #define _ACK (1lu << 2)
 
-#define RSD_TIME_GAP 1
-#define ACK_TIME_GAP 1
+#define RSD_TIME_GAP 8
+#define ACK_TIME_GAP 8
+#define WAKE_STREAM_TIME_GAP 1
 
 #define MAGIC_NUM_SEGMENT_OFFSET 54
 #define FLAGS_SEGMENT_OFFSET 55
@@ -45,6 +46,7 @@ char resend_buffer[RESEND_BUFFER_NUM];
 char resend_head[RESEND_HEAD_NUM];
 uint64_t resend_ACK_time;
 uint64_t resend_RSD_time;
+uint64_t wakeup_stream_time;
 
 static int ACK_valid;//为1时才允许发送ACK
 
@@ -103,11 +105,12 @@ void init_stream(void){
 
     resend_ACK_time = get_timer();
     resend_RSD_time = get_timer();
+    wakeup_stream_time = get_timer();
     // ACK_valid = 1;
 }
 
 void do_resend_RSD(){
-    if(resend_RSD_time - get_timer() >= RSD_TIME_GAP){
+    if(get_timer() >= resend_RSD_time){
         uint32_t resend_RSD_seq = stream_buffer_array[0].seq + stream_buffer_array[0].length;
         uint32_t resend_RSD_length = stream_buffer_array[0].length;
 
@@ -132,12 +135,8 @@ void do_resend_RSD(){
 
 void do_resend_ACK()
 {
-    if((resend_ACK_time - get_timer() >= ACK_TIME_GAP) && ACK_valid){
+    if((get_timer() >= resend_ACK_time) && ACK_valid){
         uint32_t resend_ACK_seq = stream_buffer_array[0].seq + stream_buffer_array[0].length;
-        if(resend_ACK_seq == 0)
-            ;
-        else 
-            resend_ACK_seq--;
 
         uint32_t resend_ACK_length = stream_buffer_array[0].length;
 
@@ -329,4 +328,13 @@ void net_handle_irq(void)
     if(ICR_ID & E1000_ICR_RXDMT0)
         e1000_handle_rxdmt0();
     // TODO: [p5-task3] Handle interrupts from network device
+}
+
+void do_wake_up_recv_stream(void){//定时唤醒
+    if(get_timer() >= wakeup_stream_time){
+        e1000_handle_rxdmt0();//调用该函数，将阻塞队列里的进程取出来
+
+        wakeup_stream_time += WAKE_STREAM_TIME_GAP;
+        printl("wakeup stream\n");
+    }
 }

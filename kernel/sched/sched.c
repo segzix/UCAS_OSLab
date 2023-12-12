@@ -84,6 +84,8 @@ void do_scheduler(void)
     current_running = get_current_cpu_id() ? &current_running_1 : &current_running_0;
     cpu_hartmask = get_current_cpu_id() ? 0x2 : 0x1;
     check_sleeping();
+
+    do_wake_up_recv_stream();
     do_resend_RSD();
     do_resend_ACK();
 
@@ -305,9 +307,9 @@ void do_unblock(list_node_t *pcb_node)
 {
     list_del(pcb_node);
 
-    spin_lock_acquire(&ready_spin_lock);
+    // spin_lock_acquire(&ready_spin_lock);
     list_add(pcb_node, &ready_queue);
-    spin_lock_release(&ready_spin_lock);
+    // spin_lock_release(&ready_spin_lock);
 
     (list_entry(pcb_node, pcb_t, list))->status = TASK_READY;
     //return;
