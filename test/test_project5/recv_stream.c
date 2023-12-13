@@ -4,7 +4,7 @@
 #include <string.h>
 #include <unistd.h>
 #include <stdio.h>
-#define  BUFFER_NUM 19534
+#define  BUFFER_NUM 136732
 char buffer[BUFFER_NUM];
 
 uint16_t fletcher16(uint8_t *data, int n){
