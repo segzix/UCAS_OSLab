@@ -82,4 +82,12 @@ int sys_net_recv(void *rxbuffer, int pkt_num, int *pkt_lens);
 int sys_net_recv_stream(void *buffer, int *nbytes);
 /************************************************************/
 
+int sys_mkfs(void);
+int sys_statfs(void);
+int sys_cd(char *path);
+int sys_mkdir(char *dir_name);
+int sys_ls(int argc, char *argv[]);
+int sys_rmdir(char *dir_name);
+void sys_getpwdname(char *pwd_name);
+
 #endif

@@ -33,7 +33,7 @@
 #include <stdlib.h>
 
 #define SHELL_WIDTH 80
-#define SHELL_BEGIN 10
+#define SHELL_BEGIN 15
 #define SHELL_END 35
 #define MAX_ARGC 5 
 
@@ -43,11 +43,20 @@
 #define EXEC_COMMAND 3
 #define KILL_COMMAND 4
 #define TASKSET_COMMAND 5
+#define MKFS_COMMAND 6
+#define STATFS_COMMAND 7
+#define CD_COMMAND 8
+#define MKDIR_COMMAND 9
+#define LS_COMMAND 10
+#define RMDIR_COMMAND 11
 
 int command;
 int argc;
-char arg[MAX_ARGC][200]; 
+int cd_point;
+char arg[MAX_ARGC][200];
+char cd_dir[MAX_ARGC][32]; 
 char *argv[MAX_ARGC];
+char pwd_name[32];
 
 char buff[SHELL_WIDTH];
 int print_location_x;
@@ -115,6 +124,19 @@ void parse_command(){
         command = KILL_COMMAND;
     else if(!strcmp(arg[0], "taskset"))
         command = TASKSET_COMMAND;
+    else if(!strcmp(arg[0], "mkfs"))
+        command = MKFS_COMMAND;
+    else if(!strcmp(arg[0], "statfs"))
+        command = STATFS_COMMAND;
+    else if(!strcmp(arg[0], "cd"))
+        command = CD_COMMAND;
+    else if(!strcmp(arg[0], "mkdir"))
+        command = MKDIR_COMMAND;
+    else if(!strcmp(arg[0], "ls"))
+        command = LS_COMMAND;
+    else if(!strcmp(arg[0], "rmdir"))
+        command = RMDIR_COMMAND;
+
         
 
     switch (command) {
@@ -209,6 +231,30 @@ void parse_command(){
                 sys_task_set(mask,argv[1],argc,argv);
             }
             break;
+        case MKFS_COMMAND:
+            print_location_y += sys_mkfs();
+            printf("\n");
+            break;
+        case STATFS_COMMAND:
+            print_location_y += sys_statfs();
+            printf("\n");
+            break;
+        case CD_COMMAND:
+            sys_cd(argv[0]);
+            printf("\n");
+            break;
+        case MKDIR_COMMAND:
+            sys_mkdir(argv[0]);
+            printf("\n");
+            break;
+        case LS_COMMAND:
+            print_location_y += sys_ls(argc,argv);
+            printf("\n");
+            break;
+        case RMDIR_COMMAND:
+            sys_rmdir(argv[0]);
+            printf("\n");
+            break;
         default:
             check_clear();
             printf(" \n(QAQ)Unknown Command: %s\n", arg[0]);
@@ -218,11 +264,11 @@ void parse_command(){
 }
 
 int main(void){
-    int usr_command_begin = strlen("> root@UCAS_OS: ");  
+    int usr_command_begin = strlen("> root@UCAS_OS:");  
     int bufp; 
     int c;
     
-    sys_clear(0, SHELL_END);
+
     sys_move_cursor(0, SHELL_BEGIN);
     printf("---------- COMMAND -------------------\n"); 
     sys_move_cursor(0, SHELL_END);
@@ -236,9 +282,13 @@ int main(void){
         
         print_location_y++;
         sys_move_cursor(0,print_location_y);
-        printf("> root@UCAS_OS: "); 
+        printf("> root@UCAS_OS:"); 
         bufp = 0;
         print_location_x = usr_command_begin;
+
+        sys_getpwdname(pwd_name);
+        printf("%s$ ",pwd_name);
+        print_location_x += (strlen(pwd_name) + 2);
         
         while((c = getchar()) != '\r' && c != '\n' && bufp < SHELL_WIDTH){
         // TODO [P3-task1]: parse input

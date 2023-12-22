@@ -85,9 +85,9 @@ void do_scheduler(void)
     cpu_hartmask = get_current_cpu_id() ? 0x2 : 0x1;
     check_sleeping();
 
-    do_wake_up_recv_stream();
-    do_resend_RSD();
-    do_resend_ACK();
+    // do_wake_up_recv_stream();
+    // do_resend_RSD();
+    // do_resend_ACK();
 
     if((*current_running)->pid == 2){
         for(unsigned i = 0;i < NUM_MAX_TASK;i++){

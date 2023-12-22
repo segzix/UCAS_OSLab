@@ -46,6 +46,7 @@
 #include <csr.h>
 #include <pgtable.h>
 #include <os/net.h>
+#include <os/fs.h>
 #include <plic.h>
 
 #define USER_ADDR 0xffffffc052000000
@@ -296,6 +297,8 @@ static void init_pcb(void)
         pcb[num_pcbs].kill = 0;
         pcb[num_pcbs].hart_mask = 0x0;
         pcb[num_pcbs].current_mask = 0x0;
+        pcb[num_pcbs].pwd = 0;
+        strcpy(pcb[num_pcbs].pwd_dir,"/");
     }
 
     current_running_0 = &pid0_pcb;
@@ -320,7 +323,7 @@ static void init_page_general(void)
         page_general[num_pages].pgdir = -1;
         page_general[num_pages].va = -1;
 
-         page_general[num_pages].table_not = 0;//这一项专门用来判断是不是页表项
+        page_general[num_pages].table_not = 0;//这一项专门用来判断是不是页表项
     }
 
 }
@@ -380,6 +383,8 @@ static void init_shell(void)
     pcb[num_tasks].thread_num = 0;
     pcb[num_tasks].hart_mask = 0x3;
     pcb[num_tasks].current_mask = 0x0;
+    pcb[num_tasks].pwd = 0;
+    strcpy(pcb[num_tasks].pwd_dir,"/");
     for(int k = 0;k < TASK_LOCK_MAX;k++){
         pcb[num_tasks].mutex_lock_key[k] = 0;
     }
@@ -441,6 +446,14 @@ static void init_syscall(void)
     syscall[SYSCALL_NET_RECV_STREAM]= (long(*)())do_net_recv_stream;
     // syscall[SYSCALL_THREAD_YIELD]   = (long(*)())do_thread_scheduler;
 
+    syscall[SYSCALL_MKFS]           = (long(*)())do_mkfs;
+    syscall[SYSCALL_STATFS]         = (long(*)())do_statfs;
+    syscall[SYSCALL_CD]             = (long(*)())do_cd;
+    syscall[SYSCALL_MKDIR]          = (long(*)())do_mkdir;
+    syscall[SYSCALL_LS]             = (long(*)())do_ls;
+    syscall[SYSCALL_RMDIR]          = (long(*)())do_rmdir;
+    syscall[SYSCALL_GETPWDNAME]     = (long(*)())do_getpwdname;
+
     // TODO: [p2-task3] initialize system call table.
 }
 /************************************************************/
@@ -470,29 +483,29 @@ int main(void)
         current_running = &current_running_0;
 // =======
         // Read Flatten Device Tree (｡•ᴗ-)_
-        time_base = bios_read_fdt(TIMEBASE);
-        e1000 = (volatile uint8_t *)bios_read_fdt(ETHERNET_ADDR);
-        uint64_t plic_addr = bios_read_fdt(PLIC_ADDR);
-        uint32_t nr_irqs = (uint32_t)bios_read_fdt(NR_IRQS);
-        printk("> [INIT] e1000: %lx, plic_addr: %lx, nr_irqs: %lx.\n", e1000, plic_addr, nr_irqs);
+        // time_base = bios_read_fdt(TIMEBASE);
+        // e1000 = (volatile uint8_t *)bios_read_fdt(ETHERNET_ADDR);
+        // uint64_t plic_addr = bios_read_fdt(PLIC_ADDR);
+        // uint32_t nr_irqs = (uint32_t)bios_read_fdt(NR_IRQS);
+        // printk("> [INIT] e1000: %lx, plic_addr: %lx, nr_irqs: %lx.\n", e1000, plic_addr, nr_irqs);
 
-        // IOremap
-        plic_addr = (uintptr_t)ioremap((uint64_t)plic_addr, 0x4000 * NORMAL_PAGE_SIZE);
-        e1000 = (uint8_t *)ioremap((uint64_t)e1000, 8 * NORMAL_PAGE_SIZE);
-        printk("> [INIT] IOremap initialization succeeded.\n");
+        // // IOremap
+        // plic_addr = (uintptr_t)ioremap((uint64_t)plic_addr, 0x4000 * NORMAL_PAGE_SIZE);
+        // e1000 = (uint8_t *)ioremap((uint64_t)e1000, 8 * NORMAL_PAGE_SIZE);
+        // printk("> [INIT] IOremap initialization succeeded.\n");
 // >>>>>>> 44b6afb9d17c726a4c190ffe4d7083ed3d511bd6
 
 // <<<<<<< HEAD
         // Init lock mechanism o(´^｀)o
         printk("> [INIT] Lock mechanism initialization succeeded.\n");
 // =======
-        // TODO: [p5-task3] Init plic
-        plic_init(plic_addr, nr_irqs);
-        printk("> [INIT] PLIC initialized successfully. addr = 0x%lx, nr_irqs=0x%x\n", plic_addr, nr_irqs);
+        // // TODO: [p5-task3] Init plic
+        // plic_init(plic_addr, nr_irqs);
+        // printk("> [INIT] PLIC initialized successfully. addr = 0x%lx, nr_irqs=0x%x\n", plic_addr, nr_irqs);
 
-        // Init network device
-        e1000_init();
-        printk("> [INIT] E1000 device initialized successfully.\n");
+        // // Init network device
+        // e1000_init();
+        // printk("> [INIT] E1000 device initialized successfully.\n");
 
         // Init system call table (0_0)
         init_syscall();
@@ -519,6 +532,8 @@ int main(void)
         init_screen();
         // printk("> [INIT] SCREEN initialization succeeded.\n");
 
+        if(!check_fs())
+            do_mkfs();
         enable_interrupt();
 
         send_ipi((unsigned long *)0);

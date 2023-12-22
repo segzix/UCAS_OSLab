@@ -113,6 +113,8 @@ typedef struct pcb
     uintptr_t pgdir;
     unsigned recycle;
 
+    uint32_t pwd;
+    char pwd_dir[64];//用来记录当前工作路径
 } pcb_t,tcb_t;
 
 /*main.c中定义的变量和函数*/

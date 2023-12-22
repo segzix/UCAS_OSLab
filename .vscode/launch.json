@@ -14,7 +14,7 @@
         "postRemoteConnectCommands": [
           {"text": "source ${workspaceFolder}/.gdbinit"}
         ],
-        "preLaunchTask": "Rebuild kernel"
+        // "preLaunchTask": "Rebuild kernel"
       },
       //...
     ]

@@ -320,4 +320,39 @@ int sys_net_recv_stream(void *buffer, int *nbytes)
 {
     return invoke_syscall(SYSCALL_NET_RECV_STREAM,buffer,nbytes,IGNORE,IGNORE,IGNORE);
 }
+
+int sys_mkfs(void)
+{
+    return invoke_syscall(SYSCALL_MKFS,IGNORE,IGNORE,IGNORE,IGNORE,IGNORE);
+}
+
+int sys_statfs(void)
+{
+    return invoke_syscall(SYSCALL_STATFS,IGNORE,IGNORE,IGNORE,IGNORE,IGNORE);
+}
+
+int sys_cd(char *path)
+{
+    return invoke_syscall(SYSCALL_CD,path,IGNORE,IGNORE,IGNORE,IGNORE);
+}
+
+int sys_mkdir(char *dir_name)
+{
+    return invoke_syscall(SYSCALL_MKDIR,dir_name,IGNORE,IGNORE,IGNORE,IGNORE);
+}
+
+int sys_ls(int argc, char *argv[])
+{
+    return invoke_syscall(SYSCALL_LS,argc,argv,IGNORE,IGNORE,IGNORE);
+}
+
+int sys_rmdir(char *dir_name)
+{
+    return invoke_syscall(SYSCALL_RMDIR,dir_name,IGNORE,IGNORE,IGNORE,IGNORE);
+}
+
+void sys_getpwdname(char *pwd_name)
+{
+    invoke_syscall(SYSCALL_GETPWDNAME,pwd_name,IGNORE,IGNORE,IGNORE,IGNORE);
+}
 /************************************************************/

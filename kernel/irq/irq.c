@@ -26,7 +26,7 @@ void interrupt_helper(regs_context_t *regs, uint64_t stval, uint64_t scause)
     if((*current_running)->kill == 1)
         do_exit();
 
-    uint32_t head = e1000_read_reg(e1000,E1000_RDH);
+    // uint32_t head = e1000_read_reg(e1000,E1000_RDH);
     // uint32_t tail = e1000_read_reg(e1000,E1000_RDT);
     // uint32_t icr  = e1000_read_reg(e1000,E1000_ICR);
     // uint32_t ics  = e1000_read_reg(e1000,E1000_ICS);
