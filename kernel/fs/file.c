@@ -250,16 +250,51 @@ int do_ls(int argc, char *argv[]){
     //read_inode(&cur_dir_inode, cur_dir_inode.inode_id);
     current_running = get_current_cpu_id() ? &current_running_1 : &current_running_0;
 
-    int option = 0;//default
-    if((argc == 1) && (strcmp(argv[0], "-l") == 0)){
+    int option = 0;//-l相关信息
+    int option_path = 0;//是否有路径相关信息
+
+    if(argc == 0)
+        ;
+    else if(argc == 1){
+        if(!strcmp(argv[0], "-l"))
+            option = 1;
+        else 
+            option_path = 1;
+    }
+    else if(argc == 2){
         option = 1;
+        option_path = 1;
     }
 
     dentry_t* dentry;
+    uint32_t curr_ino;
     inode_t* curr_inode;
     uint32_t dentry_offset = 0;
 
-    curr_inode = ino2inode_t((*current_running)->pwd);
+
+    curr_ino = (*current_running)->pwd;
+
+    if(option_path){//需要考虑路径的
+        char* name;
+        int sign = 0;
+        if(argc == 1)
+            name = argv[0];
+        else if(argc == 2)
+            name = argv[1];
+
+        if(name[0] == '/'){
+            name++;
+            sign = 1;
+        }
+        //注意这里和cd一样的，首先要返回文件的ino号生成inode
+        //如果是绝对路径，则从ino号为0开始找；如果是相对路径，则从当前工作目录开始找
+        if((curr_ino = inopath2ino((sign ? 0 : (*current_running)->pwd), name)) == -1){
+            printk("> [FS] No such file/directory \n");
+            return 0;
+        }
+    }
+
+    curr_inode = ino2inode_t(curr_ino);
 
     if(option == 0){
         dentry = (dentry_t*)search_datapoint(curr_inode, dentry_offset);//这里的item_num针对的是目录条目数
@@ -312,7 +347,6 @@ int do_rmdirfile(char *dir_name){
 
     father_inode->filesz -= sizeof(dentry_t);
     father_inode->mtime = get_timer();
-    father_inode->hardlinks--;
     uint32_t fatherinode_id = ((uint8_t*)father_inode-(uint8_t*)bcaches)/BLOCK_SIZ;
     bwrite(bcaches[fatherinode_id].block_id, bcaches[fatherinode_id].bcache_block);
     //这里对父亲的inode进行了修改，因此一定要落盘
@@ -541,4 +575,65 @@ int do_lseek(int fd, int offset, int whence)
 
     return fdescs[fd].r_cursor;  // the resulting offset location from the beginning of the file
     //这个操作完之后，读写指针将会一样
+}
+
+int do_ln(char *src_path, char *dst_path)
+{   
+    int sign = 0;
+    char* srcname = src_path;
+    if(srcname[0] == '/'){
+        srcname++;
+        sign = 1;
+    }
+    uint32_t src_ino;
+    if((src_ino = inopath2ino((sign ? 0 : (*current_running)->pwd), srcname)) == -1){
+        printk("> [FS] No such source file/dirctory!\n");
+        return 0;
+    }
+    inode_t* src_inode = ino2inode_t(src_ino);
+    if(src_inode->mode != INODE_FILE){
+        printk("> [FS] Cannot link a directory!\n");
+        return 0;
+    }
+
+    char* file_newname = dst_path;
+    while(*file_newname != '\0')
+        file_newname++;
+    while(*file_newname != '/')
+        file_newname--;
+    *(file_newname++) = '\0';
+    //dstpath会指定目录以及该文件新的文件名，因此需要进行截断，得到目录和文件名，然后根据目录寻找到，并将文件名写入
+
+    sign = 0;
+    char* dstname = dst_path;
+    if(dstname[0] == '/'){
+        dstname++;
+        sign = 1;
+    }
+    uint32_t dst_ino;
+    if((dst_ino = inopath2ino((sign ? 0 : (*current_running)->pwd), dstname)) == -1){
+        printk("> [FS] No such source file/dirctory!\n");
+        return 0;
+    }
+    inode_t * dst_inode = ino2inode_t(dst_ino);
+    if(dst_inode->mode != INODE_DIR){
+        printk("> [FS] File cannot be linked!\n");
+        return 0;
+    }
+
+
+    src_inode->hardlinks++;
+    int32_t srcinode_id = ((uint8_t*)src_inode-(uint8_t*)bcaches)/BLOCK_SIZ;
+    bwrite(bcaches[srcinode_id].block_id, bcaches[srcinode_id].bcache_block);
+    //文件相关的信息被修该，因此需要落盘
+
+    dentry_t father_dentry;
+
+    father_dentry.dentry_valid = 1;
+    father_dentry.ino = src_ino;//被link的文件的ino号
+    strcpy((char*)(father_dentry.name), (char*)file_newname);//写进新的文件名
+
+    write_file(dst_inode, (char*)(&father_dentry), dst_inode->filesz, sizeof(dentry_t));   
+
+    return 1;  // do_ln succeeds 
 }

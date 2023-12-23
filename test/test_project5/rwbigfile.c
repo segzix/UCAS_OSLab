@@ -12,6 +12,7 @@ typedef enum {
     SEEK_CUR,
     SEEK_END,
 } whence_status_t;
+char buff[32];
 int main(void)
 {
     sys_touch("bigfile.txt");
@@ -24,49 +25,31 @@ int main(void)
 //直接指针测试
     printf("\nstart write direct: ");
     sys_lseek(fd,POINT_DIRECT,SEEK_SET);
-    for (int i = 0; i < 10; i++)
-    {
-        sys_fwrite(fd, &i, sizeof(uint32_t));
-    }    
+    sys_fwrite(fd, "test for 8KB", 12);
     sys_sleep(1);
     printf("\nstart read direct: ");
-    for (int i = 0; i < 10; i++)
-    {
-        sys_fread(fd, &b, sizeof(uint32_t));
-        printf("%d ",b);
-    }
+    sys_fread(fd, buff, 12);
+    printf("%s ",buff);
     sys_sleep(1);
 
 //一级间接指针测试
     printf("\nstart write indirect1: ");
     sys_lseek(fd,POINT_INDIRECT1,SEEK_SET);
-    for (int i =10; i < 20; i++)
-    {
-        sys_fwrite(fd, &i, sizeof(uint32_t));
-    } 
+    sys_fwrite(fd, "test for 4MB", 12);
     sys_sleep(1);
     printf("\nstart read indirect1: ");
-    for (int i = 10; i < 20; i++)
-    {
-        sys_fread(fd, &b, sizeof(uint32_t));
-        printf("%d ",b);        
-    }
+    sys_fread(fd, buff, 12);
+    printf("%s ",buff);
     sys_sleep(1);
 
 //二级间接指针测试
     printf("\nstart write indirect2: ");
     sys_lseek(fd,POINT_INDIRECT2,SEEK_SET);
-    for (int i =20; i < 30; i++)
-    {
-        sys_fwrite(fd, &i, sizeof(uint32_t));
-    } 
+    sys_fwrite(fd, "test for 8MB", 12);
     sys_sleep(1);
     printf("\nstart read indirect2: ");
-    for (int i = 20; i < 30; i++)
-    {
-        sys_fread(fd, &b, sizeof(uint32_t));
-        printf("%d ",b);        
-    }
+    sys_fread(fd, buff, 12);
+    printf("%s ",buff);
     sys_sleep(1);
 
     printf("\ntest end !\n");

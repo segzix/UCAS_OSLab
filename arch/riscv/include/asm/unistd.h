@@ -68,5 +68,6 @@
 #define SYSCALL_FCLOSE 77
 #define SYSCALL_RMFILE 78
 #define SYSCALL_LSEEK 79
+#define SYSCALL_LN 80
 
 #endif

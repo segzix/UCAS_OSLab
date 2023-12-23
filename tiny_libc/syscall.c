@@ -396,4 +396,9 @@ int sys_lseek(int fd, int offset, int whence)
     return invoke_syscall(SYSCALL_LSEEK,fd,offset,whence,IGNORE,IGNORE);
 }
 
+int sys_ln(char *src_path, char *dst_path)
+{
+    return invoke_syscall(SYSCALL_LN,src_path,dst_path,IGNORE,IGNORE,IGNORE);
+}
+
 /************************************************************/

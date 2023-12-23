@@ -462,6 +462,7 @@ static void init_syscall(void)
     syscall[SYSCALL_FCLOSE]         = (long(*)())do_fclose;
     syscall[SYSCALL_RMFILE]         = (long(*)())do_rmdirfile;
     syscall[SYSCALL_LSEEK]          = (long(*)())do_lseek;
+    syscall[SYSCALL_LN]             = (long(*)())do_ln;
 
     // TODO: [p2-task3] initialize system call table.
 }

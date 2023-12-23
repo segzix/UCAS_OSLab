@@ -142,3 +142,4 @@ int do_fclose(int fd);
 int do_touch(char *filename);
 int do_cat(char *filename);
 int do_lseek(int fd, int offset, int whence);
+int do_ln(char *src_path, char *dst_path);

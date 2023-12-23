@@ -52,6 +52,7 @@
 #define TOUCH_COMMAND 12
 #define CAT_COMMAND 13
 #define RMFILE_COMMAND 14
+#define LN_COMMAND 15
 
 int command;
 int argc;
@@ -145,6 +146,8 @@ void parse_command(){
         command = CAT_COMMAND;
     else if(!strcmp(arg[0], "rmfile"))
         command = RMFILE_COMMAND;
+    else if(!strcmp(arg[0], "ln"))
+        command = LN_COMMAND;
 
         
 
@@ -275,6 +278,10 @@ void parse_command(){
             break;
         case RMFILE_COMMAND:
             sys_rmfile(argv[0]);
+            printf("\n");
+            break;
+        case LN_COMMAND:
+            sys_ln(argv[0],argv[1]);
             printf("\n");
             break;
         default:

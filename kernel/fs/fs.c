@@ -343,15 +343,19 @@ int rmfile(uint32_t ino){//这个函数用于删除一个目录或者文件
         }
     }
     //如果这个时候该文件有对应的文件描述符（且是文件），则应该将文件描述符置为used=0
-    if (inode->mode == INODE_FILE && ((int)inode->fd_index != 0xff)) 
+    if (inode->mode == INODE_FILE && ((int)inode->fd_index != 0xff) && !inode->hardlinks)//必须要满足没有硬链接才释放 
         fdescs[inode->fd_index].used = 0;
 
-    free_inodeblock(inode);
-    //先废除掉所有数据快
-    uint8_t* inodebytemap = bread(superblock->inodebytemap_offset);
-    inodebytemap[ino] = 0;
-    bwrite(superblock->inodebytemap_offset, inodebytemap);
-    //然后把inodebytemap中的mask无效掉
+    if ((inode->mode == INODE_FILE) && (inode->hardlinks != 0))//当为文件并且硬链接不为0时不能释放相应数据块，其他情况均应释放
+        inode->hardlinks--;
+    else {
+        free_inodeblock(inode);
+        //先废除掉所有数据快
+        uint8_t* inodebytemap = bread(superblock->inodebytemap_offset);
+        inodebytemap[ino] = 0;
+        bwrite(superblock->inodebytemap_offset, inodebytemap);
+        //然后把inodebytemap中的mask无效掉
+    }
 }
 /*
 inode相关的分配函数见上

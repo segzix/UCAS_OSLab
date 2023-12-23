@@ -98,5 +98,6 @@ int sys_touch(char *filename);
 int sys_cat(char *filename);
 int sys_rmfile(char *file_name);
 int sys_lseek(int fd, int offset, int whence);
+int sys_ln(char *src_path, char *dst_path);
 
 #endif
