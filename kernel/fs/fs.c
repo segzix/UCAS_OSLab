@@ -233,10 +233,10 @@ int free_inodeblock(inode_t* inode){//将一个inode所有的block块全部给�
                 for(uint32_t j = 0;j < BLOCK_SIZ/4;j++){
 
 
-                    if(indirect2map2[i]){//第三层
-                        blockbitmap = bread(superblock->blockbitmap_offset + indirect2map2[i]/BLOCK_BIT_SIZ);
-                        freebit(blockbitmap,indirect2map2[i]%BLOCK_BIT_SIZ);
-                        bwrite(superblock->blockbitmap_offset + indirect2map2[i]/BLOCK_BIT_SIZ, blockbitmap);
+                    if(indirect2map2[j]){//第三层
+                        blockbitmap = bread(superblock->blockbitmap_offset + indirect2map2[j]/BLOCK_BIT_SIZ);
+                        freebit(blockbitmap,indirect2map2[j]%BLOCK_BIT_SIZ);
+                        bwrite(superblock->blockbitmap_offset + indirect2map2[j]/BLOCK_BIT_SIZ, blockbitmap);
                     }
 
 
@@ -250,7 +250,7 @@ int free_inodeblock(inode_t* inode){//将一个inode所有的block块全部给�
         }
         //如果有间接指针，那么必定要全部free掉
         blockbitmap = bread(superblock->blockbitmap_offset + inode->indirect_2/BLOCK_BIT_SIZ);
-        freebit(blockbitmap, inode->indirect_1%BLOCK_BIT_SIZ);
+        freebit(blockbitmap, inode->indirect_2%BLOCK_BIT_SIZ);
         bwrite(superblock->blockbitmap_offset + inode->indirect_2/BLOCK_BIT_SIZ, blockbitmap);
     }
 }
@@ -314,10 +314,13 @@ unsigned alloc_inode(uint8_t mode){//returns an inode id
     inodetable = (inode_t*)bread(superblock->inodetable_offset + inodetable_id);
     //算出inode号对应的inodetable
 
+    memset(&inodetable[inodetable_offset], 0, sizeof(inode_t));
+    //一定一定要先刷0！！！！就和分配出一个block一样的道理！！先刷零了再赋值！！
     inodetable[inodetable_offset].mode = mode;
     inodetable[inodetable_offset].owner_pid = (*current_running)->pid;
     inodetable[inodetable_offset].filesz = 0;
     inodetable[inodetable_offset].mtime = get_timer();
+    inodetable[inodetable_offset].fd_index = 0xff;
     bwrite(superblock->inodetable_offset + inodetable_id, (uint8_t*)inodetable);
 
     return inode_id;
@@ -339,6 +342,9 @@ int rmfile(uint32_t ino){//这个函数用于删除一个目录或者文件
             dentry = (dentry_t*)search_datapoint(inode, dentryoffset);
         }
     }
+    //如果这个时候该文件有对应的文件描述符（且是文件），则应该将文件描述符置为used=0
+    if (inode->mode == INODE_FILE && ((int)inode->fd_index != 0xff)) 
+        fdescs[inode->fd_index].used = 0;
 
     free_inodeblock(inode);
     //先废除掉所有数据快
@@ -454,6 +460,9 @@ int write_file(inode_t* inode, char* string, uint32_t start, uint32_t length){//
         inode->filesz = (start > inode->filesz) ? start : inode->filesz;
         //现在的filesiz相当于永远指着最后那一个地址，中间有空洞也不管
         //因此filesz只管往大了就行，再新添加之后和之前的filesz里面选大的
+        if (inode->mode == INODE_FILE && ((int)inode->fd_index != 0xff)) 
+            fdescs[inode->fd_index].memsiz += seg_length;//中间你写是覆盖空洞还是什么我不管，只要你写了我就加
+        
     }
 
     inode->mtime = get_timer();

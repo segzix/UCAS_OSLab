@@ -1,11 +1,14 @@
 
 #include "os/task.h"
+#include "screen.h"
 #include <os/fs.h>
 #include <os/sched.h>
 #include <os/time.h>
 #include <printk.h>
 // #include <stdint.h>
 #include <os/string.h>
+
+char cat_buff[1024];
 
 int do_mkfs(void)
 {
@@ -73,7 +76,7 @@ int do_mkfs(void)
     inode->mode = INODE_DIR;
     inode->owner_pid = (*current_running)->pid;
     inode->hardlinks = 0;
-    inode->pad = 0;
+    inode->fd_index = 0xff;
     inode->filesz = 0;
     inode->mtime = get_timer();
     bwrite(superblock->inodetable_offset,(uint8_t*)inode);//inode分配一个
@@ -105,13 +108,6 @@ int do_mkfs(void)
 
 int do_statfs(void)
 {
-    // TODO [P6-task1]: Implement do_statfs
-    // if(!check_fs()){
-    //     printk("> [FS] Error: file system is not running!\n");
-    //     // assert(0);
-    //     return 0;
-    // }
-
     bios_sd_read(kva2pa((uintptr_t)super_block), 1, blockid2sectorid(0));
     superblock_t *superblock = (superblock_t *)super_block;
 
@@ -144,13 +140,6 @@ int do_statfs(void)
 int do_cd(char *path)
 {
     current_running = get_current_cpu_id() ? &current_running_1 : &current_running_0;
-
-    // TODO [P6-task1]: Implement do_cd
-    // if(!check_fs()){
-    //     printk("> [FS] Error: file system is not running!\n");
-    //     // assert(0);
-    //     return 0;
-    // }
 
     char* name = path;
     if(name[0] == '/'){
@@ -296,7 +285,7 @@ int do_ls(int argc, char *argv[]){
     return 1;
 }
 
-int do_rmdir(char *dir_name){
+int do_rmdirfile(char *dir_name){
     //create a new dir in current dir
     //NOTE: dentries are in the data block now
     //Child dir has the same name as parent dir?
@@ -356,4 +345,200 @@ int do_rmdir(char *dir_name){
 void do_getpwdname(char* pwd_name){
     current_running = get_current_cpu_id() ? &current_running_1 : &current_running_0;
     strcpy(pwd_name, (*current_running)->pwd_dir);
+}
+
+int do_fopen(char *path, int mode)
+{
+    current_running = get_current_cpu_id() ? &current_running_1 : &current_running_0;
+    // TODO [P6-task2]: Implement do_fopen
+    int fd = -1;
+
+    int sign = 0;
+    char* name = path;
+    if(name[0] == '/'){
+        name++;
+        sign = 1;
+    }
+    //注意这里和cd一样的，首先要返回文件的ino号生成inode
+    //如果是绝对路径，则从ino号为0开始找；如果是相对路径，则从当前工作目录开始找
+
+    uint32_t file_ino;
+    if((file_ino = inopath2ino((sign ? 0 : (*current_running)->pwd), name)) == -1){//没有这个文件
+        printk("> [FS] No such file/directory \n");
+        return fd;
+    }
+
+    inode_t *inode = ino2inode_t(file_ino);
+    if(inode->mode == INODE_DIR){
+        printk("> [FS] Cannot open a directory!\n");
+        return fd;
+    }//打开的不是文件是目录
+
+    for(int i=0; i<NUM_FDESCS; i++){
+        if(fdescs[i].used == 0){
+            fd = i;
+            break;
+        }
+    }
+
+    fdescs[fd].used = 1;
+    fdescs[fd].ino = file_ino;
+    fdescs[fd].mode = mode;
+    fdescs[fd].memsiz = 0;
+    fdescs[fd].r_cursor = 0;
+    fdescs[fd].w_cursor = 0;
+
+    inode->fd_index = fd;
+    uint32_t inode_id = ((uint8_t*)inode-(uint8_t*)bcaches)/BLOCK_SIZ;
+    bwrite(bcaches[inode_id].block_id, bcaches[inode_id].bcache_block);
+    //分配了文件的文件描述符，因此inode中必须记录一下，然后落盘
+
+    return fd;  // return the id of file descriptor
+}
+
+int do_fread(int fd, char *buff, int length)
+{
+    if(fd < 0 || fd >= NUM_FDESCS || fdescs[fd].used == 0){
+        printk("> [FS] invalid fd number!\n");
+        return 0;
+    }
+
+    uint32_t file_ino = fdescs[fd].ino;
+    inode_t * file_inode = ino2inode_t(file_ino);//得到inode
+    uint32_t free_siz = file_inode->filesz - fdescs[fd].r_cursor;
+    uint32_t read_siz = (free_siz > length) ? length : free_siz;//如果文件本身都已经不够大了，那么读的数据相对也会减小
+
+    read_file(file_inode, buff, fdescs[fd].r_cursor, read_siz);//读文件
+    fdescs[fd].r_cursor += read_siz;//读文件并移动读光标
+
+    return read_siz;  // return the length of trully read data
+}
+
+int do_fwrite(int fd, char *buff, int length)
+{
+    if(fd < 0 || fd >= NUM_FDESCS || fdescs[fd].used == 0){
+        printk("> [FS] invalid fd number!\n");
+        return 0;
+    }
+
+    uint32_t file_ino = fdescs[fd].ino;
+    inode_t* file_inode = ino2inode_t(file_ino);//得到inode
+    uint32_t write_siz = length;//这里不用像读的时候考虑文件大小，因为是写，可以扩展文件大小
+
+    write_file(file_inode, buff, fdescs[fd].w_cursor, write_siz);
+    fdescs[fd].w_cursor += length;//写文件并移动写光标
+
+    return write_siz;  // return the length of trully written data
+}
+
+int do_fclose(int fd)
+{
+    // TODO [P6-task2]: Implement do_fclose
+    if(fd < 0 || fd >= NUM_FDESCS || fdescs[fd].used == 0){
+        printk("> [FS] invalid fd number!\n");
+        return 0;
+    }
+
+    fdescs[fd].used = 0;
+
+    inode_t *inode = ino2inode_t(fdescs[fd].ino);
+    inode->fd_index = 0xff;
+    uint32_t inode_id = ((uint8_t*)inode-(uint8_t*)bcaches)/BLOCK_SIZ;
+    bwrite(bcaches[inode_id].block_id, bcaches[inode_id].bcache_block);
+    //关闭了文件的文件描述符，因此inode中必须改为-1，然后落盘
+
+    return 1;  // do_fclose succeeds
+}
+
+int do_touch(char *filename)
+{
+    // TODO [P6-task2]: Implement do_touch
+    current_running = get_current_cpu_id() ? &current_running_1 : &current_running_0;
+    uint32_t len = strlen(filename);//name length
+    if(len == 0 || strcheck(filename, '/') || strcheck(filename, ' ') || filename[0] == '-' || filename[0] == '.'){
+        printk("> [FS] Illegal name!\n");
+        return 0;
+    }
+
+    if(inopath2ino((*current_running)->pwd, filename) != -1){
+        printk("> [FS] name already existed!\n");
+        return 0;
+    }//名字已经存在
+
+    uint32_t new_ino = alloc_inode(INODE_FILE);//先给文件分配出一个inode
+    //这个时候还没有分配文件描述符，因此不用管，仍为-1
+
+    inode_t* father_inode = ino2inode_t((*current_running)->pwd);
+    dentry_t father_dentry;
+
+    father_dentry.dentry_valid = 1;
+    father_dentry.ino = new_ino;
+    strcpy((char*)(father_dentry.name), (char*)filename);//name拷贝//这里的path不会有多级目录
+
+    write_file(father_inode, (char*)(&father_dentry), father_inode->filesz, sizeof(dentry_t));
+    //对父目录的目录项进行修改
+
+    return 1;  // do_touch succeeds
+}
+
+int do_cat(char *filename)
+{
+    uint32_t file_ino;
+
+    int sign = 0;
+    char* name = filename;
+    if(name[0] == '/'){
+        name++;
+        sign = 1;
+    }
+    //注意这里和cd一样的，首先要返回文件的ino号生成inode
+    //如果是绝对路径，则从ino号为0开始找；如果是相对路径，则从当前工作目录开始找
+    if((file_ino = inopath2ino((sign ? 0 : (*current_running)->pwd), name)) == -1){
+        printk("> [FS] No such file/directory \n");
+        return 0;
+    }
+
+    inode_t* file_inode = ino2inode_t(file_ino);
+    if(file_inode->mode == INODE_DIR){
+        printk("> [FS] Cannot open a directory!\n");
+        return 0;
+    }
+
+    memset(cat_buff, 0, 256);//每次用cat以前必须要保证不能有残留
+    read_file(file_inode, cat_buff, 0, file_inode->filesz);//读文件//这里把所有的都打印出来，中间有空洞也不管
+    printk("\n");
+    printk("%s",cat_buff);
+
+    return 10;  // do_cat succeeds
+}
+
+int do_lseek(int fd, int offset, int whence)
+{
+    if(fd < 0 || fd >= NUM_FDESCS || fdescs[fd].used == 0){
+        printk("> [FS] invalid fd number!\n");
+        return 0;
+    }
+
+    uint32_t file_ino = fdescs[fd].ino;
+    inode_t* file_inode = ino2inode_t(file_ino);
+
+    switch(whence){
+        case SEEK_SET:
+            fdescs[fd].r_cursor = offset;
+            fdescs[fd].w_cursor = offset;
+            break;
+        case SEEK_CUR:
+            fdescs[fd].r_cursor += offset;
+            fdescs[fd].w_cursor += offset;
+            break;
+        case SEEK_END:
+            fdescs[fd].r_cursor = file_inode->filesz + offset;
+            fdescs[fd].w_cursor = file_inode->filesz + offset;
+            break;
+        default:
+            break;
+    }    
+
+    return fdescs[fd].r_cursor;  // the resulting offset location from the beginning of the file
+    //这个操作完之后，读写指针将会一样
 }

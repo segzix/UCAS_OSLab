@@ -357,6 +357,8 @@ pid_t do_exec(char *name, int argc, char *argv[])
                     pcb[id].wait_list.next = &pcb[id].wait_list;
                     pcb[id].kill = 0;
                     pcb[id].hart_mask = (*current_running)->hart_mask;
+                    pcb[id].pwd = (*current_running)->pwd;
+                    //pwd_dir只用管shell显示，这里不做拷贝
 
                     // clean_temp_page(pcb[id].pgdir);
 

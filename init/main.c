@@ -451,8 +451,17 @@ static void init_syscall(void)
     syscall[SYSCALL_CD]             = (long(*)())do_cd;
     syscall[SYSCALL_MKDIR]          = (long(*)())do_mkdir;
     syscall[SYSCALL_LS]             = (long(*)())do_ls;
-    syscall[SYSCALL_RMDIR]          = (long(*)())do_rmdir;
+    syscall[SYSCALL_RMDIR]          = (long(*)())do_rmdirfile;
     syscall[SYSCALL_GETPWDNAME]     = (long(*)())do_getpwdname;
+
+    syscall[SYSCALL_TOUCH]          = (long(*)())do_touch;
+    syscall[SYSCALL_CAT]            = (long(*)())do_cat;
+    syscall[SYSCALL_FOPEN]          = (long(*)())do_fopen;
+    syscall[SYSCALL_FREAD]          = (long(*)())do_fread;
+    syscall[SYSCALL_FWRITE]         = (long(*)())do_fwrite;
+    syscall[SYSCALL_FCLOSE]         = (long(*)())do_fclose;
+    syscall[SYSCALL_RMFILE]         = (long(*)())do_rmdirfile;
+    syscall[SYSCALL_LSEEK]          = (long(*)())do_lseek;
 
     // TODO: [p2-task3] initialize system call table.
 }

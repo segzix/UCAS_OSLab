@@ -49,6 +49,9 @@
 #define MKDIR_COMMAND 9
 #define LS_COMMAND 10
 #define RMDIR_COMMAND 11
+#define TOUCH_COMMAND 12
+#define CAT_COMMAND 13
+#define RMFILE_COMMAND 14
 
 int command;
 int argc;
@@ -136,6 +139,12 @@ void parse_command(){
         command = LS_COMMAND;
     else if(!strcmp(arg[0], "rmdir"))
         command = RMDIR_COMMAND;
+    else if(!strcmp(arg[0], "touch"))
+        command = TOUCH_COMMAND;
+    else if(!strcmp(arg[0], "cat"))
+        command = CAT_COMMAND;
+    else if(!strcmp(arg[0], "rmfile"))
+        command = RMFILE_COMMAND;
 
         
 
@@ -160,6 +169,7 @@ void parse_command(){
                 break;
             }
 
+            sys_clear(0, SHELL_BEGIN - 1);
             sys_clear(SHELL_BEGIN + 1, SHELL_END - 1);
             print_location_y = SHELL_BEGIN;
             break;
@@ -253,6 +263,18 @@ void parse_command(){
             break;
         case RMDIR_COMMAND:
             sys_rmdir(argv[0]);
+            printf("\n");
+            break;
+        case TOUCH_COMMAND:
+            sys_touch(argv[0]);
+            printf("\n");
+            break;
+        case CAT_COMMAND:
+            print_location_y += sys_cat(argv[0]);
+            printf("\n");
+            break;
+        case RMFILE_COMMAND:
+            sys_rmfile(argv[0]);
             printf("\n");
             break;
         default:

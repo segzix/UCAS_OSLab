@@ -355,4 +355,45 @@ void sys_getpwdname(char *pwd_name)
 {
     invoke_syscall(SYSCALL_GETPWDNAME,pwd_name,IGNORE,IGNORE,IGNORE,IGNORE);
 }
+
+int sys_fopen(char *path, int mode)
+{
+    return invoke_syscall(SYSCALL_FOPEN,path,mode,IGNORE,IGNORE,IGNORE);
+}
+
+int sys_fread(int fd, char *buff, int length)
+{
+    return invoke_syscall(SYSCALL_FREAD,fd,buff,length,IGNORE,IGNORE); 
+}
+
+int sys_fwrite(int fd, char *buff, int length)
+{
+    return invoke_syscall(SYSCALL_FWRITE,fd,buff,length,IGNORE,IGNORE);
+}
+
+int sys_fclose(int fd)
+{
+    return invoke_syscall(SYSCALL_FCLOSE,fd,IGNORE,IGNORE,IGNORE,IGNORE);
+}
+
+int sys_touch(char *filename)
+{
+    return invoke_syscall(SYSCALL_TOUCH,filename,IGNORE,IGNORE,IGNORE,IGNORE);
+}
+
+int sys_cat(char *filename)
+{
+    return invoke_syscall(SYSCALL_CAT,filename,IGNORE,IGNORE,IGNORE,IGNORE);
+}
+
+int sys_rmfile(char *filename)
+{
+    return invoke_syscall(SYSCALL_RMFILE,filename,IGNORE,IGNORE,IGNORE,IGNORE);
+}
+
+int sys_lseek(int fd, int offset, int whence)
+{
+    return invoke_syscall(SYSCALL_LSEEK,fd,offset,whence,IGNORE,IGNORE);
+}
+
 /************************************************************/

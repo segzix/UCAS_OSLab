@@ -22,6 +22,10 @@
 #define DIRECT_BLOCK_SIZ DIRECT_NUM//直接对应块的最大块标号
 #define INDIRECT1_BLOCK_SIZ (DIRECT_BLOCK_SIZ+POINT_PER_BLOCK*INDIRECT1_NUM)//直接对应和一级块的最大块标号
 #define INDIRECT2_BLOCK_SIZ (INDIRECT1_BLOCK_SIZ+POINT_PER_BLOCK*POINT_PER_BLOCK*INDIRECT1_NUM)//直接对应和一级二级块的最大块标号
+#define NUM_FDESCS 32
+
+#define O_RD (1lu << 0)
+#define O_WR (1lu << 1)
 
 char super_block[BLOCK_SIZ];//super可能会在内存中长期驻留
 char check_block[BLOCK_SIZ];
@@ -30,6 +34,12 @@ typedef enum {
     INODE_FILE,
     INODE_DIR,
 } inode_status_t;
+
+typedef enum {
+    SEEK_SET,
+    SEEK_CUR,
+    SEEK_END,
+} whence_status_t;
 
 typedef struct bcache{
     uint8_t bcache_valid;//是否有效
@@ -64,7 +74,7 @@ typedef struct inode{
     uint8_t mode;//形式，目录或文件
     uint8_t owner_pid;//拥有的进程
     uint8_t hardlinks;//硬链接数
-    uint8_t pad;//padding，可做权限
+    int8_t  fd_index;//如果为文件，则指向文件描述符下标
 
     uint32_t filesz;//文件大小
     uint32_t mtime;//创建时间
@@ -82,6 +92,16 @@ typedef struct dentry{
     char name[27];
 } dentry_t;
 
+typedef struct fdesc_t{
+    // TODO [P6-task2]: Implement the data structure of file descriptor
+    uint64_t memsiz;//对于文件而言，有一个真正的memsiz，用来记录如果有空洞，则除去空洞的总字节数
+    uint32_t used;
+    uint32_t ino;
+    uint32_t mode;//文件描述符里面做权限标志
+    uint32_t r_cursor;
+    uint32_t w_cursor;
+} fdesc_t;
+fdesc_t fdescs[NUM_FDESCS];
 //同时在读取之前会先从bcache中取，取不到再从硬盘中读到bcache中并且读出
 
 uint32_t blockid2sectorid(uint32_t block_id);
@@ -112,5 +132,13 @@ int do_statfs(void);
 int do_cd(char *path);
 int do_mkdir(char *dir_name);
 int do_ls(int argc, char *argv[]);
-int do_rmdir(char *dir_name);
+int do_rmdirfile(char *dir_name);
 void do_getpwdname(char* pwd_name);
+
+int do_fopen(char *path, int mode);
+int do_fread(int fd, char *buff, int length);
+int do_fwrite(int fd, char *buff, int length);
+int do_fclose(int fd);
+int do_touch(char *filename);
+int do_cat(char *filename);
+int do_lseek(int fd, int offset, int whence);

@@ -90,4 +90,13 @@ int sys_ls(int argc, char *argv[]);
 int sys_rmdir(char *dir_name);
 void sys_getpwdname(char *pwd_name);
 
+int sys_fopen(char *path, int mode);
+int sys_fread(int fd, char *buff, int length);
+int sys_fwrite(int fd, char *buff, int length);
+int sys_fclose(int fd);
+int sys_touch(char *filename);
+int sys_cat(char *filename);
+int sys_rmfile(char *file_name);
+int sys_lseek(int fd, int offset, int whence);
+
 #endif
