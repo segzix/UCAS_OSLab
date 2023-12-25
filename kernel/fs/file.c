@@ -252,6 +252,7 @@ int do_ls(int argc, char *argv[]){
 
     int option = 0;//-l相关信息
     int option_path = 0;//是否有路径相关信息
+    int y_location = 0;
 
     if(argc == 0)
         ;
@@ -306,18 +307,19 @@ int do_ls(int argc, char *argv[]){
         }
         printk("\n");
     }else if(option == 1){
-        printk("INODE SIZE    LINKS  NAME\n");
+        printk("\nINODE SIZE    LINKS  NAME  MTIME\n");
         dentry = (dentry_t*)search_datapoint(curr_inode, dentry_offset);
         while(dentry->dentry_valid && (dentry_offset < curr_inode->filesz)) {
             inode_t* child_inode = ino2inode_t(dentry->ino);
-            printk("\t\t%u\t\t\t%dB\t\t\t\t\t\t%u\t\t\t\t%s\n",dentry->ino, child_inode->filesz, child_inode->hardlinks, dentry->name);
+            printk("\t\t%u\t\t\t%dB\t\t\t\t\t\t%u\t\t\t\t\t\t%s\t\t\t\t%u\n",dentry->ino, child_inode->filesz, child_inode->hardlinks, dentry->name,child_inode->mtime);
             dentry_offset += sizeof(dentry_t);
             dentry = (dentry_t*)search_datapoint(curr_inode, dentry_offset);
             // screen_reflush();
+            y_location++;
         }
     }
 
-    return 1;
+    return y_location + 1;
 }
 
 int do_rmdirfile(char *dir_name){
@@ -597,11 +599,20 @@ int do_ln(char *src_path, char *dst_path)
     }
 
     char* file_newname = dst_path;
+    char file_name[32];
     while(*file_newname != '\0')
         file_newname++;
-    while(*file_newname != '/')
+    while((*file_newname != '/') && (file_newname != dst_path))//不能顶到头还过了
         file_newname--;
-    *(file_newname++) = '\0';
+
+    if(*file_newname == '/'){
+        *file_newname = '\0';
+        file_newname++;
+        strcpy(file_name,file_newname);
+    }else {
+        strcpy(file_name,file_newname);
+        *file_newname = '\0';
+    }
     //dstpath会指定目录以及该文件新的文件名，因此需要进行截断，得到目录和文件名，然后根据目录寻找到，并将文件名写入
 
     sign = 0;
@@ -631,7 +642,7 @@ int do_ln(char *src_path, char *dst_path)
 
     father_dentry.dentry_valid = 1;
     father_dentry.ino = src_ino;//被link的文件的ino号
-    strcpy((char*)(father_dentry.name), (char*)file_newname);//写进新的文件名
+    strcpy((char*)(father_dentry.name), (char*)file_name);//写进新的文件名
 
     write_file(dst_inode, (char*)(&father_dentry), dst_inode->filesz, sizeof(dentry_t));   
 

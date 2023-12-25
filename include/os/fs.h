@@ -6,7 +6,7 @@
 //这列全部采用块管理而非扇区管理，即一个块是4K,一个扇区是512，一个块为8个扇区；这里所有的偏移量均采用块来进行技术
 #define SUPER_START (1lu << 17)//文件系统分配出1M个block，从第512M开始，
 #define SUPER_MAGIC 0x398
-#define BCACHE_NUM 512 //bcache的数量 
+#define BCACHE_NUM 1024 //bcache的数量 
 
 #define BLOCK_SIZ (1lu << 12)
 #define BLOCK_BIT_SIZ (BLOCK_SIZ << 3)//每个块的byte数和bit数
@@ -77,7 +77,7 @@ typedef struct inode{
     int8_t  fd_index;//如果为文件，则指向文件描述符下标
 
     uint32_t filesz;//文件大小
-    uint32_t mtime;//创建时间
+    uint32_t mtime;//修改时间
 
     uint32_t direct[3];
     uint32_t indirect_1;

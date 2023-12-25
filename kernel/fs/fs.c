@@ -425,7 +425,8 @@ uint8_t* search_datapoint(inode_t* inode, uint32_t offset){//根据给出的偏�
             bwrite(inode->indirect_2, indirect2_point1);//对应的分别是id号和对应的bcache中的数组地址，必须要落盘
         }
         uint8_t* indirect2_point2 = (uint8_t*)bread(*point1);
-        uint32_t* point2 = (uint32_t*)indirect2_point2 + (offset - INDIRECT1_BLOCK_SIZ * BLOCK_SIZ) / BLOCK_SIZ;//point块，还不是目录块
+        uint32_t* point2 = (uint32_t*)indirect2_point2 + ((offset - INDIRECT1_BLOCK_SIZ * BLOCK_SIZ) % (BLOCK_SIZ * POINT_PER_BLOCK)) / BLOCK_SIZ;//point块，还不是目录块
+        //这里的操作需要稍微注意一下
 
         if(!(*point2)){//说明还没有进行过对应数据块的分配
             *point2 = alloc_block();
@@ -560,7 +561,7 @@ int inopath2ino(uint32_t base_ino, char * dir_name){//根据给出的目录和�
     char* nxt_name = name;
     uint8_t sign;//这里的sign用来判断当级有没有结束目录
     if(*nxt_name == '\0')
-        return 0;//直接就是根目录,直接返回
+        return base_ino;//直接就是当级的目录,直接返回
 
     while(*nxt_name  != '\0' && *nxt_name != '/')
         nxt_name++;

@@ -1,10 +1,21 @@
+#include <stdint.h>
 #include <stdio.h>
 #include <string.h>
 #include <unistd.h>
 uint32_t * write_buffer = 0x10000000;
-#define POINT_DIRECT 0x2000//(4K*2)
-#define POINT_INDIRECT1 0x400000//(4M)
-#define POINT_INDIRECT2 0x800000//(8M)
+#define WRITE_BLOCK_NUM 64
+#define FILE_4MB  22
+#define POINT_8KB 0x2000
+#define POINT_1MB 0x100000
+#define POINT_2MB 0x200000
+#define POINT_3MB 0x300000
+#define POINT_4MB 0x400000
+#define POINT_8MB 0x800000
+#define POINT_10MB 0xa00000
+#define POINT_12MB 0xc00000
+#define POINT_16MB 0x1000000
+#define POINT_32MB 0x2000000
+#define POINT_64MB 0x4000000
 #define O_RD (1lu << 0)
 #define O_WR (1lu << 1)
 typedef enum {
@@ -22,36 +33,18 @@ int main(void)
     printf("test begin !");
     uint32_t b;
 
-//直接指针测试
-    printf("\nstart write direct: ");
-    sys_lseek(fd,POINT_DIRECT,SEEK_SET);
-    sys_fwrite(fd, "test for 8KB", 12);
-    sys_sleep(1);
-    printf("\nstart read direct: ");
-    sys_fread(fd, buff, 12);
-    printf("%s ",buff);
-    sys_sleep(1);
+    for(int i = 0;i < WRITE_BLOCK_NUM;i++){
+        if(!(i % 10))//每次打印10次更新一下光标
+            sys_move_cursor(0, 1);
 
-//一级间接指针测试
-    printf("\nstart write indirect1: ");
-    sys_lseek(fd,POINT_INDIRECT1,SEEK_SET);
-    sys_fwrite(fd, "test for 4MB", 12);
-    sys_sleep(1);
-    printf("\nstart read indirect1: ");
-    sys_fread(fd, buff, 12);
-    printf("%s ",buff);
-    sys_sleep(1);
+        sys_lseek(fd,(i << FILE_4MB),SEEK_SET);
+        sys_fwrite(fd, &i, sizeof(int));
+        printf("\nstart read %dMB: ",i<<2);
+        sys_fread(fd, &b, sizeof(int));
+        printf("%d ",b<<2);
+    }
 
-//二级间接指针测试
-    printf("\nstart write indirect2: ");
-    sys_lseek(fd,POINT_INDIRECT2,SEEK_SET);
-    sys_fwrite(fd, "test for 8MB", 12);
-    sys_sleep(1);
-    printf("\nstart read indirect2: ");
-    sys_fread(fd, buff, 12);
-    printf("%s ",buff);
-    sys_sleep(1);
-
+    sys_move_cursor(0, 12);
     printf("\ntest end !\n");
 
     sys_fclose(fd);
