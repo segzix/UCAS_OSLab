@@ -4,7 +4,7 @@
 #include <unistd.h>
 #include <time.h>
 uint32_t * write_buffer = 0x10000000;
-#define WRITE_BLOCK_NUM 49
+#define WRITE_BLOCK_NUM 32
 #define FILE_256KB  18
 #define POINT_8KB 0x2000
 #define POINT_1MB 0x100000

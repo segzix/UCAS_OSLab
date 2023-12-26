@@ -233,8 +233,8 @@ int do_mkdir(char *dir_name){
     inode_t* father_inode = ino2inode_t((*current_running)->pwd);
     dentry_t father_dentry;
 
-    uint32_t fatherinode_bcacheid = ((uint8_t*)father_inode-(uint8_t*)bcaches)/BLOCK_SIZ;
-    bwrite(bcaches[fatherinode_bcacheid].block_id, bcaches[fatherinode_bcacheid].bcache_block);
+    // uint32_t fatherinode_bcacheid = ((uint8_t*)father_inode-(uint8_t*)bcaches)/sizeof(bcache_t);
+    // bwrite(bcaches[fatherinode_bcacheid].block_id, bcaches[fatherinode_bcacheid].bcache_block);
     //这里对父亲的inode进行了修改，因此一定要落盘
 
     father_dentry.dentry_valid = 1;
@@ -338,6 +338,10 @@ int do_rmdirfile(char *dir_name){
     if((rm_ino = inopath2ino((*current_running)->pwd, dir_name)) == -1)
         return 0;
     //pwd是当前的父目录，然后直接把名字送进去，会返回对应的ino号或者返回0
+    if(!strcmp(dir_name, ".") || !strcmp(dir_name, ".."))
+        return 0;
+    //.和..不能删除
+
     rm_inode = ino2inode_t(rm_ino);
     father_inode = ino2inode_t((*current_running)->pwd);
 
@@ -351,32 +355,12 @@ int do_rmdirfile(char *dir_name){
 
     father_inode->filesz -= sizeof(dentry_t);
     father_inode->mtime = get_timer();
-    uint32_t fatherinode_id = ((uint8_t*)father_inode-(uint8_t*)bcaches)/BLOCK_SIZ;
+    uint32_t fatherinode_id = ((uint8_t*)father_inode-(uint8_t*)bcaches)/sizeof(bcache_t);
     bwrite(bcaches[fatherinode_id].block_id, bcaches[fatherinode_id].bcache_block);
     //这里对父亲的inode进行了修改，因此一定要落盘
 
     rmfile(rm_ino);
     //将inode项彻底删除掉
-
-    // bios_sd_read(kva2pa((uintptr_t)check_block), 8, blockid2sectorid(1));//测试bitmap1
-    // bios_sd_read(kva2pa((uintptr_t)check_block), 8, blockid2sectorid(2));//测试bitmap2
-    // bios_sd_read(kva2pa((uintptr_t)check_block), 8, blockid2sectorid(5));//测试bytemap
-    // bios_sd_read(kva2pa((uintptr_t)check_block), 8, blockid2sectorid(6));//测试1
-    // bios_sd_read(kva2pa((uintptr_t)check_block), 8, blockid2sectorid(7));//测试2
-    // bios_sd_read(kva2pa((uintptr_t)check_block), 8, blockid2sectorid(8));//测试3
-    // bios_sd_read(kva2pa((uintptr_t)check_block), 8, blockid2sectorid(9));//测试4
-    // bios_sd_read(kva2pa((uintptr_t)check_block), 8, blockid2sectorid(10));//测试5
-    // bios_sd_read(kva2pa((uintptr_t)check_block), 8, blockid2sectorid(11));//测试6
-    // bios_sd_read(kva2pa((uintptr_t)check_block), 8, blockid2sectorid(12));//测试7
-    // bios_sd_read(kva2pa((uintptr_t)check_block), 8, blockid2sectorid(13));//测试8
-    // bios_sd_read(kva2pa((uintptr_t)check_block), 8, blockid2sectorid(14));//测试datablock1
-    // bios_sd_read(kva2pa((uintptr_t)check_block), 8, blockid2sectorid(15));//测试datablock2
-    // bios_sd_read(kva2pa((uintptr_t)check_block), 8, blockid2sectorid(16));//测试datablock3
-    // bios_sd_read(kva2pa((uintptr_t)check_block), 8, blockid2sectorid(17));//测试datablock4
-    // bios_sd_read(kva2pa((uintptr_t)check_block), 8, blockid2sectorid(18));//测试datablock5
-    // bios_sd_read(kva2pa((uintptr_t)check_block), 8, blockid2sectorid(19));//测试datablock6
-    // bios_sd_read(kva2pa((uintptr_t)check_block), 8, blockid2sectorid(20));//测试datablock7
-
     return 1;
 }
 
@@ -427,7 +411,7 @@ int do_fopen(char *path, int mode)
     fdescs[fd].w_cursor = 0;
 
     inode->fd_index = fd;
-    uint32_t inode_id = ((uint8_t*)inode-(uint8_t*)bcaches)/BLOCK_SIZ;
+    uint32_t inode_id = ((uint8_t*)inode-(uint8_t*)bcaches)/sizeof(bcache_t);
     bwrite(bcaches[inode_id].block_id, bcaches[inode_id].bcache_block);
     //分配了文件的文件描述符，因此inode中必须记录一下，然后落盘
 
@@ -481,7 +465,7 @@ int do_fclose(int fd)
 
     inode_t *inode = ino2inode_t(fdescs[fd].ino);
     inode->fd_index = 0xff;
-    uint32_t inode_id = ((uint8_t*)inode-(uint8_t*)bcaches)/BLOCK_SIZ;
+    uint32_t inode_id = ((uint8_t*)inode-(uint8_t*)bcaches)/sizeof(bcache_t);
     bwrite(bcaches[inode_id].block_id, bcaches[inode_id].bcache_block);
     //关闭了文件的文件描述符，因此inode中必须改为-1，然后落盘
 
@@ -591,7 +575,7 @@ int do_lseek(int fd, int offset, int whence)
 
     file_inode = ino2inode_t(file_ino);//前面都是用栈上的inode做的，这里再次读出来并且翻译后写入
     memcpy(file_inode, &buff_inode, sizeof(inode_t));//栈上暂时保存的值放到其中
-    uint32_t inode_id = ((uint8_t*)file_inode-(uint8_t*)bcaches)/BLOCK_SIZ;
+    uint32_t inode_id = ((uint8_t*)file_inode-(uint8_t*)bcaches)/sizeof(bcache_t);
     bwrite(bcaches[inode_id].block_id, bcaches[inode_id].bcache_block);
     return fdescs[fd].r_cursor;  // the resulting offset location from the beginning of the file
     //这个操作完之后，读写指针将会一样
@@ -633,6 +617,12 @@ int do_ln(char *src_path, char *dst_path)
     }
     //dstpath会指定目录以及该文件新的文件名，因此需要进行截断，得到目录和文件名，然后根据目录寻找到，并将文件名写入
 
+    src_inode->hardlinks++;
+    int32_t srcinode_id = ((uint8_t*)src_inode-(uint8_t*)bcaches)/sizeof(bcache_t);
+    bwrite(bcaches[srcinode_id].block_id, bcaches[srcinode_id].bcache_block);
+    //文件相关的信息被修该，因此需要落盘
+    //上面是处理与src相关
+
     sign = 0;
     char* dstname = dst_path;
     if(dstname[0] == '/'){
@@ -649,12 +639,6 @@ int do_ln(char *src_path, char *dst_path)
         printk("> [FS] File cannot be linked!\n");
         return 0;
     }
-
-
-    src_inode->hardlinks++;
-    int32_t srcinode_id = ((uint8_t*)src_inode-(uint8_t*)bcaches)/BLOCK_SIZ;
-    bwrite(bcaches[srcinode_id].block_id, bcaches[srcinode_id].bcache_block);
-    //文件相关的信息被修该，因此需要落盘
 
     dentry_t father_dentry;
 

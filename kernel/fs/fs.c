@@ -163,19 +163,36 @@ uint8_t* init_block(uint32_t block_id,int zero){//在分配一个硬盘块之前
     return zero_block;
 }
 
-uint32_t alloc_block(int zero){
+uint32_t alloc_block(int zero, int64_t bcache_offset){
     superblock_t *superblock = (superblock_t *) super_block;
     uint32_t block_id;
+    uint32_t block_indirect_id;
+    uint32_t block_indirect_offset;
     uint8_t* blockbitmap;
     uint32_t i;
+
+    if(bcache_offset != -1){
+        uint32_t bcache_id = ((uint8_t*)bcache_offset-(uint8_t*)bcaches)/sizeof(bcache_t);
+        block_indirect_id = bcaches[bcache_id].block_id;
+        block_indirect_offset = ((uint8_t*)bcache_offset-(uint8_t*)bcaches)%sizeof(bcache_t) - 8;//这里应该是对应的bcache_block中的偏移
+    }//如果是-1代表并没有间址块，因此不用写这些
+    //因为可能会被覆盖掉，因此这里先将间址块的blockid和对应的offset记下来，等到blockbitmap操作完成之后，再读出来并且完成bcache的写回
 
     for (i = 0; i<superblock->blockbitmap_siz; i++) {
         blockbitmap = bread(superblock->blockbitmap_offset + i);
         if((block_id = allocbit((char*)blockbitmap)) != -1)
             break;
     }//通过blockbitmap进行查找，找到可以分配的进行返回，同时也已经拉高
-
     bwrite(superblock->blockbitmap_offset + i, blockbitmap);
+
+    if(bcache_offset != -1){
+        uint8_t* bcache_indirect = bread(block_indirect_id);
+        *(uint32_t*)(bcache_indirect + block_indirect_offset) = block_id;
+        bwrite(block_indirect_id, bcache_indirect);
+    }//如果是-1代表并没有间址块，因此不用写这些
+    //这里有一个小点，就是说新读出的blockbitmap会不会将前面的bcacheoffset给覆盖掉呢？
+    //不会，因为在前面的函数中bcacheoffset是先读出的
+    //这里一定要秉承一个思想，相将分配的块的相关元数据写好，然后再进行分配！
     init_block(block_id,zero);
     return block_id;
 }
@@ -385,58 +402,58 @@ uint8_t* search_datapoint(inode_t* inode, uint32_t offset){//根据给出的偏�
     if(offset < DIRECT_BLOCK_SIZ * BLOCK_SIZ){//标号位于直接块内
         if(offset < BLOCK_SIZ){
             if(!inode->direct[0])//说明还没有进行过对应数据块的分配
-                inode->direct[0] = alloc_block(0);
+                inode->direct[0] = alloc_block(0,-1);
             uint8_t* direct0 = (uint8_t*)bread(inode->direct[0]);
             ret_point = direct0 + offset%BLOCK_SIZ;//如果在第一个块内，那么可以直接相加就行
         }
         else if(offset < BLOCK_SIZ*2){
             if(!inode->direct[1])//说明还没有进行过对应数据块的分配
-                inode->direct[1] = alloc_block(0);
+                inode->direct[1] = alloc_block(0,-1);
             uint8_t* direct1 = (uint8_t*)bread(inode->direct[1]);
             ret_point = direct1 + offset%BLOCK_SIZ;//第二个直接指针（已转换）加上偏移量
         }
         else{
             if(!inode->direct[2])//说明还没有进行过对应数据块的分配
-                inode->direct[2] = alloc_block(0);
+                inode->direct[2] = alloc_block(0,-1);
             uint8_t* direct2 = (uint8_t*)bread(inode->direct[2]);
             ret_point = direct2 + offset%BLOCK_SIZ;//第二个直接指针（已转换）加上偏移量
         }
     }
     else if(offset < INDIRECT1_BLOCK_SIZ * BLOCK_SIZ){//标号位于一级间接块内
-        if(!inode->indirect_1){//说明还没有进行过对应数据块的分配
-            inode->indirect_1 = alloc_block(0);
-        }
+        if(!inode->indirect_1)//说明还没有进行过对应数据块的分配
+            inode->indirect_1 = alloc_block(0,-1);
+
         uint8_t* indirect1_point = (uint8_t*)bread(inode->indirect_1);
         uint32_t* point = (uint32_t*)indirect1_point + (offset - DIRECT_BLOCK_SIZ * BLOCK_SIZ) / BLOCK_SIZ;//point块，还不是目录块
+        uint32_t temp_point = *point;
 
-        if(!(*point)){//说明还没有进行过对应数据块的分配
-            *point = alloc_block(0);
-            bwrite(inode->indirect_1, indirect1_point);//对应的分别是id号和对应的bcache中的数组地址，必须要落盘
-        }
-        uint8_t* indirect1 = (uint8_t*)bread(*point);
+        if(!(*point))//说明还没有进行过对应数据块的分配
+            temp_point = alloc_block(0,point);//分配，分配的同时,point指针出的blockid号也已经置好
+
+        uint8_t* indirect1 = (uint8_t*)bread(temp_point);
         ret_point = indirect1 + offset%BLOCK_SIZ;//第二个直接指针（已转换）加上偏移量
     }
     else{//标号位于二级间接块内
         if(!inode->indirect_2){//说明还没有进行过对应数据块的分配
-            inode->indirect_2 = alloc_block(0);
+            inode->indirect_2 = alloc_block(0,-1);
         }
         uint8_t* indirect2_point1 = (uint8_t*)bread(inode->indirect_2);
         uint32_t* point1 = (uint32_t*)indirect2_point1 + (offset - INDIRECT1_BLOCK_SIZ * BLOCK_SIZ) / (BLOCK_SIZ * POINT_PER_BLOCK);//point块，还不是目录块
+        uint32_t temp_point1 = *point1;
 
-        if(!(*point1)){//说明还没有进行过对应数据块的分配
-            *point1 = alloc_block(0);
-            bwrite(inode->indirect_2, indirect2_point1);//对应的分别是id号和对应的bcache中的数组地址，必须要落盘
-        }
-        uint32_t temp_point1 = *point1;//这里可能会被替换掉，一定要保存在栈上！
+        if(!(*point1))//说明还没有进行过对应数据块的分配
+            temp_point1 = alloc_block(0,point1);//分配，分配的同时,point指针出的blockid号也已经置好
+        //如果是现在才分配，那么point1指向的blockid会返回，但是由于可能会被覆盖掉，因此不能采用之前的写法
+
         uint8_t* indirect2_point2 = (uint8_t*)bread(temp_point1);
         uint32_t* point2 = (uint32_t*)indirect2_point2 + ((offset - INDIRECT1_BLOCK_SIZ * BLOCK_SIZ) % (BLOCK_SIZ * POINT_PER_BLOCK)) / BLOCK_SIZ;//point块，还不是目录块
+        uint32_t temp_point2 = *point2;
         //这里的操作需要稍微注意一下
 
-        if(!(*point2)){//说明还没有进行过对应数据块的分配
-            *point2 = alloc_block(0);
-            bwrite(temp_point1, indirect2_point2);//对应的分别是id号和对应的bcache中的数组地址，必须要落盘
-        }
-        uint8_t* indirect2 = (uint8_t*)bread(*point2);
+        if(!(*point2))//说明还没有进行过对应数据块的分配
+            temp_point2 = alloc_block(0,point2);
+            
+        uint8_t* indirect2 = (uint8_t*)bread(temp_point2);
         ret_point = indirect2 + offset%BLOCK_SIZ;//三级间接指针（已转换）加上偏移量
     }
 
@@ -449,50 +466,47 @@ void bigfile_alloc(inode_t* inode, uint32_t offset){//与searchdatapoint基本�
     if(offset < DIRECT_BLOCK_SIZ * BLOCK_SIZ){//标号位于直接块内
         if(offset < BLOCK_SIZ){
             if(!inode->direct[0])//说明还没有进行过对应数据块的分配
-                inode->direct[0] = alloc_block(0);
+                inode->direct[0] = alloc_block(0,-1);
         }
         else if(offset < BLOCK_SIZ*2){
             if(!inode->direct[1])//说明还没有进行过对应数据块的分配
-                inode->direct[1] = alloc_block(0);
+                inode->direct[1] = alloc_block(0,-1);
         }
         else{
             if(!inode->direct[2])//说明还没有进行过对应数据块的分配
-                inode->direct[2] = alloc_block(0);
+                inode->direct[2] = alloc_block(0,-1);
         }
     }
     else if(offset < INDIRECT1_BLOCK_SIZ * BLOCK_SIZ){//标号位于一级间接块内
-        if(!inode->indirect_1){//说明还没有进行过对应数据块的分配
-            inode->indirect_1 = alloc_block(0);
-        }
+        if(!inode->indirect_1)//说明还没有进行过对应数据块的分配
+            inode->indirect_1 = alloc_block(0,-1);
+
         uint8_t* indirect1_point = (uint8_t*)bread(inode->indirect_1);
         uint32_t* point = (uint32_t*)indirect1_point + (offset - DIRECT_BLOCK_SIZ * BLOCK_SIZ) / BLOCK_SIZ;//point块，还不是目录块
         uint32_t temp_point = *point;
 
-        if(!(*point)){//说明还没有进行过对应数据块的分配
-            *point = alloc_block(0);
-            bwrite(inode->indirect_1, indirect1_point);//对应的分别是id号和对应的bcache中的数组地址，必须要落盘
-        }
+        if(!(*point))//说明还没有进行过对应数据块的分配
+            temp_point = alloc_block(0,point);//分配，分配的同时,point指针出的blockid号也已经置好
     }
     else{//标号位于二级间接块内
         if(!inode->indirect_2){//说明还没有进行过对应数据块的分配
-            inode->indirect_2 = alloc_block(0);
+            inode->indirect_2 = alloc_block(0,-1);
         }
         uint8_t* indirect2_point1 = (uint8_t*)bread(inode->indirect_2);
         uint32_t* point1 = (uint32_t*)indirect2_point1 + (offset - INDIRECT1_BLOCK_SIZ * BLOCK_SIZ) / (BLOCK_SIZ * POINT_PER_BLOCK);//point块，还不是目录块
+        uint32_t temp_point1 = *point1;
 
-        if(!(*point1)){//说明还没有进行过对应数据块的分配
-            *point1 = alloc_block(0);
-            bwrite(inode->indirect_2, indirect2_point1);//对应的分别是id号和对应的bcache中的数组地址，必须要落盘
-        }
-        uint32_t temp_point1 = *point1;//这里可能会被替换掉，一定要保存在栈上！
+        if(!(*point1))//说明还没有进行过对应数据块的分配
+            temp_point1 = alloc_block(0,point1);//分配，分配的同时,point指针出的blockid号也已经置好
+        //如果是现在才分配，那么point1指向的blockid会返回，但是由于可能会被覆盖掉，因此不能采用之前的写法
+
         uint8_t* indirect2_point2 = (uint8_t*)bread(temp_point1);
         uint32_t* point2 = (uint32_t*)indirect2_point2 + ((offset - INDIRECT1_BLOCK_SIZ * BLOCK_SIZ) % (BLOCK_SIZ * POINT_PER_BLOCK)) / BLOCK_SIZ;//point块，还不是目录块
+        uint32_t temp_point2 = *point2;
         //这里的操作需要稍微注意一下
 
-        if(!(*point2)){//说明还没有进行过对应数据块的分配
-            *point2 = alloc_block(0);
-            bwrite(temp_point1, indirect2_point2);//对应的分别是id号和对应的bcache中的数组地址，必须要落盘
-        }
+        if(!(*point2))//说明还没有进行过对应数据块的分配
+            temp_point2 = alloc_block(0,point2);
     }
 }
 
@@ -506,8 +520,13 @@ int write_file(inode_t* inode, char* string, uint32_t start, uint32_t length){//
 
     superblock_t *superblock = (superblock_t *) super_block;
 
+    inode_t buff_inode;
+    uint32_t buff_ino = ((((uint8_t*)inode - (uint8_t*)bcaches)%sizeof(bcache_t)) - 8)/sizeof(inode_t);
+    //通过inode来获得ino//这个实际上只考虑了一个inodetable
+    memcpy(&buff_inode, inode, sizeof(inode_t));//栈上暂时保存
+
     while(length){
-        bcache_start = search_datapoint(inode, start);
+        bcache_start = search_datapoint(&buff_inode, start);
         bcache_index = (bcache_start - (uint8_t*)bcaches)/sizeof(bcache_t);//获得是第几个bcache
         bcache_end = (uint8_t*)&(bcaches[bcache_index+1]);//得到结束的位置
 
@@ -519,19 +538,21 @@ int write_file(inode_t* inode, char* string, uint32_t start, uint32_t length){//
         length -= seg_length;
         start += seg_length;
         start_string += seg_length;
-        inode->filesz = (start > inode->filesz) ? start : inode->filesz;
+        buff_inode.filesz = (start > buff_inode.filesz) ? start : buff_inode.filesz;
         //现在的filesiz相当于永远指着最后那一个地址，中间有空洞也不管
         //因此filesz只管往大了就行，再新添加之后和之前的filesz里面选大的
-        if (inode->mode == INODE_FILE && ((int)inode->fd_index != 0xff)) 
-            fdescs[inode->fd_index].memsiz += seg_length;//中间你写是覆盖空洞还是什么我不管，只要你写了我就加
+        if (buff_inode.mode == INODE_FILE && ((int)buff_inode.fd_index != 0xff)) 
+            fdescs[buff_inode.fd_index].memsiz += seg_length;//中间你写是覆盖空洞还是什么我不管，只要你写了我就加
         
     }
 
-    inode->mtime = get_timer();
+    buff_inode.mtime = get_timer();
 
+    inode = ino2inode_t(buff_ino);//前面都是用栈上的inode做的，这里再次读出来并且翻译后写入
+    memcpy(inode, &buff_inode, sizeof(inode_t));//栈上暂时保存的值放到其中
     uint32_t bcache_inode_index = ((uint8_t*)inode - (uint8_t*)bcaches)/sizeof(bcache_t);
-    bios_sd_read(kva2pa((uintptr_t)check_block), 8, blockid2sectorid(bcaches[bcache_inode_index].block_id));//测试
     bwrite(bcaches[bcache_inode_index].block_id, bcaches[bcache_inode_index].bcache_block);//落盘
+
     bios_sd_read(kva2pa((uintptr_t)check_block), 8, blockid2sectorid(bcaches[bcache_inode_index].block_id));//测试
     //写文件之后inode必然会被修改，因此必须落盘
 
@@ -546,8 +567,13 @@ int read_file(inode_t* inode, char* string, uint32_t start, uint32_t length){//i
 
     uint32_t seg_length;
 
+    inode_t buff_inode;
+    uint32_t buff_ino = ((((uint8_t*)inode - (uint8_t*)bcaches)%sizeof(bcache_t)) - 8)/sizeof(inode_t);
+    //通过inode来获得ino
+    memcpy(&buff_inode, inode, sizeof(inode_t));//栈上暂时保存
+
     while(length){
-        bcache_start = search_datapoint(inode, start);
+        bcache_start = search_datapoint(&buff_inode, start);
         bcache_index = (bcache_start - (uint8_t*)bcaches)/sizeof(bcache_t);//获得是第几个bcache
         bcache_end = (uint8_t*)&(bcaches[bcache_index+1]);//得到结束的位置
 
@@ -559,6 +585,10 @@ int read_file(inode_t* inode, char* string, uint32_t start, uint32_t length){//i
         start += seg_length;
         start_string += seg_length;
     }
+
+    inode = ino2inode_t(buff_ino);//前面都是用栈上的inode做的，这里再次读出来并且翻译后写入
+    memcpy(inode, &buff_inode, sizeof(inode_t));//栈上暂时保存的值放到其中
+    //这里需要吗？可能不需要，但是我认为要把inode对应的东西重新加载到bcache中来
 
     return 1;
 }
