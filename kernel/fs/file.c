@@ -600,6 +600,14 @@ int do_ln(char *src_path, char *dst_path)
         return 0;
     }
 
+    src_inode->hardlinks++;
+    int32_t srcinode_id = ((uint8_t*)src_inode-(uint8_t*)bcaches)/sizeof(bcache_t);
+    bwrite(bcaches[srcinode_id].block_id, bcaches[srcinode_id].bcache_block);
+    //文件相关的信息被修该，因此需要落盘
+    //上面是处理与src相关
+
+    sign = 0;
+
     char* file_newname = dst_path;
     char file_name[32];
     while(*file_newname != '\0')
@@ -608,6 +616,8 @@ int do_ln(char *src_path, char *dst_path)
         file_newname--;
 
     if(*file_newname == '/'){
+        if(file_newname == dst_path)
+            sign = 1;//这里可以提前发现，如果这样说明是从根目录开始
         *file_newname = '\0';
         file_newname++;
         strcpy(file_name,file_newname);
@@ -617,18 +627,11 @@ int do_ln(char *src_path, char *dst_path)
     }
     //dstpath会指定目录以及该文件新的文件名，因此需要进行截断，得到目录和文件名，然后根据目录寻找到，并将文件名写入
 
-    src_inode->hardlinks++;
-    int32_t srcinode_id = ((uint8_t*)src_inode-(uint8_t*)bcaches)/sizeof(bcache_t);
-    bwrite(bcaches[srcinode_id].block_id, bcaches[srcinode_id].bcache_block);
-    //文件相关的信息被修该，因此需要落盘
-    //上面是处理与src相关
-
-    sign = 0;
     char* dstname = dst_path;
     if(dstname[0] == '/'){
         dstname++;
         sign = 1;
-    }
+    }//先行判断
     uint32_t dst_ino;
     if((dst_ino = inopath2ino((sign ? 0 : (*current_running)->pwd), dstname)) == -1){
         printk("> [FS] No such source file/dirctory!\n");
