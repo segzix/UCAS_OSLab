@@ -46,7 +46,7 @@ typedef struct bcache{
     uint32_t block_id;//对应数据块的id
     uint8_t bcache_block[BLOCK_SIZ];
 } bcache_t;
-uint8_t bcache_point;
+uint32_t bcache_point;
 bcache_t bcaches[BCACHE_NUM];
 
 typedef struct superblock{
@@ -112,7 +112,7 @@ void bwrite(uint32_t block_id, uint8_t* bcache_write);
 uint8_t* balloc(uint32_t block_id);
 
 int write_file(inode_t*inode, char* string, uint32_t start, uint32_t length);
-uint8_t* init_block(uint32_t block_id);
+uint8_t* init_block(uint32_t block_id,int zero);
 int inopath2ino(uint32_t base_ino, char * name);
 inode_t* ino2inode_t(uint32_t ino);
 int check_dir(inode_t* inode);
@@ -126,6 +126,7 @@ int read_file(inode_t* inode, char* string, uint32_t start, uint32_t length);
 dentry_t* name_search_dentry(inode_t* inode_current, char* name);
 int name_search_offset(inode_t* inode_current, char* name);
 int rmfile(uint32_t ino);
+void bigfile_alloc(inode_t* inode, uint32_t offset);
 
 int do_mkfs(void);
 int do_statfs(void);

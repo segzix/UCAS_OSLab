@@ -4,8 +4,8 @@
 #include <unistd.h>
 #include <time.h>
 uint32_t * write_buffer = 0x10000000;
-#define WRITE_BLOCK_NUM 64
-#define FILE_4MB  22
+#define WRITE_BLOCK_NUM 49
+#define FILE_256KB  18
 #define POINT_8KB 0x2000
 #define POINT_1MB 0x100000
 #define POINT_2MB 0x200000
@@ -43,7 +43,7 @@ int main(int argc, char *argv[])
     for(int i = 0;i < WRITE_BLOCK_NUM;i++){
 
         // printf("\npersist read %dMB: ",i<<2);
-        sys_lseek(fd,(i << FILE_4MB),SEEK_SET);
+        sys_lseek(fd,(i << FILE_256KB),SEEK_SET);
         sys_fread(fd, &b, sizeof(int));
         if(b != i)
             printf("read error!");

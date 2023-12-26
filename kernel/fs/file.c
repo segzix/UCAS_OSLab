@@ -9,6 +9,8 @@
 #include <os/string.h>
 
 char cat_buff[1024];
+uint32_t checkmagic;
+uint32_t judge3;
 
 int do_mkfs(void)
 {
@@ -54,25 +56,25 @@ int do_mkfs(void)
     init_bcache();
 
     printk("> [FS] Setting blockbit-map...\n");
-    uint8_t* blockbit = init_block(superblock->blockbitmap_offset);
+    uint8_t* blockbit = init_block(superblock->blockbitmap_offset,1);
     blockbit[0] = 0xff;
     blockbit[1] = 0x3f;//前14个块已经被占了
     bwrite(superblock->blockbitmap_offset,blockbit);//block对应的掩码
     for(int i = 1; i<superblock->blockbitmap_siz; i++)
-        init_block(superblock->blockbitmap_offset + i);//其它块全部填0
+        init_block(superblock->blockbitmap_offset + i,1);//其它块全部填0
 
     printk("> [FS] Setting inodebyte-map...\n");
     for(int i=0; i<superblock->inodebytemap_siz; i++)
-        init_block(superblock->inodebytemap_offset + i);
+        init_block(superblock->inodebytemap_offset + i,1);
 
     //inode bytemap
-    uint8_t* inodebyte = init_block(superblock->inodebytemap_offset);
+    uint8_t* inodebyte = init_block(superblock->inodebytemap_offset,1);
     inodebyte[0] = 1;
     bwrite(superblock->inodebytemap_offset,inodebyte);//inode对应的掩码
 
 
     printk("> [FS] Setting inode...\n");
-    inode_t* inode = (inode_t*)init_block(superblock->inodetable_offset);
+    inode_t* inode = (inode_t*)init_block(superblock->inodetable_offset,1);
     inode->mode = INODE_DIR;
     inode->owner_pid = (*current_running)->pid;
     inode->hardlinks = 0;
@@ -550,6 +552,7 @@ int do_cat(char *filename)
 
 int do_lseek(int fd, int offset, int whence)
 {
+    judge3 = (offset == 0xc00000);
     if(fd < 0 || fd >= NUM_FDESCS || fdescs[fd].used == 0){
         printk("> [FS] invalid fd number!\n");
         return 0;
@@ -557,6 +560,9 @@ int do_lseek(int fd, int offset, int whence)
 
     uint32_t file_ino = fdescs[fd].ino;
     inode_t* file_inode = ino2inode_t(file_ino);
+
+    inode_t buff_inode;
+    memcpy(&buff_inode, file_inode, sizeof(inode_t));//栈上暂时保存
 
     switch(whence){
         case SEEK_SET:
@@ -575,6 +581,18 @@ int do_lseek(int fd, int offset, int whence)
             break;
     }    
 
+    buff_inode.filesz = (buff_inode.filesz >> 12) << 12;//首先先保证对齐
+    while(buff_inode.filesz <= fdescs[fd].r_cursor){
+        bigfile_alloc(&buff_inode, buff_inode.filesz);
+        buff_inode.filesz += BLOCK_SIZ;//不断地进行分配，如果filesz比较大代表分配过，不用再分配了
+        bios_sd_read(kva2pa((uintptr_t)check_block), 8, blockid2sectorid(0));//验证blockbitmap不能出错
+        checkmagic = check_block[0];
+    }
+
+    file_inode = ino2inode_t(file_ino);//前面都是用栈上的inode做的，这里再次读出来并且翻译后写入
+    memcpy(file_inode, &buff_inode, sizeof(inode_t));//栈上暂时保存的值放到其中
+    uint32_t inode_id = ((uint8_t*)file_inode-(uint8_t*)bcaches)/BLOCK_SIZ;
+    bwrite(bcaches[inode_id].block_id, bcaches[inode_id].bcache_block);
     return fdescs[fd].r_cursor;  // the resulting offset location from the beginning of the file
     //这个操作完之后，读写指针将会一样
 }
