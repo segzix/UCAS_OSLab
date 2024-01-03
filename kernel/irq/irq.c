@@ -26,14 +26,6 @@ void interrupt_helper(regs_context_t *regs, uint64_t stval, uint64_t scause)
     if((*current_running)->kill == 1)
         do_exit();
 
-    // uint32_t head = e1000_read_reg(e1000,E1000_RDH);
-    // uint32_t tail = e1000_read_reg(e1000,E1000_RDT);
-    // uint32_t icr  = e1000_read_reg(e1000,E1000_ICR);
-    // uint32_t ics  = e1000_read_reg(e1000,E1000_ICS);
-    // uint32_t ims  = e1000_read_reg(e1000,E1000_IMS);
-    // uint32_t imc  = e1000_read_reg(e1000,E1000_IMC);
-    // printl("head : %x tail : %x icr : %x ics : %x ims : %x imc : %x scause : %lx\n",head,tail,icr,ics,ims,imc,scause);
-
     if(scause & (1UL << 63)){
         scause = scause & (~(1UL << 63));
         (*irq_table[scause])(regs, stval, scause);
@@ -167,38 +159,6 @@ void handle_pagefault_access(regs_context_t *regs, uint64_t stval, uint64_t scau
     }
 
     local_flush_tlb_all();
-    // for(int i=0; i<=sw_top; i++){
-    //     if(sw_pool[i].valid && pid == sw_pool[i].pid && ((stval >> 12) << 12) == sw_pool[i].va){
-    //         uint64_t kva = allocPage(1);
-    //         uint64_t bias = padding_ADDR/512;
-    //         bios_sdread(kva2pa(kva), 8, bias + 8*i);
-    //         PTE * pmd3 = sw_pool[i].pmd3;
-    //         set_pfn(pmd3,kva2pa(kva) >> NORMAL_PAGE_SHIFT);
-    //         set_attribute(pmd3,_PAGE_PRESENT | _PAGE_READ | _PAGE_WRITE | _PAGE_EXEC
-    //                          |_PAGE_ACCESSED| _PAGE_DIRTY| _PAGE_USER);
-    //         local_flush_tlb_all();
-    //         sw_pool[i].valid = 0;
-    //         if(i == sw_top){
-    //             sw_top --;
-    //         }
-    //         printl("retain swap page successful! %ld\n",sw_pool[i].va);
-    //         if(am_siz < 4096){
-    //             am_pool[am_tail].pid = (*current_running)->pid;
-    //             am_pool[am_tail].pa = kva2pa(kva);
-    //             am_pool[am_tail].pmd3 = pmd3;
-    //             am_pool[am_tail].va = ((stval >> 12) << 12);
-    //             am_pool[am_tail].valid = 1;
-    //             am_tail++;
-    //             if(am_tail == 4096)
-    //                 am_tail = 0;
-    //             am_siz++;
-    //         }
-    //         return;
-    //     }
-    // }
-
-    // alloc_page_helper(stval,(*current_running)->pgdir,1);
-    // local_flush_tlb_all();
 }
 
 void handle_pagefault_store(regs_context_t *regs, uint64_t stval, uint64_t scause)

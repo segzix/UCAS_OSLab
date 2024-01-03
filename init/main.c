@@ -489,9 +489,7 @@ int main(void)
         init_page_general();
         init_share_page();
 
-// <<<<<<< HEAD
         current_running = &current_running_0;
-// =======
         // Read Flatten Device Tree (｡•ᴗ-)_
         // time_base = bios_read_fdt(TIMEBASE);
         // e1000 = (volatile uint8_t *)bios_read_fdt(ETHERNET_ADDR);
@@ -503,12 +501,9 @@ int main(void)
         // plic_addr = (uintptr_t)ioremap((uint64_t)plic_addr, 0x4000 * NORMAL_PAGE_SIZE);
         // e1000 = (uint8_t *)ioremap((uint64_t)e1000, 8 * NORMAL_PAGE_SIZE);
         // printk("> [INIT] IOremap initialization succeeded.\n");
-// >>>>>>> 44b6afb9d17c726a4c190ffe4d7083ed3d511bd6
 
-// <<<<<<< HEAD
         // Init lock mechanism o(´^｀)o
         printk("> [INIT] Lock mechanism initialization succeeded.\n");
-// =======
         // // TODO: [p5-task3] Init plic
         // plic_init(plic_addr, nr_irqs);
         // printk("> [INIT] PLIC initialized successfully. addr = 0x%lx, nr_irqs=0x%x\n", plic_addr, nr_irqs);
@@ -520,7 +515,6 @@ int main(void)
         // Init system call table (0_0)
         init_syscall();
         printk("> [INIT] System call initialized successfully.\n");
-// >>>>>>> 44b6afb9d17c726a4c190ffe4d7083ed3d511bd6
 
         init_shell();
         printk("> [INIT] PCB initialization succeeded.\n");
@@ -569,15 +563,10 @@ int main(void)
         }
     }
     else{
-        // lock_kernel();
         current_running = &current_running_1;
         setup_exception();
-        // lock_kernel();
         bios_set_timer(get_ticks() + TIMER_INTERVAL);
-        // unlock_kernel();
         enable_interrupt();
-        //clean_temp_page(PGDIR_PA);//清空临时映射
-        // unlock_kernel();
         while(1){
             enable_preempt();
             asm volatile("wfi");

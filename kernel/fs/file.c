@@ -5,7 +5,6 @@
 #include <os/sched.h>
 #include <os/time.h>
 #include <printk.h>
-// #include <stdint.h>
 #include <os/string.h>
 
 char cat_buff[1024];
