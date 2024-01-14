@@ -44,18 +44,6 @@ static void enter_app(uint32_t task_entrypoint)
     );
 }
 
-/*static int bss_check(void)
-{
-    for (int i = 0; i < VERSION_BUF; ++i)
-    {
-        if (buf[i] != 0)
-        {
-            return 0;
-        }
-    }
-    return 1;
-}*/
-
 static void init_jmptab(void)
 {
     volatile long (*(*jmptab))() = (volatile long (*(*))())KERNEL_JMPTAB_BASE;

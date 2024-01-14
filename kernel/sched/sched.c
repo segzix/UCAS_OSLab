@@ -275,21 +275,6 @@ int do_kill(pid_t pid)
         return 1;
     } 
 
-    // if(id < 0 || id >= NUM_MAX_TASK || pcb[id].status == TASK_EXITED){
-    //     printk("\n> [Kill] Pid number not in use. \n\r");
-    //     return 0;
-    // }
-    // if(id == 0){
-    //     printk("\n> [Kill] Can not kill the shell. \n\r");
-    //     return 0;
-    // }
-    // if(pcb[id].status != TASK_RUNNING){
-    //     list_del(&(pcb[id].list));
-    //     while(pcb[id].wait_list.prev != &(pcb[id].wait_list))
-    //         do_unblock(pcb[id].wait_list.prev);
-    // }
-    // pcb[id].status = TASK_EXITED;
-    // return 1;
 }
 int do_waitpid(pid_t pid)
 {
