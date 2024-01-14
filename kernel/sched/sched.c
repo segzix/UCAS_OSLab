@@ -123,92 +123,6 @@ void do_scheduler(void)
     process_id = (*current_running)->pid;
     //修改当前执行进程ID
 
-    // list_node_t* list_debug = ready_queue.next;
-    // printl("ready_queue: ");
-    // while(list_debug != &ready_queue){
-    //     pcb_t* pcb_debug = list_entry(list_debug, pcb_t, list);
-    //     printl("%s:%d  ",pcb_debug->pcb_name,pcb_debug->pid);
-    //     list_debug = list_debug->next;
-    // }
-    // printl("\n");
-
-    // list_debug = sleep_queue.next;
-    // printl("sleep_queue:");
-    // while(list_debug != &sleep_queue){
-    //     pcb_t* pcb_debug = list_entry(list_debug, pcb_t, list);
-    //     printl("%s %d  ",pcb_debug->pcb_name,pcb_debug->pid);
-    //     list_debug = list_debug->next;
-    // }
-    // printl("\n");
-
-    // list_debug = mailboxs[0].mailbox_send_queue.next;
-    // printl("mboxs[0].send_queue:");
-    // while(list_debug != &mailboxs[0].mailbox_send_queue){
-    //     pcb_t* pcb_debug = list_entry(list_debug, pcb_t, list);
-    //     printl("%s %d  ",pcb_debug->pcb_name,pcb_debug->pid);
-    //     list_debug = list_debug->next;
-    // }
-    // printl("\n");
-
-    // list_debug = mailboxs[0].mailbox_recv_queue.next;
-    // printl("mboxs[0].recv_queue:");
-    // while(list_debug != &mailboxs[0].mailbox_recv_queue){
-    //     pcb_t* pcb_debug = list_entry(list_debug, pcb_t, list);
-    //     printl("%s %d  ",pcb_debug->pcb_name,pcb_debug->pid);
-    //     list_debug = list_debug->next;
-    // }
-    // printl("\n");
-
-    // list_debug = mailboxs[1].mailbox_send_queue.next;
-    // printl("mboxs[1].send_queue:");
-    // while(list_debug != &mailboxs[1].mailbox_send_queue){
-    //     pcb_t* pcb_debug = list_entry(list_debug, pcb_t, list);
-    //     printl("%s %d  ",pcb_debug->pcb_name,pcb_debug->pid);
-    //     list_debug = list_debug->next;
-    // }
-    // printl("\n");
-
-    // list_debug = mailboxs[1].mailbox_recv_queue.next;
-    // printl("mboxs[1].recv_queue:");
-    // while(list_debug != &mailboxs[1].mailbox_recv_queue){
-    //     pcb_t* pcb_debug = list_entry(list_debug, pcb_t, list);
-    //     printl("%s %d  ",pcb_debug->pcb_name,pcb_debug->pid);
-    //     list_debug = list_debug->next;
-    // }
-    // printl("\n");
-
-    // list_debug = mailboxs[2].mailbox_send_queue.next;
-    // printl("mboxs[2].send_queue:");
-    // while(list_debug != &mailboxs[2].mailbox_send_queue){
-    //     pcb_t* pcb_debug = list_entry(list_debug, pcb_t, list);
-    //     printl("%s %d  ",pcb_debug->pcb_name,pcb_debug->pid);
-    //     list_debug = list_debug->next;
-    // }
-    // printl("\n");
-
-    // list_debug = mailboxs[2].mailbox_recv_queue.next;
-    // printl("mboxs[2].recv_queue:");
-    // while(list_debug != &mailboxs[2].mailbox_recv_queue){
-    //     pcb_t* pcb_debug = list_entry(list_debug, pcb_t, list);
-    //     printl("%s %d  ",pcb_debug->pcb_name,pcb_debug->pid);
-    //     list_debug = list_debug->next;
-    // }
-    // printl("\n");
-
-    // printl("current running:(%s %d)",(*current_running)->pcb_name,(*current_running)->pid);
-    // printl("\n\n");   
-    // printl("ready_queue:\n");
-    // while(list_debug != &ready_queue){
-    //     pcb_t* pcb_debug = list_entry(list_debug, pcb_t, list);
-    //     printl("%s:%d  ",pcb_debug->pcb_name,pcb_debug->pid);
-    //     list_debug = list_debug->next;
-    // }
-    // printl("\n");
-    /*vt100_move_cursor(current_running->cursor_x, current_running->cursor_y);
-    screen_cursor_x = current_running->cursor_x;
-    screen_cursor_y = current_running->cursor_y;*/
-    // 将当前执行进程的screen_cursor修改一下？
-
     // TODO: [p2-task1] Modify the current_running pointer.
     set_satp(SATP_MODE_SV39, (*current_running)->pid, kva2pa((*current_running)->pgdir) >> NORMAL_PAGE_SHIFT);
     local_flush_tlb_all();
@@ -220,51 +134,6 @@ void do_scheduler(void)
     // TODO: [p2-task1] switch_to current_running
 
 }
-
-// void do_thread_scheduler(void)
-// {   
-//     // TODO: [p2-task3] Check sleep queue to wake up PCBs
-
-//     spin_lock_acquire(&ready_spin_lock);
-//     current_running = get_current_cpu_id() ? &current_running_1 : &current_running_0;
-//     /************************************************************/
-//     /* Do not touch this comment. Reserved for future projects. */
-//     /************************************************************/
-//     list_node_t* list_check;
-//     pcb_t* prev_running = (*current_running);
-
-//     if((*current_running)->status == TASK_RUNNING){
-//         list_add(&((*current_running)->list), &ready_queue);
-//         (*current_running)->status = TASK_READY;
-//     } 
-//     //注意这里如果status为BLOCKED则不用执行上面的操作，因为已经加入到对应lock的block_queue中了
-//     list_check = ready_queue.next;
-//     (*current_running) = list_entry(list_check, pcb_t, list);
-
-//     while(((*current_running)->pid != prev_running->pid) || ((*current_running)->tid == 0) || ((*current_running)->tid ==  prev_running->tid)){
-//         list_check = list_check->next;
-//         (*current_running) = list_entry(list_check, pcb_t, list);
-//     }
-//     list_del(&((*current_running)->list));
-//     (*current_running)->status = TASK_RUNNING;
-//     //将当前执行的进程对应的pcb加入ready队列之中，同时将ready队列的最前端进程取下来，由prev_running指向它。
-//     //注意将两个pcb的进程状态修改。
-
-//     process_id = (*current_running)->pid;
-//     //修改当前执行进程ID
-
-//     /*vt100_move_cursor(current_running->cursor_x, current_running->cursor_y);
-//     screen_cursor_x = current_running->cursor_x;
-//     screen_cursor_y = current_running->cursor_y;*/
-//     // 将当前执行进程的screen_cursor修改一下？
-
-//     // TODO: [p2-task1] Modify the current_running pointer.
-//     spin_lock_release(&ready_spin_lock);
-    
-//     switch_to(prev_running, (*current_running));
-//     // TODO: [p2-task1] switch_to current_running
-
-// }
 
 void do_sleep(uint32_t sleep_time)
 {
@@ -513,21 +382,6 @@ pid_t do_getpid(){
     current_running = get_current_cpu_id() ? &current_running_1 : &current_running_0;
     return (*current_running)->pid;
 }
-
-// void do_thread_create(uint64_t addr,uint64_t thread_id)
-// {
-//     current_running = get_current_cpu_id() ? &current_running_1 : &current_running_0;
-//     tcb[num_threads].kernel_sp = allocKernelPage(1) + PAGE_SIZE;
-//     tcb[num_threads].user_sp   = allocUserPage(1)   + PAGE_SIZE;
-//     list_add(&tcb[num_threads].list, &ready_queue);
-//     tcb[num_threads].pid = (*current_running)->pid;
-//     tcb[num_threads].tid = thread_id+1;
-//     tcb[num_threads].status = TASK_READY;
-        
-//     init_tcb_stack( tcb[num_threads].kernel_sp, tcb[num_threads].user_sp, 
-//                     addr, thread_id, &tcb[num_threads]); 
-//     num_threads++;
-// }
 
 int do_process_show()
 {

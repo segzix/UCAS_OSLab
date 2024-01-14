@@ -58,12 +58,6 @@ uintptr_t search_PTE(uintptr_t kva, uintptr_t pgdir,int pid)//这个函数只会
 {
     uintptr_t va;
     PTE * pgdir_t = (PTE *)pgdir;
-    // uint64_t vpn2 = (va   >> (NORMAL_PAGE_SHIFT + PPN_BITS + PPN_BITS));//页目录虚地址
-    // uint64_t vpn1 = (vpn2 << PPN_BITS) ^
-    //                 (va   >> (NORMAL_PAGE_SHIFT + PPN_BITS));//二级页表虚地址
-    // uint64_t vpn0 = (vpn2 << (PPN_BITS + PPN_BITS)) ^
-    //                 (vpn1 << (PPN_BITS)) ^
-    //                 (va   >> (NORMAL_PAGE_SHIFT));//三级页表虚地址
     
     for(unsigned vpn2 = 0;vpn2 < 512;vpn2++){
         if(pgdir_t[vpn2] % 2 == 0){//页表对应的p位必然是1，除非没有被分配过
@@ -116,28 +110,6 @@ uintptr_t search_PTE(uintptr_t kva, uintptr_t pgdir,int pid)//这个函数只会
     }
 
     printk("search PTE error");
-    // if(pgdir_t[vpn2] % 2 == 0){//页表对应的p位必然是1，除非没有被分配过
-    //     // printl("IN ! %d\n",pgdir_t[vpn2]);
-    //     // alloc second - level page
-    //     pgdir_t[vpn2] = 0;
-    //     set_pfn(&pgdir_t[vpn2], kva2pa(allocPage(1,1,va,1,pid)) >> NORMAL_PAGE_SHIFT);//allocpage作为内核中的函数是虚地址，此时为二级页表分配了空间
-    //     set_attribute(&pgdir_t[vpn2],_PAGE_PRESENT | _PAGE_USER | _PAGE_ACCESSED | _PAGE_DIRTY);
-    //     clear_pgdir(pa2kva(get_pa(pgdir_t[vpn2])));//事实上就是将刚刚allocpage的页清空
-    // }
-
-    // PTE *pmd = (PTE *)pa2kva(get_pa(pgdir_t[vpn2]));
-    
-    // if(pmd[vpn1] % 2 == 0){//然后对二级页表的虚地址进行操作//可能会出现前面几级页表一样，最后一级不一样
-    //     // alloc third - level page
-    //     pmd[vpn1] = 0;
-    //     set_pfn(&pmd[vpn1], kva2pa(allocPage(1,1,va,1,pid)) >> NORMAL_PAGE_SHIFT);//这里分配出去的时页表页，并且一定会被pin住
-    //     set_attribute(&pmd[vpn1],_PAGE_PRESENT | _PAGE_USER | _PAGE_ACCESSED | _PAGE_DIRTY);
-    //     clear_pgdir(pa2kva(get_pa(pmd[vpn1])));
-    // }
-
-    // PTE *pmd2 = (PTE *)pa2kva(get_pa(pmd[vpn1]));  
-
-    // return (pmd2 + vpn0);//直接返回了对应的页表项地址
 }
 
 void clear_pagearray(uint32_t node_index){
@@ -184,36 +156,6 @@ unsigned swap_out(){//swapout函数只负责选中一页然后换出，不负责
             return i;//返回数组中的下标
         }
     }
-    // while(am_siz > 0 && am_pool[am_head].valid == 0){
-    //     am_head ++;
-    //     am_siz--;
-    // }
-    // if(am_siz == 0){
-    //     swap_error();
-    //     return;
-    // }
-    // for(int i=0; i<4096; i++){
-    //     if(sw_pool[i].valid == 0){
-    //         if(i > sw_top)
-    //             sw_top = i;
-    //         uint64_t pa = am_pool[am_head].pa;
-    //         sw_pool[i].valid = 1;
-    //         sw_pool[i].pid   = (*current_running)->parent_id ? (*current_running)->parent_id : (*current_running)->pid;
-    //         sw_pool[i].va    = am_pool[am_head].va;
-    //         sw_pool[i].pmd3  = am_pool[am_head].pmd3;
-    //         am_head++;
-    //         if(am_head == 4096)
-    //             am_head = 0;
-    //         am_siz--;
-    //         *(sw_pool[i].pmd3) = (PTE) 0; 
-    //         local_flush_tlb_all();
-    //         uint64_t bias = padding_ADDR/512;
-    //         bios_sdwrite(pa,8,bias+8*i); 
-    //         printl("swap successful ! %ld\n",sw_pool[i].va);
-    //         return pa2kva(pa);          
-    //     }
-    // }    
-    // swap_error();
     return 0;
 }
 
@@ -260,28 +202,6 @@ ptr_t allocPage(int numPage,int pin,uintptr_t va,int table_not,int pid)//返回�
     }
 
     return ret;
-    // ptr_t ret;
-    // if(fm_head >= 0){
-    //     int temp = fm_head;
-    //     ret = fm_head * PAGE_SIZE + FREEMEM_KERNEL;
-    //     fm_head = fm_pool[fm_head].nxt;
-    //     fm_pool[temp].nxt = -1;
-    //     fm_pool[temp].valid = 0;
-    //     // printl("ret node %ld\n",ret);
-    //     return ret;
-    // }
-    
-    // ret = ROUND(kernMemCurr, PAGE_SIZE);
-    // if(ret + numPage * PAGE_SIZE <= FREEMEM_END){
-    //     kernMemCurr = ret + numPage * PAGE_SIZE;
-    //     return ret;        
-    // }
-    // ret = swap_page();
-    // return ret;
-    // // align PAGE_SIZE
-    // ptr_t ret = ROUND(kernMemCurr, PAGE_SIZE);
-    // kernMemCurr = ret + numPage * PAGE_SIZE;
-    // return ret;
 }
 
 // NOTE: Only need for S-core to alloc 2MB large page
@@ -366,18 +286,6 @@ void free_all_pagetable(ptr_t baseAddr){//取消并回收所有的页表
     local_flush_tlb_all();
 }
 
-// typedef struct page_allocated{
-//     int valid;//是否被分配，已经被分配则置为1
-    
-//     int pin;//如果置成1，则该页不允许被换出
-//     int using;//如果是共享内存，该变量记录有多少个进程正在共享
-
-//     uintptr_t kva;//对应的内核虚地址
-
-//     int pid;//对应的进程号
-//     uintptr_t pgdir;//对应进程的根目录页
-//     uintptr_t va;//对应进程对该物理地址的虚地址
-// }page_allocated;
 void free_all_pageframe(ptr_t baseAddr){//取消并回收所有的物理页
     PTE *pgdir = (PTE *)baseAddr;
     PTE *pmd, *pmd2, *pmd3;
@@ -412,94 +320,6 @@ void free_all_pageframe(ptr_t baseAddr){//取消并回收所有的物理页
         }
     }
 }
-// void freePage(ptr_t baseAddr)
-// {
-//     PTE *pgdir = (PTE *)baseAddr;
-//     PTE *pmd, *pmd2, *pmd3;
-//     int last = fm_head;
-//     current_running = get_current_cpu_id() ? &current_running_1 : &current_running_0;
-//     for(int i=0; i<512; i++){
-//         if(pgdir[i] % 2){
-//             pmd = (PTE *)pa2kva(get_pa(pgdir[i]));
-            
-//             if(pmd < FREEMEM_KERNEL) continue; //kernal no release
-//             // printl("pmd %ld \n",pmd);
-
-//             for(int j = 0; j<512; ++j){
-//                 if(pmd[j] % 2){
-//                     pmd2 = (PTE *)pa2kva(get_pa(pmd[j]));
-//                     for(int k = 0; k<512; ++k){
-//                         if(pmd2[k] % 2){
-//                             pmd3 = (PTE *)pa2kva(get_pa(pmd2[k]));
-//                             uint32_t node_index = ((uint64_t)pmd3 - FREEMEM_KERNEL)/PAGE_SIZE;
-//                             if(fm_pool[node_index].valid)continue;
-//                             fm_pool[node_index].valid = 1;
-//                             fm_pool[node_index].nxt = -1;
-//                             if(fm_head == -1){
-//                                 fm_head = node_index;
-//                                 last = fm_head;
-//                             }
-//                             else{
-//                                 for(;fm_pool[last].nxt >= 0; last = fm_pool[last].nxt);
-//                                 fm_pool[last].nxt = node_index;
-//                             }
-//                         }
-//                     }
-//                     uint32_t node_index = ((uint64_t)pmd2 - FREEMEM_KERNEL)/PAGE_SIZE;
-//                     if(fm_pool[node_index].valid)continue;
-//                     fm_pool[node_index].valid = 1;
-//                     fm_pool[node_index].nxt = -1;
-//                     if(fm_head == -1){
-//                         fm_head = node_index;
-//                         last = fm_head;
-//                     }
-//                     else{
-//                         for(;fm_pool[last].nxt >= 0;last = fm_pool[last].nxt);
-//                         fm_pool[last].nxt = node_index;
-//                     }
-//                 }
-//             }
-//             uint32_t node_index = ((uint64_t)pmd - FREEMEM_KERNEL)/PAGE_SIZE;
-//             if(fm_pool[node_index].valid)continue;
-//             fm_pool[node_index].valid = 1;
-//             fm_pool[node_index].nxt = -1;
-//             if(fm_head == -1){
-//                 fm_head = node_index;
-//                 last = fm_head;
-//             }
-//             else{
-//                 for(;fm_pool[last].nxt >= 0;last = fm_pool[last].nxt);
-//                 fm_pool[last].nxt = node_index;
-//             }
-//         }
-//     }
-//     uint32_t node_index = ((uint64_t)pgdir - FREEMEM_KERNEL)/PAGE_SIZE;
-//     if(fm_pool[node_index].valid == 0){
-//         fm_pool[node_index].valid = 1;
-//         fm_pool[node_index].nxt = -1;
-//         if(fm_head == -1){
-//             fm_head = node_index;
-//             last = fm_head;
-//         }
-//         else{
-//             for(;fm_pool[last].nxt >= 0;last = fm_pool[last].nxt);
-//             fm_pool[last].nxt=node_index;
-//         }        
-//     }
-
-//     for(int i=0; i <= sw_top; i++){
-//         if(sw_pool[i].pid == (*current_running)->pid)
-//             sw_pool[i].valid = 0; 
-
-//     }
-//     while(sw_top >=0&&sw_pool[sw_top].valid ==0)
-//         sw_top--;
-//     for(int i=0; i < 4096; i++){
-//         if(am_pool[i].pid == (*current_running)->pid)
-//             am_pool[i].valid = 0;
-//     }
-//     // TODO [P4-task1] (design you 'freePage' here if you need):
-// }
 
 void *kmalloc(size_t size)
 {
@@ -542,18 +362,6 @@ uintptr_t alloc_page_helper(uintptr_t va, uintptr_t pgdir, int pin,int pid)//用
                                         | _PAGE_USER);
     // printl("vpn2 %d %d vpn1 %d %d vpn0 %d %d pa %d | %d %d %d\n",vpn2,&pgdir_t[vpn2],vpn1,&pmd[vpn1],vpn0,&pmd2[vpn0],pa,pgdir_t[vpn2],pmd[vpn1],pmd2[vpn0]);                         
     
-    // if(swap && am_siz < 4096){
-    //     am_pool[am_tail].pid  = (*current_running)->parent_id ? (*current_running)->parent_id : (*current_running)->pid;
-    //     am_pool[am_tail].pa   = pa;
-    //     am_pool[am_tail].pmd3 = &pmd2[vpn0];
-    //     am_pool[am_tail].va   = (va >> 12) << 12;
-    //     am_pool[am_tail].valid=1;
-    //     am_tail++;
-    //     if(am_tail == 4096)
-    //         am_tail = 0;
-    //     am_siz++;
-    //     printl("get valid swap page ! %d %ld\n",va,pmd2[vpn0]);
-    // }
     local_flush_tlb_all();
     return pa2kva(pa);
     // TODO [P4-task1] alloc_page_helper:
@@ -648,29 +456,12 @@ void shm_page_dt(uintptr_t addr)
         share_pages[node_index].pin = 0;
         //clear_pgdir(share_pages[node_index].kva);//共享物理页要求在没有人用，全部解除映射时就清空
     }
-    // share_pages[node_index].valid = 
-    // for(int i=0;i<SHM_NUM;i++){
-    //     if(share_pages[i].valid == 0)continue;
-    //     printl("%ld %ld\n",share_pages[i].pa,pa);
-    //     if(share_pages[i].pa == pa){
-    //         printl("HAPPEN!\n");
-    //         share_pages[i].siz--;
-    //         if(share_pages[i].siz == 0)share_pages[i].valid = 0;
-    //         break;
-    //     }
-    // }
     // TODO [P4-task4] shm_page_dt:
 }
 
 void copy_pagetable(uintptr_t dest_pgdir,uintptr_t src_pgdir,int pid){
     PTE * src_pgdir_t = (PTE *)src_pgdir;
     PTE * dest_pgdir_t = (PTE *)dest_pgdir;
-    // uint64_t vpn2 = (va   >> (NORMAL_PAGE_SHIFT + PPN_BITS + PPN_BITS));//页目录虚地址
-    // uint64_t vpn1 = (vpn2 << PPN_BITS) ^
-    //                 (va   >> (NORMAL_PAGE_SHIFT + PPN_BITS));//二级页表虚地址
-    // uint64_t vpn0 = (vpn2 << (PPN_BITS + PPN_BITS)) ^
-    //                 (vpn1 << (PPN_BITS)) ^
-    //                 (va   >> (NORMAL_PAGE_SHIFT));//三级页表虚地址
     
     for(unsigned vpn2 = 0;vpn2 < (NUM_PTE_ENTRY >> 1);vpn2++){
         if(src_pgdir_t[vpn2] % 2 != 0){//页表对应的p位是1,则需要进行拷贝
@@ -803,75 +594,3 @@ pid_t do_fork(){
         }
     }
 }
-
-// pid_t do_fork()
-// {
-//     int i, j;
-//     char buff[32];
-//     for (i = 0; i < NUM_MAX_TASK; i++){
-//         if (pcb[i].status == TASK_EXITED){
-//             pcb[i].kill = 0;
-//             pcb[i].pid = i+2;
-//             pcb[i].status = TASK_READY;
-//             break;
-//         }
-//     }
-//     if (i == NUM_MAX_TASK)
-//         return 0;
-    
-//     uint64_t kernel_stack = (uint64_t)allocPage(1,1,0,0,i+2) + PAGE_SIZE;
-//     pcb[i].kernel_stack_base = kernel_stack - PAGE_SIZE;
-    
-//     regs_context_t *father_pt_regs = current_running[get_current_cpu_id()]->kernel_sp - sizeof(regs_context_t);
-//     regs_context_t *son_pt_regs    = (regs_context_t *)(kernel_stack - sizeof(regs_context_t));
-//     memcpy((uint8_t*)son_pt_regs, (uint8_t*)father_pt_regs, sizeof(regs_context_t));
-//     son_pt_regs->regs[4]  = &pcb[i];  
-//     son_pt_regs->regs[10] = 0;
-    
-//     switchto_context_t *son_pt_switchto = (switchto_context_t *)((uint64_t)son_pt_regs - sizeof(switchto_context_t));
-//     pcb[i].kernel_sp = (uint64_t)son_pt_switchto;
-//     son_pt_switchto->regs[0] = ret_from_exception;
-//     son_pt_switchto->regs[1] = (uint64_t)son_pt_switchto;
-    
-//     PTE* son_pgdir = (PTE*)allocPage(1,1,0,1,i+2);
-//     pcb[i].pgdir = (uint64_t)son_pgdir;
-//     share_pgtable(son_pgdir, (PTE*)pa2kva(PGDIR_PA));
-    
-//     PTE* father_pgdir = (PTE*)current_running[get_current_cpu_id()]->pgdir;
-//     for (uint64_t i = 0; i < (NUM_PTE_ENTRY >> 1); i++){
-//         if (father_pgdir[i] & _PAGE_PRESENT){
-//             PTE* son_pmd = (PTE*)allocPage(1,1,0,1,pcb[i].pid);
-//             set_pfn(&son_pgdir[i], kva2pa((uint64_t)son_pmd) >> NORMAL_PAGE_SHIFT);
-//             set_attribute(&son_pgdir[i], _PAGE_PRESENT);
-//             PTE* father_pmd = (PTE*)pa2kva(get_pfn(father_pgdir[i]));
-//             for (uint64_t j = 0; j < NUM_PTE_ENTRY; j++){
-//                 if (father_pmd[j] & _PAGE_PRESENT){
-//                     PTE* son_pgt = (PTE*)allocPage(1,1,0,1,pcb[i].pid);
-//                     set_pfn(&son_pmd[j], kva2pa((uint64_t)son_pgt) >> NORMAL_PAGE_SHIFT);
-//                     set_attribute(&son_pmd[j], _PAGE_PRESENT);
-//                     PTE* father_pgt = (PTE*)pa2kva(get_pfn(father_pmd[j]));
-//                     for (uint64_t k = 0; k < NUM_PTE_ENTRY; k++){
-//                         if (father_pgt[k] & _PAGE_PRESENT){
-//                             memcpy((uint8_t*)&son_pgt[k], (uint8_t*)&father_pgt[k], sizeof(uint64_t));
-//                             uint64_t perm = get_attribute(son_pgt[k],PA_ATTRIBUTE_MASK);
-//                             set_attribute(&son_pgt[k], perm & ~_PAGE_WRITE);
-//                         }
-//                         else{
-//                             continue;
-//                         }
-//                     }
-//                 }
-//                 else{
-//                     continue;
-//                 }
-//             }
-//         }
-//         else{
-//             continue;
-//         }
-//     }
-    
-//     list_add(&ready_queue, &pcb[i].list);
-    
-//     return pcb[i].pid;
-// }

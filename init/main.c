@@ -46,18 +46,6 @@ static void enter_app(uint32_t task_entrypoint)
     );
 }
 
-/*static int bss_check(void)
-{
-    for (int i = 0; i < VERSION_BUF; ++i)
-    {
-        if (buf[i] != 0)
-        {
-            return 0;
-        }
-    }
-    return 1;
-}*/
-
 static void init_jmptab(void)
 {
     volatile long (*(*jmptab))() = (volatile long (*(*))())KERNEL_JMPTAB_BASE;
@@ -165,21 +153,6 @@ void init_pcb_stack(
     }
     (*argv_ptr) = 0;
 
-    //  uint64_t user_sp_va = argv_va_base;
-    //                 uint64_t user_sp_pa = argv_pa_base;
-    //                 uintptr_t * argv_ptr = (ptr_t)argv_va_base;
-    //                 for(int i=0; i<argc; i++){
-    //                     uint32_t len = strlen(argv[i]);
-    //                     user_sp_va = user_sp_va - len - 1;
-    //                     user_sp_pa = user_sp_pa - len - 1;
-    //                     (*argv_ptr) = user_sp_pa;
-    //                     strcpy(user_sp_va,argv[i]);
-    //                     argv_ptr ++;
-    //                 }
-    // int user_stack_size =  user_stack - user_sp_now;
-    // int siz_alignment = ((user_stack_size/16) + !(user_stack_size%128==0))*16;
-    // user_sp_now = user_stack - siz_alignment;
-
     // user_sp_now = user_sp_now & (~0xf);
     pcb->user_sp = pcb->user_sp & (~0xf);
 
@@ -224,35 +197,6 @@ void init_tcb_stack(
 
     tcb->kernel_sp = pt_switchto;
 }
-
-// static void init_pcb(void)
-// {
-//     /* TODO: [p2-task1] load needed tasks and init their corresponding PCB */
-
-//     int num_tasks; 
-    
-//     // task1: sched1_tasks
-//     //init_sched1_tasks();
-//     //先将sched1_tasks数组做一遍初始化
-//     for(num_tasks = 0; num_tasks < task_num; num_tasks++){
-//         //pcb[num_tasks].kernel_sp = KERNEL_STACK + (num_tasks + 1) * 0x1000;
-//         //pcb[num_tasks].user_sp = pcb[num_tasks].kernel_sp;
-//         pcb[num_tasks].kernel_sp = allocKernelPage(1) + PAGE_SIZE;
-//         pcb[num_tasks].user_sp   = allocUserPage(1) + PAGE_SIZE;
-//         list_add(&pcb[num_tasks].list, &ready_queue);
-//         pcb[num_tasks].pid = num_tasks + 1;
-//         pcb[num_tasks].tid = 0;
-//         pcb[num_tasks].status = TASK_READY;
-        
-//         load_task_img(num_tasks);
-//         init_pcb_stack( pcb[num_tasks].kernel_sp, pcb[num_tasks].user_sp, 
-//                         tasks[num_tasks].task_entrypoint, &pcb[num_tasks]); 
-//     }
-    
-//     current_running = &pid0_pcb;
-//     /* TODO: [p2-task1] remember to initialize 'current_running' */
-
-// }
 
 static void init_pcb(void)
 {
