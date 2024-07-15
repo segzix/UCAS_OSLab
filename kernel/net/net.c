@@ -6,6 +6,7 @@
 #include <os/list.h>
 #include <os/smp.h>
 #include <os/time.h>
+#include <printk.h>
 #define STREAM_BUFFER_NUM 64
 #define TEMP_BUFFER_NUM 2048
 #define RESEND_BUFFER_NUM 62

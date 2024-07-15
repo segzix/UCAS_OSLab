@@ -1,11 +1,12 @@
 
 #include "os/task.h"
-#include "screen.h"
 #include <os/fs.h>
 #include <os/sched.h>
 #include <os/time.h>
 #include <printk.h>
 #include <os/string.h>
+#include <os/kernel.h>
+#include <os/smp.h>
 
 char cat_buff[1024];
 uint32_t checkmagic;
@@ -431,7 +432,7 @@ int do_fread(int fd, char *buff, int length)
 
     read_file(file_inode, buff, fdescs[fd].r_cursor, read_siz);//读文件
     fdescs[fd].r_cursor += read_siz;//读文件并移动读光标
-
+ 
     return read_siz;  // return the length of trully read data
 }
 

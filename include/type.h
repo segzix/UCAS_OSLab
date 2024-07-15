@@ -30,13 +30,13 @@
 #define NULL 	((void*)0)
 #endif
 
-typedef int BOOL;
-#ifndef TRUE
-	#define TRUE 	1
-	#define FALSE 	0
-#endif
+// typedef int BOOL;
+// #ifndef TRUE
+// 	#define TRUE 	1
+// 	#define FALSE 	0
+// #endif
 
-typedef int bool;
+typedef int Bool;
 #ifndef true
     #define true   1
     #define false  0

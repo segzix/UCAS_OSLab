@@ -7,8 +7,6 @@
 #include <csr.h>
 
 /* maybe you need another stack for booting? */
-.equ boot_stack_top_base, 0x50202000
-
 .equ kernel_stack_for_boot, 		0x50900000
 .equ kernel_stack1_for_boot,   0x508ff000
 

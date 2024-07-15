@@ -50,7 +50,7 @@ int main()
 
 
     sd_read(KERNEL_compressed,KERNEL_compressed_block_num,KERNEL_compressed_block_id);
-    memcpy(KERNEL_compressed, KERNEL_compressed + KERNEL_compressed_block_offset, KERNEL_compressed_block_size);
+    memcpy((char*)KERNEL_compressed, (char*)(KERNEL_compressed + KERNEL_compressed_block_offset), KERNEL_compressed_block_size);
     //将压缩的kernel读到KERNEL_compressed处并且让其对齐
 
     // prepare environment

@@ -8,10 +8,10 @@
 #include <os/task.h>
 #include <os/loader.h>
 #include <os/net.h>
-#include <screen.h>
 #include <printk.h>
 #include <assert.h>
 #include <pgtable.h>
+#include <os/smp.h>
 
 pcb_t pcb[NUM_MAX_TASK];
 tcb_t tcb[NUM_MAX_TASK];
@@ -65,7 +65,7 @@ pid_t process_id = 1;
 //初始进程pid号为1，为内核进程
 
 void clean_temp_page(uint64_t pgdir_addr){
-    PTE * pgdir = pgdir_addr;
+    PTE * pgdir = (PTE *)pgdir_addr;
     for(uint64_t va = 0x50000000lu; va < 0x51000000lu; va += 0x200000lu){
         va &= VA_MASK;
         uint64_t vpn2 =

@@ -1,6 +1,6 @@
 #include <asm.h>
 #include <csr.h>
-//#include <os/smp.h>
+//#include "os/smp.h"
 
 ENTRY(get_current_cpu_id)
   csrr a0, CSR_MHARTID

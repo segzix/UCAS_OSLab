@@ -29,7 +29,6 @@
 #define INCLUDE_SYSCALL_H_
 
 #include <os/sched.h>
-#include <type.h>
 
 #define NUM_SYSCALLS 96
 

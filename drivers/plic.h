@@ -5,7 +5,7 @@
 #include <os/sched.h>
 
 struct plic_handler {
-	bool		present;
+	Bool		present;
 	void		*hart_base;
 	void		*enable_base;
 } plic_handlers;

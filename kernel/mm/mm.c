@@ -3,6 +3,8 @@
 #include <os/string.h>
 #include <os/sched.h>
 #include <os/kernel.h>
+#include <os/smp.h>
+#include <printk.h>
 // #include <stdint.h>
 // #include <stdint.h>
 
@@ -32,9 +34,7 @@ PTE * search_and_set_PTE(uintptr_t va, uintptr_t pgdir,int pid)
         // alloc second - level page
         pgdir_t[vpn2] = 0;
         set_pfn(&pgdir_t[vpn2], kva2pa(allocPage(1,1,va,1,pid)) >> NORMAL_PAGE_SHIFT);//allocpage作为内核中的函数是虚地址，此时为二级页表分配了空间
-        //set_attribute(&pgdir_t[vpn2],_PAGE_PRESENT | _PAGE_USER | _PAGE_ACCESSED | _PAGE_DIRTY);
         set_attribute(&pgdir_t[vpn2],_PAGE_PRESENT);
-        //clear_pgdir(pa2kva(get_pa(pgdir_t[vpn2])));//事实上就是将刚刚allocpage的页清空
     }
 
     PTE *pmd = (PTE *)pa2kva(get_pa(pgdir_t[vpn2]));

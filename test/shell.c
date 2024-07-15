@@ -318,10 +318,12 @@ int main(void){
         sys_getpwdname(pwd_name);
         printf("%s$ ",pwd_name);
         print_location_x += (strlen(pwd_name) + 2);
+        int cnt = 0;
         
         while((c = getchar()) != '\r' && c != '\n' && bufp < SHELL_WIDTH){
         // TODO [P3-task1]: parse input
         // note: backspace maybe 8(' \b') or 127(delete)
+            cnt++;
             if(c == '\b' || c == 127){
                 if(bufp> 0){
                     print_location_x--; 

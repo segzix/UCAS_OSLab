@@ -1,8 +1,11 @@
+#include "type.h"
 #include <os/lock.h>
 #include <os/sched.h>
 #include <os/list.h>
 #include <atomic.h>
+#include <printk.h>
 #include <os/string.h>
+#include <os/smp.h>
 
 mutex_lock_t mlocks[LOCK_NUM];
 
@@ -35,7 +38,7 @@ void spin_lock_init(spin_lock_t *lock)
 int spin_lock_try_acquire(spin_lock_t *lock)
 {
     /* TODO: [p2-task2] try to acquire spin lock */
-    return atomic_swap(LOCKED, (lock_status_t*)lock);
+    return atomic_swap(LOCKED, (ptr_t)(lock_status_t*)lock);
 }
 
 void spin_lock_acquire(spin_lock_t *lock)
@@ -49,7 +52,7 @@ void spin_lock_acquire(spin_lock_t *lock)
 
 void spin_lock_release(spin_lock_t *lock)
 {
-    atomic_swap(UNLOCKED, (lock_status_t*)lock);
+    atomic_swap(UNLOCKED, (ptr_t)(lock_status_t*)lock);
 
     return;
     /* TODO: [p2-task2] release spin lock */
@@ -251,7 +254,7 @@ void do_semaphore_up(int sema_idx){
     spin_lock_acquire(&(semaphore_now->lock));
 
     if(semaphore_now->semaphore_size < 0)
-            do_unblock(semaphore_now->semaphore_queue.next);
+        do_unblock(semaphore_now->semaphore_queue.next);
     semaphore_now->semaphore_size++;
 
     spin_lock_release(&(semaphore_now->lock));
@@ -416,102 +419,3 @@ int do_mbox_recv(int mbox_idx, void * msg, int msg_length){
     spin_lock_release(&(mailbox_now->lock));
     return block;    
 }
-
-// mailbox_t mboxs[MBOX_NUM];
-// spin_lock_t mbox_init = {UNLOCKED};
-// void init_mbox()
-// {
-//     for (int i = 0; i < MBOX_NUM; i++){
-//         mboxs[i].usnr = 0;
-//         mboxs[i].key[0] = '\0';
-//     }
-// }
-
-// int do_mbox_open(char *name)
-// {
-//     spin_lock_acquire(&mbox_init);
-//     for (int i = 0; i < MBOX_NUM; i++){
-//         if (!strcmp(mboxs[i].key, name)){
-//             mboxs[i].usnr++;
-//             spin_lock_release(&mbox_init);
-//             return i;
-//         }
-//     }
-//     for (int i = 0; i < MBOX_NUM; i++){
-//         if (mboxs[i].key[0] == '\0'){
-//             strcpy(mboxs[i].key, name);
-//             mboxs[i].usnr++;
-//             mboxs[i].lock.status = UNLOCKED;
-//             mboxs[i].buffer_head = 0;
-//             mboxs[i].buffer_tail = 0;
-//             mboxs[i].send_block_queue.prev = &mboxs[i].send_block_queue;
-//             mboxs[i].send_block_queue.next = &mboxs[i].send_block_queue;
-//             mboxs[i].recv_block_queue.prev = &mboxs[i].recv_block_queue;
-//             mboxs[i].recv_block_queue.next = &mboxs[i].recv_block_queue;
-//             spin_lock_release(&mbox_init);
-//             return i;
-//         }
-//     }
-//     spin_lock_release(&mbox_init);
-//     return -1;
-// }
-
-// int mbox_buffer_full(int mbox_idx, int len)
-// {
-//     return (((mboxs[mbox_idx].buffer_tail-mboxs[mbox_idx].buffer_head+MAX_MBOX_LENGTH) % MAX_MBOX_LENGTH) + len >= MAX_MBOX_LENGTH);
-// }
-// int mbox_buffer_empty(int mbox_idx, int len)
-// {
-//     return (((mboxs[mbox_idx].buffer_tail-mboxs[mbox_idx].buffer_head+MAX_MBOX_LENGTH) % MAX_MBOX_LENGTH) < len);
-// }
-// void mbox_buffer_add(int mbox_idx, char ch)
-// {
-//     mboxs[mbox_idx].mbox_buf[mboxs[mbox_idx].buffer_tail] = ch;
-//     mboxs[mbox_idx].buffer_tail = (mboxs[mbox_idx].buffer_tail + 1) % MAX_MBOX_LENGTH;
-// }
-// char mbox_buffer_sub(int mbox_idx)
-// {
-//     char ret = mboxs[mbox_idx].mbox_buf[mboxs[mbox_idx].buffer_head];
-//     mboxs[mbox_idx].buffer_head = (mboxs[mbox_idx].buffer_head + 1) % MAX_MBOX_LENGTH;
-//     return ret;
-// }
-
-// int do_mbox_send(int mbox_idx, char *msg, int msg_length)
-// {
-//     spin_lock_acquire(&mboxs[mbox_idx].lock);
-//     while (mbox_buffer_full(mbox_idx, msg_length)){
-//         do_block(&current_running[get_current_cpu_id()]->list, &mboxs[mbox_idx].send_block_queue, &mboxs[mbox_idx].lock);
-//     }
-//     while (msg_length--){
-//         mbox_buffer_add(mbox_idx, *msg);
-//         msg++;
-//     }
-//     while (mboxs[mbox_idx].recv_block_queue.next != &mboxs[mbox_idx].recv_block_queue)
-//         do_unblock(mboxs[mbox_idx].recv_block_queue.next);
-//     spin_lock_release(&mboxs[mbox_idx].lock);
-// }
-
-// int do_mbox_recv(int mbox_idx, char *msg, int msg_length)
-// {
-//     spin_lock_acquire(&mboxs[mbox_idx].lock);
-//     while (mbox_buffer_empty(mbox_idx, msg_length)){
-//         do_block(&current_running[get_current_cpu_id()]->list, &mboxs[mbox_idx].recv_block_queue, &mboxs[mbox_idx].lock);
-//     }
-//     while (msg_length--){
-//         char ret = mbox_buffer_sub(mbox_idx);
-//         *msg++ = ret;
-//     }
-//     while (mboxs[mbox_idx].send_block_queue.next != &mboxs[mbox_idx].send_block_queue)
-//         do_unblock(mboxs[mbox_idx].send_block_queue.next);
-//     spin_lock_release(&mboxs[mbox_idx].lock);
-// }
-
-// void do_mbox_close(int mbox_idx)
-// {
-//     spin_lock_acquire(&mbox_init);
-//     mboxs[mbox_idx].usnr--;
-//     if (!mboxs[mbox_idx].usnr){
-//         mboxs[mbox_idx].key[0] = '\0';
-//     }
-//     spin_lock_release(&mbox_init);
-// }

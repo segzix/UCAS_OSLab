@@ -29,7 +29,7 @@
 #ifndef INCLUDE_SCHEDULER_H_
 #define INCLUDE_SCHEDULER_H_
 
-#include "os/lock.h"
+#include <os/lock.h>
 #include <type.h>
 #include <os/list.h>
 

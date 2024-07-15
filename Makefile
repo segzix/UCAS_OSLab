@@ -40,18 +40,11 @@ CFLAGS          = -O0 -fno-builtin -nostdlib -nostdinc -Wall -mcmodel=medany -gg
 BOOT_INCLUDE    = -I$(DIR_ARCH)/include
 BOOT_CFLAGS     = $(CFLAGS) $(BOOT_INCLUDE) -Wl,--defsym=TEXT_START=$(BOOTLOADER_ENTRYPOINT) -T riscv.lds
 
-# <<<<<<< HEAD
-
 DECOMPRESS_INCLUDE  = -I$(DIR_DEFLATE) -I$(DIR_ARCH)/include #-Iinclude
 DECOMPRESS_CFLAGS   = $(CFLAGS) $(DECOMPRESS_INCLUDE) -Wl,--defsym=TEXT_START=$(DECOMPRESS_ENTRYPOINT) -T riscv.lds
 
-#KERNEL_INCLUDE  = -I$(DIR_ARCH)/include -Iinclude
 KERNEL_INCLUDE  = -I$(DIR_ARCH)/include -Iinclude -Idrivers 
 KERNEL_CFLAGS   = $(CFLAGS) $(KERNEL_INCLUDE) -Wl,--defsym=TEXT_START=$(KERNEL_ENTRYPOINT) -T riscv.lds
-# =======
-# KERNEL_INCLUDE  = -I$(DIR_ARCH)/include -Iinclude -Idrivers
-# KERNEL_CFLAGS   = $(CFLAGS) $(KERNEL_INCLUDE) -Wl,--defsym=TEXT_START=$(KERNEL_ENTRYPOINT) -T riscv.lds 
-# >>>>>>> start/Project4-Virtual_Memory_Management
 
 USER_INCLUDE    = -I$(DIR_TINYLIBC)/include
 USER_CFLAGS     = $(CFLAGS) $(USER_INCLUDE)
@@ -85,48 +78,36 @@ DIR_DEFLATE     = ./tools/deflate
 DIR_DECOMPRESS     = ./decompress
 
 BOOTLOADER_ENTRYPOINT   = 0x50200000
-# <<<<<<< HEAD
-# KERNEL_ENTRYPOINT       = 0x50201000
-# USER_ENTRYPOINT         = 0x52000000
 DECOMPRESS_ENTRYPOINT   = 0x53000000
-# =======
 KERNEL_ENTRYPOINT       = 0xffffffc050202000
 USER_ENTRYPOINT         = 0x10000
-# >>>>>>> start/Project4-Virtual_Memory_Management
 
 # -----------------------------------------------------------------------
 # UCAS-OS Kernel Source Files
 # -----------------------------------------------------------------------
 
 SRC_BOOT    = $(wildcard $(DIR_ARCH)/boot/*.S)
+
+SRC_START   = $(wildcard $(DIR_ARCH)/kernel/*.c)
 SRC_ARCH    = $(wildcard $(DIR_ARCH)/kernel/*.S)
 SRC_BIOS    = $(wildcard $(DIR_ARCH)/bios/*.c)
 SRC_DRIVER  = $(wildcard $(DIR_DRIVERS)/*.c)
 SRC_INIT    = $(wildcard $(DIR_INIT)/*.c)
 SRC_KERNEL  = $(wildcard $(DIR_KERNEL)/*/*.c)
 SRC_LIBS    = $(wildcard $(DIR_LIBS)/*.c)
-# <<<<<<< HEAD
-SRC_STRING  = $(wildcard $(DIR_LIBS)/string.c)
+SRC_MAIN    = $(SRC_ARCH) $(SRC_START) $(SRC_INIT) $(SRC_BIOS) $(SRC_DRIVER) $(SRC_KERNEL) $(SRC_LIBS) 
+
 SRC_DECOMPRESS_1 = $(wildcard $(DIR_DECOMPRESS)/*.c)
 SRC_DECOMPRESS_2 = $(wildcard $(DIR_DECOMPRESS)/*.S)
 SRC_DEFLATE_1 = $(wildcard $(DIR_DEFLATE)/*.c)
 SRC_DEFLATE_2 = $(wildcard $(DIR_DEFLATE)/lib/*.c)
-
-
-# SRC_MAIN    = $(SRC_ARCH) $(SRC_INIT) $(SRC_BIOS) $(SRC_DRIVER) $(SRC_KERNEL) $(SRC_LIBS)
-# SRC_MAIN    = $(SRC_ARCH) $(SRC_INIT) $(SRC_BIOS) $(SRC_KERNEL) $(SRC_LIBS)
-SRC_DECOMPRESS= $(SRC_DECOMPRESS_1) $(SRC_DECOMPRESS_2) $(SRC_DEFLATE_1) $(SRC_DEFLATE_2) #$(SRC_BIOS) $(SRC_STRING)
-
-# =======
-SRC_START   = $(wildcard $(DIR_ARCH)/kernel/*.c)
-
-SRC_MAIN    = $(SRC_ARCH) $(SRC_START) $(SRC_INIT) $(SRC_BIOS) $(SRC_DRIVER) $(SRC_KERNEL) $(SRC_LIBS) 
-# >>>>>>> start/Project4-Virtual_Memory_Management
+SRC_DECOMPRESS= $(SRC_DECOMPRESS_1) $(SRC_DECOMPRESS_2) $(SRC_DEFLATE_1) $(SRC_DEFLATE_2) 
 
 ELF_BOOT    = $(DIR_BUILD)/bootblock
 ELF_MAIN    = $(DIR_BUILD)/main
-ELF_IMAGE   = $(DIR_BUILD)/image
 ELF_DECOMPRESS    = $(DIR_BUILD)/decompress
+
+ELF_IMAGE   = $(DIR_BUILD)/image
 
 # -----------------------------------------------------------------------
 # UCAS-OS User Source Files
@@ -206,6 +187,8 @@ minicom:
 # UCAS-OS Rules
 # -----------------------------------------------------------------------
 
+# 这些可以理解成先行规则，对于boot main decom crt0规则和USER不一样，直接在这里使用依赖关系
+
 $(ELF_BOOT): $(SRC_BOOT) riscv.lds
 	$(CC) $(BOOT_CFLAGS) -o $@ $(SRC_BOOT) -e main
 
@@ -218,6 +201,12 @@ $(ELF_DECOMPRESS): $(SRC_DECOMPRESS) riscv.lds
 
 $(OBJ_CRT0): $(SRC_CRT0)
 	$(CC) $(USER_CFLAGS) -I$(DIR_ARCH)/include -c $< -o $@
+
+# LIB_TINYC 需要OBJ_LIBC; 
+# OBJ_LIBC是.o文件，调用$(DIR_BUILD)/%.o用$(DIR_TINYLIBC)/%.c来进行生成
+# $(DIR_BUILD)/%同理
+# 即当某个目标需要生成最终的可执行文件时，如果发现自己没有.o那么调用$(DIR_BUILD)/%.o；进一步调用$(DIR_BUILD)/%
+# 这两条规则相当于给所有的最终可执行文件的生成指明了方向(除了BOOT，MAIN，DECOMPRESS)
 
 $(LIB_TINYC): $(OBJ_LIBC)
 	$(AR) rcs $@ $^
@@ -240,15 +229,11 @@ elf: $(ELF_BOOT) $(ELF_DECOMPRESS) $(ELF_MAIN) $(LIB_TINYC) $(ELF_USER)
 # -----------------------------------------------------------------------
 
 $(ELF_CREATEIMAGE): $(SRC_CREATEIMAGE) $(SRC_DEFLATE_1) $(SRC_DEFLATE_2)
-	$(HOST_CC) $(SRC_CREATEIMAGE) $(SRC_DEFLATE_1) $(SRC_DEFLATE_2) -o $@ -ggdb -Wall -I$(DIR_DEFLATE) -I$(DIR_ARCH)/include -DFREESTANDING
+	$(HOST_CC) $^ -o $@ -ggdb -Wall -I$(DIR_DEFLATE) -I$(DIR_ARCH)/include -DFREESTANDING
 
-# <<<<<<< HEAD
 image: $(ELF_CREATEIMAGE) $(ELF_BOOT) $(ELF_DECOMPRESS) $(ELF_MAIN) $(ELF_USER)
-	cd $(DIR_BUILD) && ./$(<F) --extended $(filter-out $(<F), $(^F)) 
-#&& dd if=//dev/zero of=image oflag=append conv=notrunc bs=512MB count=2
-# =======
-# image: $(ELF_CREATEIMAGE) $(ELF_BOOT) $(ELF_MAIN) $(ELF_USER)
-# 	cd $(DIR_BUILD) && ./$(<F) --extended $(filter-out $(<F), $(^F)) 
-# >>>>>>> 44b6afb9d17c726a4c190ffe4d7083ed3d511bd6
+# 运行createimage文件
+	cd $(DIR_BUILD) && ./$(<F) --extended $(filter-out $(<F), $(^F)) \
+	&& dd if=//dev/zero of=image oflag=append conv=notrunc bs=512MB count=2
 
 .PHONY: image

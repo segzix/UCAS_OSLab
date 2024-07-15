@@ -7,7 +7,6 @@
 #include <csr.h>
 
 #define DEFLATE_STACK		0x53100000
-#define KERNEL_STACK		0x50500000
 #define KERNEL		      0x50202000
 .section ".entry_function","ax"
 ENTRY(_start)

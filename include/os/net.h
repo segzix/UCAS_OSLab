@@ -1,8 +1,6 @@
 #ifndef __INCLUDE_NET_H__
 #define __INCLUDE_NET_H__
 
-#include <os/list.h>
-#include <type.h>
 
 #define PKT_NUM 32
 

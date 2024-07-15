@@ -12,8 +12,6 @@
 #include <pgtable.h>
 #include <plic.h>
 #include <e1000.h>
-// #include <stdint.h>
-// #include <stdint.h>
 
 handler_t irq_table[IRQC_COUNT];
 handler_t exc_table[EXCC_COUNT];
@@ -176,7 +174,7 @@ void handle_pagefault_store(regs_context_t *regs, uint64_t stval, uint64_t scaus
             uint64_t src_kva = pa2kva(get_pa(*search_PTE_swap));//已经找到的表项，将其中的物理地址提取出来
             uint64_t dest_kva = allocPage(1,1,stval,0,(*current_running)->pid);//分配出一块空间
 
-            memcpy(dest_kva, src_kva, PAGE_SIZE);
+            memcpy((uint8_t*)dest_kva, (uint8_t*)src_kva, PAGE_SIZE);
 
             //bios_sd_read(kva2pa(kva), 8, search_block_id);
 

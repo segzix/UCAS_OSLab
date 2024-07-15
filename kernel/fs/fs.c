@@ -1,9 +1,10 @@
+#include "os/smp.h"
 #include <os/fs.h>
 #include <os/sched.h>
 #include <os/time.h>
 #include <printk.h>
-// #include <stdint.h>
 #include <os/string.h>
+#include <os/kernel.h>
 
 inode_t* current_dir = 0;
 int judge1;
@@ -12,16 +13,6 @@ char temp_block[BLOCK_SIZ];//每次读出8个扇区并首先暂存于此
 
 char inode_block[BLOCK_SIZ];//每次读出的关于inode，都将先存放在这个block中，并且返回这个block中对应的inode指针
 int judge;
-// char direct0_block[BLOCK_SIZ];//直接指针0对应的目录块
-// char direct1_block[BLOCK_SIZ];//直接指针1对应的目录块
-// char direct2_block[BLOCK_SIZ];//直接指针2对应的目录块
-
-// char indirect1_point_block[BLOCK_SIZ];//一级间接指针对应的point块
-// char indirect1_data_block[BLOCK_SIZ];//一级间接指针对应的目录块
-
-// char indirect2_point1_block[BLOCK_SIZ];//二级间接指针对应的目录块
-// char indirect2_point2_block[BLOCK_SIZ];//一级间接指针对应的point块
-// char indirect2_data_block[BLOCK_SIZ];//一级间接指针对应的目录块
 
 uint32_t blockid2sectorid(uint32_t block_id){
     return (SUPER_START + block_id) << 3;
@@ -428,7 +419,7 @@ uint8_t* search_datapoint(inode_t* inode, uint32_t offset){//根据给出的偏�
         uint32_t temp_point = *point;
 
         if(!(*point))//说明还没有进行过对应数据块的分配
-            temp_point = alloc_block(0,point);//分配，分配的同时,point指针出的blockid号也已经置好
+            temp_point = alloc_block(0,(int64_t)point);//分配，分配的同时,point指针出的blockid号也已经置好
 
         uint8_t* indirect1 = (uint8_t*)bread(temp_point);
         ret_point = indirect1 + offset%BLOCK_SIZ;//第二个直接指针（已转换）加上偏移量
@@ -442,7 +433,7 @@ uint8_t* search_datapoint(inode_t* inode, uint32_t offset){//根据给出的偏�
         uint32_t temp_point1 = *point1;
 
         if(!(*point1))//说明还没有进行过对应数据块的分配
-            temp_point1 = alloc_block(0,point1);//分配，分配的同时,point指针出的blockid号也已经置好
+            temp_point1 = alloc_block(0,(int64_t)point1);//分配，分配的同时,point指针出的blockid号也已经置好
         //如果是现在才分配，那么point1指向的blockid会返回，但是由于可能会被覆盖掉，因此不能采用之前的写法
 
         uint8_t* indirect2_point2 = (uint8_t*)bread(temp_point1);
@@ -451,7 +442,7 @@ uint8_t* search_datapoint(inode_t* inode, uint32_t offset){//根据给出的偏�
         //这里的操作需要稍微注意一下
 
         if(!(*point2))//说明还没有进行过对应数据块的分配
-            temp_point2 = alloc_block(0,point2);
+            temp_point2 = alloc_block(0,(int64_t)point2);
             
         uint8_t* indirect2 = (uint8_t*)bread(temp_point2);
         ret_point = indirect2 + offset%BLOCK_SIZ;//三级间接指针（已转换）加上偏移量
@@ -486,7 +477,7 @@ void bigfile_alloc(inode_t* inode, uint32_t offset){//与searchdatapoint基本�
         uint32_t temp_point = *point;
 
         if(!(*point))//说明还没有进行过对应数据块的分配
-            temp_point = alloc_block(0,point);//分配，分配的同时,point指针出的blockid号也已经置好
+            temp_point = alloc_block(0,(int64_t)point);//分配，分配的同时,point指针出的blockid号也已经置好
     }
     else{//标号位于二级间接块内
         if(!inode->indirect_2){//说明还没有进行过对应数据块的分配
@@ -497,7 +488,7 @@ void bigfile_alloc(inode_t* inode, uint32_t offset){//与searchdatapoint基本�
         uint32_t temp_point1 = *point1;
 
         if(!(*point1))//说明还没有进行过对应数据块的分配
-            temp_point1 = alloc_block(0,point1);//分配，分配的同时,point指针出的blockid号也已经置好
+            temp_point1 = alloc_block(0,(int64_t)point1);//分配，分配的同时,point指针出的blockid号也已经置好
         //如果是现在才分配，那么point1指向的blockid会返回，但是由于可能会被覆盖掉，因此不能采用之前的写法
 
         uint8_t* indirect2_point2 = (uint8_t*)bread(temp_point1);
@@ -506,7 +497,7 @@ void bigfile_alloc(inode_t* inode, uint32_t offset){//与searchdatapoint基本�
         //这里的操作需要稍微注意一下
 
         if(!(*point2))//说明还没有进行过对应数据块的分配
-            temp_point2 = alloc_block(0,point2);
+            temp_point2 = alloc_block(0,(int64_t)point2);
     }
 }
 

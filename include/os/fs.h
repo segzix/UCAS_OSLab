@@ -1,7 +1,4 @@
-#include "pgtable.h"
-#include <os/string.h>
-#include <os/kernel.h>
-#include <type.h>
+#include <pgtable.h>
 
 //这列全部采用块管理而非扇区管理，即一个块是4K,一个扇区是512，一个块为8个扇区；这里所有的偏移量均采用块来进行技术
 #define SUPER_START (1lu << 17)//文件系统分配出1M个block，从第512M开始，

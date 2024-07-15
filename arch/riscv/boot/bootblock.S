@@ -35,7 +35,6 @@ main:
 	la 	 	t1,deflate_block_size_loc
 	lh	 	a1,0(t1)
 	mv   	t1,zero
-
 	li		a2,1
 
 	jal  	bios_func_entry 
