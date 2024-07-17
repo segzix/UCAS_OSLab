@@ -176,42 +176,6 @@ void e1000_init(void)
     e1000_configure_rx();
 }
 
-// void e1000_block_send(){
-//     current_running = get_current_cpu_id()? &current_running_1 : &current_running_0;
-//     (*current_running)->status = TASK_BLOCKED;
-//     list_del(&((*current_running)->list));
-//     list_add(&((*current_running)->list), &send_queue);
-//     do_scheduler(); 
-// }
-
-// void e1000_check_send(){
-//     current_running = get_current_cpu_id()? &current_running_1 : &current_running_0;
-//     local_flush_dcache();
-//     if(send_queue.prev == &send_queue) return;
-//     list_node_t *now = &send_queue;
-//     list_node_t *nxt = now->prev;
-
-//     int tail = e1000_read_reg(e1000,E1000_TDT);
-//     if(tx_desc_array[tail].status & E1000_TXD_STAT_DD){
-//         list_del(nxt);
-//         list_add(nxt,&ready_queue);
-//         pcb_t *pcb_now = LIST_to_PCB(nxt);
-//         pcb_now->status = TASK_READY;        
-//     }
-// }
-// void do_unblock(list_node_t *pcb_node)
-// {
-//     list_del(pcb_node);
-
-//     spin_lock_acquire(&ready_spin_lock);
-//     list_add(pcb_node, &ready_queue);
-//     spin_lock_release(&ready_spin_lock);
-
-//     (list_entry(pcb_node, pcb_t, list))->status = TASK_READY;
-//     //return;
-//     // TODO: [p2-task2] unblock the `pcb` from the block queue
-// }
-
 /**
  * e1000_transmit - Transmit packet through e1000 net device
  * @param txpacket - The buffer address of packet to be transmitted
