@@ -317,11 +317,6 @@ static void init_page_general(void)
 
         page_general[num_pages].pin = 0;
         page_general[num_pages].using = 0;
-        page_general[num_pages].kva = num_pages * PAGE_SIZE + FREEMEM_KERNEL;
-
-        page_general[num_pages].va = -1;
-
-        page_general[num_pages].table_not = 0;//这一项专门用来判断是不是页表项
     }
 
 }
@@ -359,18 +354,16 @@ static void init_shell(void)
     uintptr_t kva_user_stack;
 
     pcb[num_tasks].recycle = 0;
-    pcb[num_tasks].pgdir = (PTE*)allocPage(1,1,NULL);//分配根目录页//这里的给出的用户映射的虚地址没有任何意义  //这里是2因为能确定是shell
+    pcb[num_tasks].pgdir = (PTE*)kalloc();//分配根目录页//这里的给出的用户映射的虚地址没有任何意义  //这里是2因为能确定是shell
     //clear_pgdir(pcb[num_tasks].pgdir); //清空根目录页
     share_pgtable(pcb[num_tasks].pgdir,(PTE*)pa2kva(PGDIR_PA));//内核地址映射拷贝
     load_task_img(num_tasks,(uintptr_t)pcb[num_tasks].pgdir,2);//load进程并且为给进程建立好地址映射
-    //pcb[num_tasks].kernel_sp = KERNEL_STACK + (num_tasks + 1) * 0x1000;
-    //pcb[num_tasks].user_sp = pcb[num_tasks].kernel_sp;
 
-    pcb[num_tasks].kernel_sp = allocPage(1,1,pcb[num_tasks].pgdir) + 1 * PAGE_SIZE;//不是页表，但是要被pin住//只要没有所谓的用户对应的地址，va全部放0
+    pcb[num_tasks].kernel_sp = kalloc() + PAGE_SIZE;//不是页表，但是要被pin住//只要没有所谓的用户对应的地址，va全部放0
     pcb[num_tasks].user_sp   = USER_STACK_ADDR;
 
-    kva_user_stack = alloc_page_helper(pcb[num_tasks].user_sp - PAGE_SIZE, pcb[num_tasks].pgdir,1,2) + 1 * PAGE_SIZE;//比栈地址低的一张物理页
-    alloc_page_helper(pcb[num_tasks].user_sp - 2*PAGE_SIZE, pcb[num_tasks].pgdir,1,2);//比栈地址低的第二张物理页
+    kva_user_stack = uvmalloc(pcb[num_tasks].user_sp - PAGE_SIZE, pcb[num_tasks].pgdir, 
+                        _PAGE_PRESENT | _PAGE_READ | _PAGE_WRITE | _PAGE_EXEC | _PAGE_USER);
 
     pcb[num_tasks].wait_list.prev = &pcb[num_tasks].wait_list;
     pcb[num_tasks].wait_list.next = &pcb[num_tasks].wait_list;

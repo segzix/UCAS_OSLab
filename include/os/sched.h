@@ -185,7 +185,6 @@ int do_task_set(int mask,char *name, int argc, char *argv[]);
 // void do_thread_create(pid_t *thread, void *thread_entrypoint, void *arg);
 void do_thread_create(pid_t *thread, void *thread_entrypoint, void *arg);
 pcb_t* get_pcb();
-void pin_page(uintptr_t kva);
 /************************************************************/
 
 #endif

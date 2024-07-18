@@ -26,7 +26,6 @@ uintptr_t walk(uintptr_t va, PTE* pgdir, enum WALK walk)
     for(level=2; level>0; level--){
         // 得到PTE表项地址
         PTE* pte = &pgdir_t[PX(level, va)];
-
         
         // _PAGE_PRESENT有效，则直接有pgdir_t
         if(*pte & _PAGE_PRESENT){
@@ -35,10 +34,8 @@ uintptr_t walk(uintptr_t va, PTE* pgdir, enum WALK walk)
         else{
             // ALLOC的情况才会继续往下进行分配
             if(walk == ALLOC){
-                *pte = 0;
-                pgdir_t = (PTE*)allocPage(1,1,pgdir);
-                set_pfn(pte, kva2pa((uintptr_t)pgdir_t) >> NORMAL_PAGE_SHIFT);//allocpage作为内核中的函数是虚地址，此时为二级页表分配了空间
-                set_attribute(pte,_PAGE_PRESENT);
+                palloc(pte);
+                pgdir_t = (PTE *)pa2kva(get_pa(*pte));
             }else{
                 return 0;
             }
@@ -61,11 +58,6 @@ uintptr_t walk(uintptr_t va, PTE* pgdir, enum WALK walk)
 void clear_pagearray(uint32_t node_index){
     page_general[node_index].valid = 0;
     page_general[node_index].pin = 0;
-    //page_general[node_index].using
-    //page_general[node_index].kva
-
-    page_general[node_index].va  = -1;
-    page_general[node_index].table_not  = 0;
 }
 
 unsigned swap_out(){//swapout函数只负责选中一页然后换出，不负责将某一页重新填入或者分配出去
@@ -75,7 +67,7 @@ unsigned swap_out(){//swapout函数只负责选中一页然后换出，不负责
     PTE * swap_PTE;//将要换出去的物理页对应的表项
     for(unsigned i = swap_index;i < PAGE_NUM;i = (i+1)%PAGE_NUM)
     {
-        if(!page_general[i].pin && !page_general[i].table_not){
+        if(!page_general[i].pin){
             page_general[i].valid = 0;
 
             // page_general[i].pin   = pin;
@@ -84,8 +76,7 @@ unsigned swap_out(){//swapout函数只负责选中一页然后换出，不负责
             // page_general[i].pid   = (*current_running)->pid;
             // page_general[i].pgdir = (*current_running)->pgdir;
             // page_general[i].va    = va;
-            PTE* pgdir = get_pcb()->pgdir;
-            swap_PTE = (PTE*)walk(page_general[i].va, pgdir,ALLOC);
+            swap_PTE = page_general[i].pte;
             assert(swap_PTE);
             *swap_PTE = 0;
 
@@ -93,9 +84,9 @@ unsigned swap_out(){//swapout函数只负责选中一页然后换出，不负责
             set_attribute(swap_PTE, _PAGE_SOFT | _PAGE_USER);//软件位拉高
             local_flush_tlb_all();
 
-            bios_sd_write(kva2pa(page_general[i].kva),8,swap_block_id);//将物理地址和所写的扇区号传入
+            bios_sd_write(kva2pa(pgindex2kva(i)),8,swap_block_id);//将物理地址和所写的扇区号传入
 
-            printl("\npage[%d](kva : 0x%x) has been swapped to block id[%d]\n",i,page_general[i].kva,swap_block_id);
+            printl("\npage[%d](kva : 0x%x) has been swapped to block id[%d]\n",i,pgindex2kva(i),swap_block_id);
 
             swap_block_id += 8;//扇区号加8
             swap_index = (i+1)%PAGE_NUM;//从下一个开始算起，为fifo算法
@@ -104,51 +95,6 @@ unsigned swap_out(){//swapout函数只负责选中一页然后换出，不负责
     }
 
     return 0;
-}
-
-ptr_t allocPage(int numPage,int pin,PTE* pgdir)//返回的是物理地址对应的内核虚地址
-{
-    uintptr_t ret = 0;
-
-    for(int j = 0;j < numPage;j++)
-    {
-        for(unsigned i = 0;i < PAGE_NUM;i++)
-        {
-            if(page_general[i].valid == 0){
-                page_general[i].valid = 1;
-
-                page_general[i].pin   = pin;
-                page_general[i].using = 1;
-
-                if(pgdir)
-                    page_general[i].pgdir = pgdir;
-                else
-                    page_general[i].pgdir = (PTE*)page_general[i].kva;
-
-                clear_pgdir(page_general[i].kva);
-                if(j == 0)
-                    ret = page_general[i].kva;//kva初始化的时候已经被设置好了
-                break;
-            }
-        }
-        if(ret != 0)//如果前面已经被分配出，则直接结束该循环
-            continue;
-        unsigned index= swap_out();//如果没有空余的，则在换出之后返回一个被换出的数组下标//这里只用单纯的去找能换出的页表项即可
-
-        page_general[index].valid = 1;
-
-        page_general[index].pin   = pin;
-        page_general[index].using = 1;
-
-        if(pgdir)
-            page_general[index].pgdir = pgdir;
-        else
-            page_general[index].pgdir = (PTE*)page_general[index].kva;
-        ret = page_general[index].kva;
-        clear_pgdir(page_general[index].kva);
-    }
-
-    return ret;
 }
 
 // NOTE: Only need for S-core to alloc 2MB large page
@@ -255,8 +201,6 @@ void free_all_pageframe(ptr_t baseAddr){//取消并回收所有的物理页
                             page_general[node_index].valid = 0;
                             page_general[node_index].pin = 0;
 
-                            page_general[node_index].va  = -1;
-
                             //取消映射
                         }
                     }
@@ -283,34 +227,6 @@ void share_pgtable(PTE* dest_pgdir, PTE* src_pgdir)
         dest_pgdir_addr++;
         src_pgdir_addr++;
     }
-}
-
-/* allocate physical page for `va`, mapping it into `pgdir`,
-   return the kernel virtual address for the page
-   */
-//这是专门为用户建立页表，用户进行映射准备的函数，其他的比如建立内核栈，建立映射页表都是用户不可见，因此不会使用该函数
-uintptr_t alloc_page_helper(uintptr_t va, PTE* pgdir, int pin,int pid)//用户给出一个虚地址以及页目录地址，返回给出一个内核分配的物理页的虚地址映射
-//helper的作用在于由他分配出去的肯定不是页表，或者说除了例外处理的时候不用他多分配，其他时候都用它帮忙进行分配(要求分配的东西不是内核的东西)
-//注意这个函数的精髓之处在于因为是用户，因此要建立映射，而对于内核栈和页表而言，不需要重新建立映射，因此不会调用此函数
-{
-    PTE * set_PTE;  
-
-    set_PTE = (PTE*)walk(va, pgdir, ALLOC);//这里不仅会进行寻找表项，如果没有还会将页表全部建立起来
-    assert(set_PTE);
-
-    *set_PTE = 0;
-    uint64_t pa = kva2pa(allocPage(1,pin,pgdir));//为给页表项分配出一个物理页，并且根据传参确定是否pin住
-    
-    set_pfn(set_PTE,(pa >> NORMAL_PAGE_SHIFT));
-    // set_attribute(set_PTE,_PAGE_PRESENT | _PAGE_READ | _PAGE_WRITE | _PAGE_EXEC
-    //                          | _PAGE_ACCESSED| _PAGE_DIRTY| _PAGE_USER);
-    set_attribute(set_PTE,_PAGE_PRESENT | _PAGE_READ | _PAGE_WRITE | _PAGE_EXEC
-                                        | _PAGE_USER);
-    // printl("vpn2 %d %d vpn1 %d %d vpn0 %d %d pa %d | %d %d %d\n",vpn2,&pgdir_t[vpn2],vpn1,&pmd[vpn1],vpn0,&pmd2[vpn0],pa,pgdir_t[vpn2],pmd[vpn1],pmd2[vpn0]);                         
-    
-    local_flush_tlb_all();
-    return pa2kva(pa);
-    // TODO [P4-task1] alloc_page_helper:
 }
 
 uintptr_t shm_page_get(int key)
@@ -430,60 +346,31 @@ void shm_page_dt(uintptr_t addr)
     }
 }
 
-void copy_pagetable(PTE* dest_pgdir,PTE* src_pgdir,int pid){
-    PTE * src_pgdir_t = (PTE *)src_pgdir;
-    PTE * dest_pgdir_t = (PTE *)dest_pgdir;
-    
-    for(unsigned vpn2 = 0;vpn2 < (NUM_PTE_ENTRY >> 1);vpn2++){
-        if(src_pgdir_t[vpn2] % 2 != 0){//页表对应的p位是1,则需要进行拷贝
-            // printl("IN ! %d\n",pgdir_t[vpn2]);
-            // alloc second - level page
-            dest_pgdir_t[vpn2] = 0;
-            set_pfn(&dest_pgdir_t[vpn2], kva2pa(allocPage(1,1,dest_pgdir)) >> NORMAL_PAGE_SHIFT);//allocpage作为内核中的函数是虚地址，此时为二级页表分配了空间
-            set_attribute(&dest_pgdir_t[vpn2],_PAGE_PRESENT);
-            //clear_pgdir(pa2kva(get_pa(pgdir_t[vpn2])));//事实上就是将刚刚allocpage的页清空
+void pgcopy(PTE* dest_pgdir, PTE* src_pgdir, uint8_t level){
+    PTE * src_pgdir_t = src_pgdir;
+    PTE * dest_pgdir_t = dest_pgdir;
+
+    for(unsigned vpn = 0;vpn < NUM_PTE_ENTRY; vpn++){
+        //页表对应的p位是1,则需要进行拷贝
+        if(src_pgdir_t[vpn] & _PAGE_PRESENT){
+            if(level){
+                //首先给目标项分配一页，然后继续进入进行memcopy
+                palloc(&dest_pgdir_t[vpn]);
+                pgcopy((PTE *)pa2kva(get_pa(dest_pgdir_t[vpn])), (PTE *)pa2kva(get_pa(src_pgdir_t[vpn])), level-1);
+            }
+            else{
+                //这里不能调用palloc函数，要直接对PTE表项进行操作，指向同一个物理页
+                memset(&dest_pgdir_t[vpn], 0, sizeof(PTE));
+                set_pfn(&dest_pgdir_t[vpn], get_pa(src_pgdir_t[vpn]) >> NORMAL_PAGE_SHIFT);
+                set_attribute(&dest_pgdir_t[vpn],get_attribute(src_pgdir_t[vpn],PA_ATTRIBUTE_MASK) & ~_PAGE_WRITE);
+
+                page_general[kva2pgindex(pa2kva(get_pa(src_pgdir_t[vpn])))].using++;//对应的物理页的使用数量会增加！
+            }
         }
         else 
             continue;
-
-        for(unsigned vpn1 = 0;vpn1 < 512;vpn1++){
-            PTE *src_pmd = (PTE *)pa2kva(get_pa(src_pgdir_t[vpn2]));
-            PTE *dest_pmd = (PTE *)pa2kva(get_pa(dest_pgdir_t[vpn2]));
-    
-            if(src_pmd[vpn1] % 2 != 0){//然后对二级页表的虚地址进行操作//可能会出现前面几级页表一样，最后一级不一样
-            // alloc third - level page
-                dest_pmd[vpn1] = 0;
-                set_pfn(&dest_pmd[vpn1], kva2pa(allocPage(1,1,dest_pgdir)) >> NORMAL_PAGE_SHIFT);//这里分配出去的时页表页，并且一定会被pin住
-                set_attribute(&dest_pmd[vpn1],_PAGE_PRESENT);
-                //clear_pgdir(pa2kva(get_pa(pmd[vpn1])));
-            }
-            else 
-                continue;
-
-            for(unsigned vpn0 = 0;vpn0 < 512;vpn0++){
-                PTE *src_pmd2 = (PTE *)pa2kva(get_pa(src_pmd[vpn1]));
-                PTE *dest_pmd2 = (PTE *)pa2kva(get_pa(dest_pmd[vpn1]));
-
-                if(src_pmd2[vpn0] % 2 != 0){//然后对二级页表的虚地址进行操作//可能会出现前面几级页表一样，最后一级不一样
-                // alloc third - level page
-                    dest_pmd2[vpn0] = 0;
-                    set_pfn(&dest_pmd2[vpn0], get_pa(src_pmd2[vpn0]) >> NORMAL_PAGE_SHIFT);//这里最后一级建立映射，把源的物理地址放进去即可
-                    // set_attribute(&pmd2[vpn0],_PAGE_PRESENT | _PAGE_READ | _PAGE_WRITE | _PAGE_EXEC
-                    //          | _PAGE_ACCESSED| _PAGE_DIRTY| _PAGE_USER);
-                    set_attribute(&dest_pmd2[vpn0],get_attribute(src_pmd2[vpn0],PA_ATTRIBUTE_MASK) & ~_PAGE_WRITE);
-                    //clear_pgdir(pa2kva(get_pa(pmd2[vpn0])));
-
-                    uint32_t node_index = (pa2kva(get_pa(src_pmd2[vpn0])) - FREEMEM_KERNEL)/PAGE_SIZE;
-                    page_general[node_index].using++;//对应的物理页的使用数量会增加！
-                    
-                }
-                else 
-                    continue; 
-            }
-        }
     }
 
-    //printk("search PTE error");
     return;
 }
 
@@ -495,14 +382,14 @@ pid_t do_fork(){
         if(pcb[id].status == TASK_EXITED){
 
             pcb[id].recycle = 0;
-            pcb[id].pgdir = (PTE*)allocPage(1,1,NULL);//分配根目录页//这里的给出的用户映射的虚地址没有任何意义
+            pcb[id].pgdir = (PTE*)kalloc();//分配根目录页//这里的给出的用户映射的虚地址没有任何意义
             //clear_pgdir(pcb[id].pgdir); //清空根目录页
             // share_pgtable(pcb[id].pgdir,pa2kva(PGDIR_PA));//内核地址映射拷贝
             // load_task_img(i,pcb[id].pgdir,id+2);//load进程并且为给进程建立好地址映射(这一步实际上包括了建立好除了根目录页的所有页表以及除了栈以外的所有映射)
             share_pgtable(pcb[id].pgdir,(PTE*)pa2kva(PGDIR_PA));//内核地址映射拷贝
-            copy_pagetable(pcb[id].pgdir,(*current_running)->pgdir,id+2);
+            pgcopy(pcb[id].pgdir, (PTE*)pa2kva(PGDIR_PA), 2);
 
-            pcb[id].kernel_sp  = allocPage(1,1,pcb[id].pgdir) + 1 * PAGE_SIZE;//这里的给出的用户映射的虚地址没有任何意义
+            pcb[id].kernel_sp  = kalloc() + 1 * PAGE_SIZE;//这里的给出的用户映射的虚地址没有任何意义
             pcb[id].user_sp    = (*current_running)->user_sp;
 
             // kva_user_stack = alloc_page_helper(pcb[id].user_sp - PAGE_SIZE, pcb[id].pgdir,1,id+2) + 1 * PAGE_SIZE;//比栈地址低的一张物理页
@@ -560,3 +447,99 @@ pid_t do_fork(){
         }
     }
 }
+
+/*
+ * kalloc()负责分配出一个物理页并返回内核虚地址，在分配的过程中可能会涉及到页的换入换出
+ */
+uintptr_t malloc(){
+
+    for(int j = 0;j < PAGE_NUM;j++)
+    {
+        for(unsigned i = 0;i < PAGE_NUM;i++)
+        {
+            //若有还没用到的页，直接返回即可
+            if(page_general[i].valid == 0){
+                page_general[i].valid = 1;
+                clear_pgdir(pgindex2kva(i));
+                return pgindex2kva(i);
+            }
+        }
+        //swap_out负责换出某一页；并将这一页的index返回
+        unsigned index= swap_out();
+        assert(index!=-1);
+
+        page_general[index].valid = 1;
+        clear_pgdir(pgindex2kva(index));
+        return pgindex2kva(index);
+    }
+
+    return 0;
+}
+
+/*
+ * kalloc()负责根目录页的分配以及内核栈的分配；即所有只局限于内核中的，不涉及到用户页表的分配
+ */
+uintptr_t kalloc(){
+    uintptr_t kva = malloc();
+    assert(kva);
+
+    //将pte表项写入倒排数组中，方便后续swap时直接进行修改；这里默认全部pin住
+    page_general[kva2pgindex(kva)].pte = NULL;
+    page_general[kva2pgindex(kva)].pin = 1;
+    page_general[kva2pgindex(kva)].using = 1;
+    return kva;
+}    
+
+/*
+ * palloc()负责页表的分配，要考虑pte项的置位
+ */
+uintptr_t palloc(PTE* pte){
+    uintptr_t kva = malloc();
+    assert(kva);
+
+    memset(pte, 0, sizeof(PTE));
+    set_pfn(pte, kva2pa(kva) >> NORMAL_PAGE_SHIFT);//allocpage作为内核中的函数是虚地址，此时为二级页表分配了空间
+    set_attribute(pte,_PAGE_PRESENT);
+
+    //将pte表项写入倒排数组中，方便后续swap时直接进行修改；这里默认全部pin住
+    page_general[kva2pgindex(kva)].pte = pte;
+    page_general[kva2pgindex(kva)].pin = 1;
+    page_general[kva2pgindex(kva)].using = 1;
+    return kva;
+}  
+
+/*
+ * va是要映射的虚地址(必然是用户的虚地址)，pgdir是用户的根目录页，pa是实地址，perm是对应的权限项
+ * mappages负责把给出的虚实地址映射全部建立好，并返回最后一级的pte表项地址
+ */
+PTE* mappages(uintptr_t va, PTE* pgdir, uintptr_t pa, uint64_t perm){
+    //首先中间页表建立好
+    PTE* pte = (PTE*)walk(va, pgdir, ALLOC);
+    assert(pte);
+
+    //然后将最后一级的pte项写入物理地址和权限位
+    memset(pte, 0, sizeof(PTE));
+    set_pfn(pte, pa >> NORMAL_PAGE_SHIFT);
+    set_attribute(pte, perm);
+
+    return pte;
+}
+
+/*
+ * uvmalloc主要负责建立用户末级页的映射，同时对倒排数组进行注册
+ */
+uintptr_t uvmalloc(uintptr_t va, PTE* pgdir, uint64_t perm){
+    //分配并建立完所有映射
+    uintptr_t kva = malloc();
+    assert(kva);
+    PTE* pte = mappages(va, pgdir, kva2pa(kva), perm);
+
+    //将pte表项写入倒排数组中，方便后续swap时直接进行修改；这里默认全部pin住
+    page_general[kva2pgindex(kva)].pte = pte;
+    page_general[kva2pgindex(kva)].pin = 1;
+    page_general[kva2pgindex(kva)].using = 1;
+
+    return kva;
+}
+
+

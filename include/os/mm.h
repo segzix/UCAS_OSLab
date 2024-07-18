@@ -38,18 +38,15 @@
 #define TEMP_PAGE_START 0x50000000
 #define PAGE_NUM 512
 #define SHARE_PAGE_NUM 32
+#define SHM_PAGE_STARTVA 0x80000000
 
 enum WALK{
-    FIND,
-    ALLOC,
+    FIND,   //找寻一个空闲的pte表项并返回最终的pte表项
+    ALLOC,  //根据给出的虚地址进行分配并返回最终的
     VOID
 };
 
-#define SHM_PAGE_STARTVA 0x80000000
-
 /* Rounding; only works for n = power of two */
-#define ROUND(a, n)     (((((uint64_t)(a))+(n)-1)) & ~((n)-1))
-#define ROUNDDOWN(a, n) (((uint64_t)(a)) & ~((n)-1))
 #define PXSHIFT(level)  (NORMAL_PAGE_SHIFT+(9*(level)))
 #define PX(level, va) ((((uint64_t) (va)) >> PXSHIFT(level)) & PXMASK)
 #define PXMASK          0x1FF
@@ -60,11 +57,7 @@ typedef struct page_allocated{
     int pin;//如果置成1，则该页不允许被换出
     int using;//如果是共享内存，该变量记录有多少个进程正在共享
 
-    uintptr_t kva;//对应的内核虚地址
-
-    PTE* pgdir;
-    uintptr_t va;//对应进程对该物理地址的虚地址
-    int table_not;//这一项专门用来判断是不是页表项
+    PTE* pte;
 }page_allocated;
 
 typedef struct share_page{
@@ -101,14 +94,30 @@ extern ptr_t allocLargePage(int numPage);
 // TODO [P4-task1] */
 extern void* kmalloc(size_t size);
 extern void share_pgtable(PTE* dest_pgdir, PTE* src_pgdir);
-extern uintptr_t alloc_page_helper(uintptr_t va, PTE* pgdir, int pin,int pid);
 uintptr_t walk(uintptr_t va, PTE* pgdir, enum WALK walk);
 
 // TODO [P4-task4]: shm_page_get/dt */
 uintptr_t shm_page_get(int key);
 void shm_page_dt(uintptr_t addr);
 pid_t do_fork();
+void pin_page(uintptr_t kva);
 
+PTE* mappages(uintptr_t va, PTE* pgdir, uintptr_t pa, uint64_t perm);
+uintptr_t uvmalloc(uintptr_t va, PTE* pgdir, uint64_t perm);
+uintptr_t kalloc();
+uintptr_t malloc();
+uintptr_t palloc(PTE* pte);
+void pgcopy(PTE* dest_pgdir, PTE* src_pgdir, uint8_t level);
+
+static inline uint32_t kva2pgindex(uintptr_t kva)
+{
+    return (kva-FREEMEM_KERNEL)/PAGE_SIZE;
+}
+
+static inline uintptr_t pgindex2kva(uint32_t index)
+{
+    return FREEMEM_KERNEL + index*PAGE_SIZE;
+}
 
 
 #endif /* MM_H */

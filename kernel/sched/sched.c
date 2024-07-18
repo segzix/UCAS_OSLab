@@ -199,17 +199,17 @@ pid_t do_exec(char *name, int argc, char *argv[])
                 if(pcb[id].status == TASK_EXITED){
 
                     pcb[id].recycle = 0;
-                    pcb[id].pgdir = (PTE*)allocPage(1,1,NULL);//分配根目录页//这里的给出的用户映射的虚地址没有任何意义
+                    pcb[id].pgdir = (PTE*)kalloc();//分配根目录页//这里的给出的用户映射的虚地址没有任何意义
                     //clear_pgdir(pcb[id].pgdir); //清空根目录页
                     share_pgtable(pcb[id].pgdir,(PTE*)pa2kva(PGDIR_PA));//内核地址映射拷贝
                     load_task_img(i,(uintptr_t)pcb[id].pgdir,id+2);//load进程并且为给进程建立好地址映射(这一步实际上包括了建立好除了根目录页的所有页表以及除了栈以外的所有映射)
 
 
-                    pcb[id].kernel_sp  = allocPage(1,1,pcb[id].pgdir) + 1 * PAGE_SIZE;//这里的给出的用户映射的虚地址没有任何意义
+                    pcb[id].kernel_sp  = kalloc() + 1 * PAGE_SIZE;//这里的给出的用户映射的虚地址没有任何意义
                     pcb[id].user_sp    = USER_STACK_ADDR;
 
-                    kva_user_stack = alloc_page_helper(pcb[id].user_sp - PAGE_SIZE, pcb[id].pgdir,1,id+2) + 1 * PAGE_SIZE;//比栈地址低的一张物理页
-                    alloc_page_helper(pcb[id].user_sp - 2*PAGE_SIZE, pcb[id].pgdir,1,id+2);//比栈地址低的第二张物理页
+                    kva_user_stack = uvmalloc(pcb[id].user_sp - PAGE_SIZE, pcb[id].pgdir, 
+                                            _PAGE_PRESENT | _PAGE_READ | _PAGE_WRITE | _PAGE_EXEC | _PAGE_USER) + 1 * PAGE_SIZE;//比栈地址低的一张物理页
                     // uintptr_t va = alloc_page_helper(pcb[id].user_sp - PAGE_SIZE, pcb[id].pgdir) + PAGE_SIZE;
                     //内核对应的映射到这张物理页的地址，后面对于该用户栈的操作全部通过内核映射表进行
                     //并且考虑到后面要加一个东西导致真实的
@@ -269,11 +269,11 @@ void do_thread_create(pid_t *thread, void *thread_entrypoint, void *arg){
             pcb[id].recycle = 0;
             pcb[id].pgdir = (*current_running)->pgdir;
 
-            pcb[id].kernel_sp  = allocPage(1,1,pcb[id].pgdir) + 1 * PAGE_SIZE;//这里的给出的用户映射的虚地址没有任何意义
+            pcb[id].kernel_sp  = kalloc() + 1 * PAGE_SIZE;//这里的给出的用户映射的虚地址没有任何意义
             pcb[id].user_sp    = USER_STACK_ADDR + 2 * PAGE_SIZE * pcb[id].tid;//必须是分配两页用户栈
 
-            kva_user_stack = alloc_page_helper(pcb[id].user_sp - PAGE_SIZE, pcb[id].pgdir,1,id+2) + 1 * PAGE_SIZE;//比栈地址低的一张物理页
-            alloc_page_helper(pcb[id].user_sp - 2*PAGE_SIZE, pcb[id].pgdir,1,id+2);//比栈地址低的第二张物理页
+            kva_user_stack = uvmalloc(pcb[id].user_sp - PAGE_SIZE, pcb[id].pgdir, 
+                                    _PAGE_PRESENT | _PAGE_READ | _PAGE_WRITE | _PAGE_EXEC | _PAGE_USER) + 1 * PAGE_SIZE;//比栈地址低的一张物理页
             // uintptr_t va = alloc_page_helper(pcb[id].user_sp - PAGE_SIZE, pcb[id].pgdir) + PAGE_SIZE;
             //内核对应的映射到这张物理页的地址，后面对于该用户栈的操作全部通过内核映射表进行
             //并且考虑到后面要加一个东西导致真实的

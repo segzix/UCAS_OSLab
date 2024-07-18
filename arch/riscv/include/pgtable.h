@@ -115,6 +115,7 @@ static inline long get_attribute(PTE entry, uint64_t mask)
     return entry & mask;
     /* TODO: [P4-task1] */
 }
+
 static inline void set_attribute(PTE *entry, uint64_t bits)
 {
 
