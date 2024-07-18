@@ -9,7 +9,6 @@
 #include <os/loader.h>
 #include <os/net.h>
 #include <printk.h>
-#include <assert.h>
 #include <pgtable.h>
 #include <os/smp.h>
 
@@ -27,7 +26,7 @@ pcb_t pid0_pcb = {
     .pcb_name = "pid0",
     //每个核对应的都有可以跑的
 
-    .pgdir = PGDIR_PA + KVA_OFFSET,
+    .pgdir = (PTE*)(PGDIR_PA + KVA_OFFSET),
     .recycle = 0,
     .list = {NULL,NULL}, 
     .status = TASK_RUNNING
@@ -42,7 +41,7 @@ pcb_t pid1_pcb = {
     .pcb_name = "pid1",
     //每个核对应的都有可以跑的
 
-    .pgdir = PGDIR_PA + KVA_OFFSET,
+    .pgdir = (PTE*)(PGDIR_PA + KVA_OFFSET),
     .recycle = 0,
     .list = {NULL,NULL}, 
     .status = TASK_RUNNING
@@ -129,7 +128,7 @@ void do_scheduler(void)
     //修改当前执行进程ID
 
     // TODO: [p2-task1] Modify the current_running pointer.
-    set_satp(SATP_MODE_SV39, (*current_running)->pid, kva2pa((*current_running)->pgdir) >> NORMAL_PAGE_SHIFT);
+    set_satp(SATP_MODE_SV39, (*current_running)->pid, kva2pa((uintptr_t)(*current_running)->pgdir) >> NORMAL_PAGE_SHIFT);
     local_flush_tlb_all();
     local_flush_icache_all();
     
@@ -200,13 +199,13 @@ pid_t do_exec(char *name, int argc, char *argv[])
                 if(pcb[id].status == TASK_EXITED){
 
                     pcb[id].recycle = 0;
-                    pcb[id].pgdir = allocPage(1,1,0,1,id+2);//分配根目录页//这里的给出的用户映射的虚地址没有任何意义
+                    pcb[id].pgdir = (PTE*)allocPage(1,1,NULL);//分配根目录页//这里的给出的用户映射的虚地址没有任何意义
                     //clear_pgdir(pcb[id].pgdir); //清空根目录页
-                    share_pgtable(pcb[id].pgdir,pa2kva(PGDIR_PA));//内核地址映射拷贝
-                    load_task_img(i,pcb[id].pgdir,id+2);//load进程并且为给进程建立好地址映射(这一步实际上包括了建立好除了根目录页的所有页表以及除了栈以外的所有映射)
+                    share_pgtable(pcb[id].pgdir,(PTE*)pa2kva(PGDIR_PA));//内核地址映射拷贝
+                    load_task_img(i,(uintptr_t)pcb[id].pgdir,id+2);//load进程并且为给进程建立好地址映射(这一步实际上包括了建立好除了根目录页的所有页表以及除了栈以外的所有映射)
 
 
-                    pcb[id].kernel_sp  = allocPage(1,1,0,0,id+2) + 1 * PAGE_SIZE;//这里的给出的用户映射的虚地址没有任何意义
+                    pcb[id].kernel_sp  = allocPage(1,1,pcb[id].pgdir) + 1 * PAGE_SIZE;//这里的给出的用户映射的虚地址没有任何意义
                     pcb[id].user_sp    = USER_STACK_ADDR;
 
                     kva_user_stack = alloc_page_helper(pcb[id].user_sp - PAGE_SIZE, pcb[id].pgdir,1,id+2) + 1 * PAGE_SIZE;//比栈地址低的一张物理页
@@ -270,7 +269,7 @@ void do_thread_create(pid_t *thread, void *thread_entrypoint, void *arg){
             pcb[id].recycle = 0;
             pcb[id].pgdir = (*current_running)->pgdir;
 
-            pcb[id].kernel_sp  = allocPage(1,1,0,0,id+2) + 1 * PAGE_SIZE;//这里的给出的用户映射的虚地址没有任何意义
+            pcb[id].kernel_sp  = allocPage(1,1,pcb[id].pgdir) + 1 * PAGE_SIZE;//这里的给出的用户映射的虚地址没有任何意义
             pcb[id].user_sp    = USER_STACK_ADDR + 2 * PAGE_SIZE * pcb[id].tid;//必须是分配两页用户栈
 
             kva_user_stack = alloc_page_helper(pcb[id].user_sp - PAGE_SIZE, pcb[id].pgdir,1,id+2) + 1 * PAGE_SIZE;//比栈地址低的一张物理页
@@ -438,4 +437,8 @@ int do_task_set(int mask,char *name, int argc, char *argv[]){
     int pid = do_exec(name,argc,argv);
     do_task_set_p(pid,mask);
     return pid;
+}
+
+pcb_t* get_pcb() { 
+    return *(get_current_cpu_id()? &current_running_1 : &current_running_0); 
 }

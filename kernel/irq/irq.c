@@ -128,7 +128,8 @@ void handle_pagefault_access(regs_context_t *regs, uint64_t stval, uint64_t scau
     uint16_t search_block_id;//从磁盘中取出时的扇区号
     PTE * search_PTE_swap;
 
-    search_PTE_swap = search_and_set_PTE(stval,(*current_running)->pgdir,(*current_running)->pid);//找寻到对应的页表项
+    search_PTE_swap = (PTE*)walk(stval,(*current_running)->pgdir, ALLOC);//找寻到对应的页表项
+    assert(search_PTE_swap);
     
     
     if(*search_PTE_swap % 2 == 1){//p位有效
@@ -137,7 +138,7 @@ void handle_pagefault_access(regs_context_t *regs, uint64_t stval, uint64_t scau
     else{
         if((*search_PTE_swap & _PAGE_SOFT)){//软件位有，则是在硬盘上
             search_block_id = (uint16_t)get_pfn(*search_PTE_swap);//确定扇区上的扇区号
-            uint64_t kva = allocPage(1,0,stval,0,(*current_running)->pid);//分配出一块空间,并且这里肯定不是页表，也不用被pin住
+            uint64_t kva = allocPage(1,0,(*current_running)->pgdir);//分配出一块空间,并且这里肯定不是页表，也不用被pin住
 
             bios_sd_read(kva2pa(kva), 8, search_block_id);
 
@@ -147,7 +148,7 @@ void handle_pagefault_access(regs_context_t *regs, uint64_t stval, uint64_t scau
             //将硬盘中的内容读到内存中(内存中可能被换出的内容在allocpage中已经被换出)，然后再将页表映射建立好
         }
         else{//软件位无，则需要新分配物理页
-            uint64_t kva = allocPage(1,0,stval,0,(*current_running)->pid);//分配出一块空间
+            uint64_t kva = allocPage(1,0,(*current_running)->pgdir);//分配出一块空间
 
             set_pfn(search_PTE_swap,kva2pa(kva) >> NORMAL_PAGE_SHIFT);//
             set_attribute(search_PTE_swap,_PAGE_PRESENT | _PAGE_READ | _PAGE_WRITE | _PAGE_EXEC
@@ -165,14 +166,15 @@ void handle_pagefault_store(regs_context_t *regs, uint64_t stval, uint64_t scaus
     uint16_t search_block_id;//从磁盘中取出时的扇区号
     PTE * search_PTE_swap;
 
-    search_PTE_swap = search_and_set_PTE(stval,(*current_running)->pgdir,(*current_running)->pid);
+    search_PTE_swap = (PTE*)walk(stval,(*current_running)->pgdir,ALLOC);
+    assert(search_PTE_swap);
     
     if(*search_PTE_swap % 2 == 1){//p位有效
         if(*search_PTE_swap & _PAGE_WRITE)
             ;
         else {
             uint64_t src_kva = pa2kva(get_pa(*search_PTE_swap));//已经找到的表项，将其中的物理地址提取出来
-            uint64_t dest_kva = allocPage(1,1,stval,0,(*current_running)->pid);//分配出一块空间
+            uint64_t dest_kva = allocPage(1,1,(*current_running)->pgdir);//分配出一块空间
 
             memcpy((uint8_t*)dest_kva, (uint8_t*)src_kva, PAGE_SIZE);
 
@@ -190,7 +192,7 @@ void handle_pagefault_store(regs_context_t *regs, uint64_t stval, uint64_t scaus
     else{
         if((*search_PTE_swap & _PAGE_SOFT)){//软件位有，则是在硬盘上
             search_block_id = (uint16_t)get_pfn(*search_PTE_swap);//确定扇区上的扇区号
-            uint64_t kva = allocPage(1,0,stval,0,(*current_running)->pid);//分配出一块空间
+            uint64_t kva = allocPage(1,0,(*current_running)->pgdir);//分配出一块空间
 
             bios_sd_read(kva2pa(kva), 8, search_block_id);
 
@@ -205,7 +207,7 @@ void handle_pagefault_store(regs_context_t *regs, uint64_t stval, uint64_t scaus
                 printk("address fault !");
                 do_exit();
             }else{
-                uint64_t kva = allocPage(1,0,stval,0,(*current_running)->pid);//分配出一块空间
+                uint64_t kva = allocPage(1,0,(*current_running)->pgdir);//分配出一块空间
 
                 set_pfn(search_PTE_swap,kva2pa(kva) >> NORMAL_PAGE_SHIFT);//
                 set_attribute(search_PTE_swap,_PAGE_PRESENT | _PAGE_READ | _PAGE_WRITE | _PAGE_EXEC

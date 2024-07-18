@@ -29,6 +29,7 @@
 #ifndef INCLUDE_SCHEDULER_H_
 #define INCLUDE_SCHEDULER_H_
 
+#include "pgtable.h"
 #include <os/lock.h>
 #include <type.h>
 #include <os/list.h>
@@ -110,7 +111,7 @@ typedef struct pcb
     int current_mask;
 
     /* pgdir */
-    uintptr_t pgdir;
+    PTE* pgdir;
     unsigned recycle;
 
     uint32_t pwd;
@@ -183,6 +184,8 @@ int do_task_set(int mask,char *name, int argc, char *argv[]);
 
 // void do_thread_create(pid_t *thread, void *thread_entrypoint, void *arg);
 void do_thread_create(pid_t *thread, void *thread_entrypoint, void *arg);
+pcb_t* get_pcb();
+void pin_page(uintptr_t kva);
 /************************************************************/
 
 #endif

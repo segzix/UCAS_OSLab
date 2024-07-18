@@ -19,8 +19,6 @@ uint64_t load_task_img(int taskid,uintptr_t pgdir,int pid)
     task_block_num      =  (tasks[taskid].task_block_phyaddr + tasks[taskid].task_block_size) / SECTOR_SIZE - task_block_id + 1;
     task_block_offset   =  tasks[taskid].task_block_phyaddr % SECTOR_SIZE;
 
-    // bios_sd_read(tasks[taskid].task_entrypoint, task_block_num, task_block_id);
-    // memcpy(tasks[taskid].task_entrypoint,tasks[taskid].task_entrypoint + task_block_offset,tasks[taskid].task_block_size);
     bios_sd_read(load_entrypoint, task_block_num, task_block_id);
     load_entrypoint_kva = pa2kva(load_entrypoint);
     memcpy((uint8_t *)load_entrypoint_kva,(uint8_t *)(load_entrypoint_kva + task_block_offset),tasks[taskid].task_block_size);

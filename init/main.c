@@ -24,6 +24,7 @@
  *
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *  * * * * * * * * * * */
 
+#include <os/smp.h>
 #include <common.h>
 #include <asm.h>
 #include <asm/unistd.h>
@@ -41,7 +42,6 @@
 #include <screen.h>
 #include <e1000.h>
 #include <printk.h>
-#include <assert.h>
 #include <type.h>
 #include <csr.h>
 #include <pgtable.h>
@@ -93,22 +93,22 @@ static void init_jmptab(void)
 {
     volatile long (*(*jmptab))() = (volatile long (*(*))())KERNEL_JMPTAB_BASE;
 
-    jmptab[CONSOLE_PUTSTR]  = (long (*)())port_write;
-    jmptab[CONSOLE_PUTCHAR] = (long (*)())port_write_ch;
-    jmptab[CONSOLE_GETCHAR] = (long (*)())port_read_ch;
-    jmptab[SD_READ]         = (long (*)())sd_read;
-    jmptab[SD_WRITE]        = (long (*)())sd_write;
-    jmptab[QEMU_LOGGING]    = (long (*)())qemu_logging;
-    jmptab[SET_TIMER]       = (long (*)())set_timer;
-    jmptab[READ_FDT]        = (long (*)())read_fdt;
-    jmptab[MOVE_CURSOR]     = (long (*)())screen_move_cursor;
-    jmptab[PRINT]           = (long (*)())printk;
-    jmptab[YIELD]           = (long (*)())do_scheduler;
-    jmptab[MUTEX_INIT]      = (long (*)())do_mutex_lock_init;
-    jmptab[MUTEX_ACQ]       = (long (*)())do_mutex_lock_acquire;
-    jmptab[MUTEX_RELEASE]   = (long (*)())do_mutex_lock_release;
-    jmptab[WRITE]           = (long (*)())screen_write;
-    jmptab[REFLUSH]         = (long (*)())screen_reflush;
+    jmptab[CONSOLE_PUTSTR]  = (volatile long (*)())port_write;
+    jmptab[CONSOLE_PUTCHAR] = (volatile long (*)())port_write_ch;
+    jmptab[CONSOLE_GETCHAR] = (volatile long (*)())port_read_ch;
+    jmptab[SD_READ]         = (volatile long (*)())sd_read;
+    jmptab[SD_WRITE]        = (volatile long (*)())sd_write;
+    jmptab[QEMU_LOGGING]    = (volatile long (*)())qemu_logging;
+    jmptab[SET_TIMER]       = (volatile long (*)())set_timer;
+    jmptab[READ_FDT]        = (volatile long (*)())read_fdt;
+    jmptab[MOVE_CURSOR]     = (volatile long (*)())screen_move_cursor;
+    jmptab[PRINT]           = (volatile long (*)())printk;
+    jmptab[YIELD]           = (volatile long (*)())do_scheduler;
+    jmptab[MUTEX_INIT]      = (volatile long (*)())do_mutex_lock_init;
+    jmptab[MUTEX_ACQ]       = (volatile long (*)())do_mutex_lock_acquire;
+    jmptab[MUTEX_RELEASE]   = (volatile long (*)())do_mutex_lock_release;
+    jmptab[WRITE]           = (volatile long (*)())screen_write;
+    jmptab[REFLUSH]         = (volatile long (*)())screen_reflush;
 
     // TODO: [p2-task1] (S-core) initialize system call table.
 
@@ -134,8 +134,8 @@ static void init_task_info(void)
 
     //swap_block_id = task_info_block_id + task_info_block_num;
 
-    bios_sd_read(TASK_MEM_BASE, task_info_block_num, task_info_block_id);
-    memcpy(tasks, TASK_MEM_BASE + task_info_block_offset, task_info_block_size);
+    bios_sd_read((unsigned)TASK_MEM_BASE, task_info_block_num, task_info_block_id);
+    memcpy((uint8_t*)tasks, (uint8_t*)TASK_MEM_BASE + task_info_block_offset, task_info_block_size);
     //将task_info数组拷贝到tasks数组中
 
     // TODO: [p1-task4] Init 'tasks' array via reading app-info sector
@@ -184,7 +184,7 @@ void init_pcb_stack(
     pt_switchto->regs[1] = (reg_t)(pt_regs);      //sp
 
     uint64_t user_sp_now = argv_base;
-    uintptr_t * argv_ptr = (ptr_t)argv_base;
+    uintptr_t* argv_ptr = (uintptr_t*)argv_base;
     for(i=0; i<argc; i++){
         uint32_t len = strlen(argv[i]);
         user_sp_now = user_sp_now - len - 1;
@@ -253,7 +253,7 @@ void init_tcb_stack(
     pt_switchto->regs[0] = (reg_t)ret_from_exception;    //ra
     pt_switchto->regs[1] = (reg_t)(pt_regs);      //sp
 
-    tcb->kernel_sp = pt_switchto;
+    tcb->kernel_sp = (uint64_t)pt_switchto;
 }
 
 // static void init_pcb(void)
@@ -319,8 +319,6 @@ static void init_page_general(void)
         page_general[num_pages].using = 0;
         page_general[num_pages].kva = num_pages * PAGE_SIZE + FREEMEM_KERNEL;
 
-        page_general[num_pages].pid = -1;
-        page_general[num_pages].pgdir = -1;
         page_general[num_pages].va = -1;
 
         page_general[num_pages].table_not = 0;//这一项专门用来判断是不是页表项
@@ -361,14 +359,14 @@ static void init_shell(void)
     uintptr_t kva_user_stack;
 
     pcb[num_tasks].recycle = 0;
-    pcb[num_tasks].pgdir = allocPage(1,1,0,1,2);//分配根目录页//这里的给出的用户映射的虚地址没有任何意义  //这里是2因为能确定是shell
+    pcb[num_tasks].pgdir = (PTE*)allocPage(1,1,NULL);//分配根目录页//这里的给出的用户映射的虚地址没有任何意义  //这里是2因为能确定是shell
     //clear_pgdir(pcb[num_tasks].pgdir); //清空根目录页
-    share_pgtable(pcb[num_tasks].pgdir,pa2kva(PGDIR_PA));//内核地址映射拷贝
-    load_task_img(num_tasks,pcb[num_tasks].pgdir,2);//load进程并且为给进程建立好地址映射
+    share_pgtable(pcb[num_tasks].pgdir,(PTE*)pa2kva(PGDIR_PA));//内核地址映射拷贝
+    load_task_img(num_tasks,(uintptr_t)pcb[num_tasks].pgdir,2);//load进程并且为给进程建立好地址映射
     //pcb[num_tasks].kernel_sp = KERNEL_STACK + (num_tasks + 1) * 0x1000;
     //pcb[num_tasks].user_sp = pcb[num_tasks].kernel_sp;
 
-    pcb[num_tasks].kernel_sp = allocPage(1,1,0,0,2) + 1 * PAGE_SIZE;//不是页表，但是要被pin住//只要没有所谓的用户对应的地址，va全部放0
+    pcb[num_tasks].kernel_sp = allocPage(1,1,pcb[num_tasks].pgdir) + 1 * PAGE_SIZE;//不是页表，但是要被pin住//只要没有所谓的用户对应的地址，va全部放0
     pcb[num_tasks].user_sp   = USER_STACK_ADDR;
 
     kva_user_stack = alloc_page_helper(pcb[num_tasks].user_sp - PAGE_SIZE, pcb[num_tasks].pgdir,1,2) + 1 * PAGE_SIZE;//比栈地址低的一张物理页
