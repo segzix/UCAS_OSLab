@@ -312,11 +312,10 @@ static void init_page_general(void)
     int num_pages; 
     
     for(num_pages = 0; num_pages < PAGE_NUM; num_pages++){
-
         page_general[num_pages].valid = 0;
-
         page_general[num_pages].pin = 0;
-        page_general[num_pages].using = 0;
+        page_general[num_pages].used = 0;
+        page_general[num_pages].pte = NULL;
     }
 
 }
@@ -328,14 +327,8 @@ static void init_share_page(void)
     int share_num; 
     
     for(share_num = 0; share_num < SHARE_PAGE_NUM; share_num++){
-
-        share_pages[share_num].valid = 0;
-
         share_pages[share_num].key = -1;
-        share_pages[share_num].pin = 0;
-        share_pages[share_num].using = 0;
-
-        share_pages[share_num].kva = (share_num + PAGE_NUM) * PAGE_SIZE + FREEMEM_KERNEL;
+        share_pages[share_num].pg_index = -1;
     }
 
 }
@@ -454,6 +447,9 @@ static void init_syscall(void)
     syscall[SYSCALL_RMFILE]         = (long(*)())do_rmdirfile;
     syscall[SYSCALL_LSEEK]          = (long(*)())do_lseek;
     syscall[SYSCALL_LN]             = (long(*)())do_ln;
+
+    syscall[SYSCALL_MMALLOC]         = (long(*)())mmalloc;
+    //syscall[SYSCALL_FREE]           = (long(*)())mmfree;
 
     // TODO: [p2-task3] initialize system call table.
 }

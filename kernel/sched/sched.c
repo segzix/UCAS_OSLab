@@ -91,8 +91,10 @@ void do_scheduler(void)
     if((*current_running)->pid == 2){
         for(unsigned i = 0;i < NUM_MAX_TASK;i++){
             if((pcb[i].pid != 2) && pcb[i].recycle && pcb[i].status == TASK_EXITED && !pcb[i].tid){
-                free_all_pagemapping(pcb[i].pgdir);
-                free_all_pagetable(pcb[i].pgdir);
+                //取消末级页，取消映射，回收内核栈
+                uvmfreeall(pcb[i].pgdir);
+                mapfree(pcb[i].pgdir);
+                kmfree(pcb[i].kernel_sp);
                 pcb[i].recycle = 0;
             }
             //当前是shell,并且经过了exit需要被回收，同时不是子线程，同时shell的不允许被回收
@@ -199,8 +201,9 @@ pid_t do_exec(char *name, int argc, char *argv[])
                 if(pcb[id].status == TASK_EXITED){
 
                     pcb[id].recycle = 0;
-                    pcb[id].pgdir = (PTE*)kalloc();//分配根目录页//这里的给出的用户映射的虚地址没有任何意义
-                    //clear_pgdir(pcb[id].pgdir); //清空根目录页
+                    //因为使用内核虚地址访问内核栈，所以不用单独建立映射
+                    pcb[id].pgdir = (PTE*)kalloc();
+                    pcb[id].heap = HEAP_STARTVA;
                     share_pgtable(pcb[id].pgdir,(PTE*)pa2kva(PGDIR_PA));//内核地址映射拷贝
                     load_task_img(i,(uintptr_t)pcb[id].pgdir,id+2);//load进程并且为给进程建立好地址映射(这一步实际上包括了建立好除了根目录页的所有页表以及除了栈以外的所有映射)
 
@@ -268,6 +271,7 @@ void do_thread_create(pid_t *thread, void *thread_entrypoint, void *arg){
 
             pcb[id].recycle = 0;
             pcb[id].pgdir = (*current_running)->pgdir;
+            pcb[id].heap = HEAP_STARTVA;
 
             pcb[id].kernel_sp  = kalloc() + 1 * PAGE_SIZE;//这里的给出的用户映射的虚地址没有任何意义
             pcb[id].user_sp    = USER_STACK_ADDR + 2 * PAGE_SIZE * pcb[id].tid;//必须是分配两页用户栈

@@ -112,6 +112,7 @@ typedef struct pcb
 
     /* pgdir */
     PTE* pgdir;
+    uintptr_t heap;
     unsigned recycle;
 
     uint32_t pwd;

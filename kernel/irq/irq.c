@@ -128,15 +128,23 @@ void handle_pagefault_access(regs_context_t *regs, uint64_t stval, uint64_t scau
     uint16_t search_block_id;//从磁盘中取出时的扇区号
     PTE * search_PTE_swap;
 
-    search_PTE_swap = (PTE*)walk(stval,(*current_running)->pgdir, ALLOC);//找寻到对应的页表项
-    assert(search_PTE_swap);
+    search_PTE_swap = (PTE*)walk(stval,(*current_running)->pgdir,VOID);
+    if(!search_PTE_swap){
+        printk("Segmentation Fault");
+        regs->sepc = regs->sepc + 4;
+        return;
+    }
     
-    
-    if(*search_PTE_swap & _PAGE_PRESENT){//p位有效
+    /*
+     * p位有效：access位无，重新给出即可
+     * p位无效：软件位有，在硬盘上
+     * p位无效：软件位无，还未分配即进行访问，报错(对于一个地址，规定先malloc建立映射，然后对该地址进行访问时分配一个物理页)
+     */
+    if(*search_PTE_swap & _PAGE_PRESENT){
         set_attribute(search_PTE_swap, get_attribute(*search_PTE_swap,PA_ATTRIBUTE_MASK) |_PAGE_PRESENT |_PAGE_ACCESSED |_PAGE_READ);
     }
     else{
-        if((*search_PTE_swap & _PAGE_SOFT)){//软件位有，则是在硬盘上
+        if((*search_PTE_swap & _PAGE_SOFT)){
             //确定扇区上的扇区号，分配一页，并将扇区读入
             search_block_id = (uint16_t)get_pfn(*search_PTE_swap);//确定扇区上的扇区号
             uint64_t kva = uvmalloc(stval, (*current_running)->pgdir, 
@@ -144,7 +152,7 @@ void handle_pagefault_access(regs_context_t *regs, uint64_t stval, uint64_t scau
 
             bios_sd_read(kva2pa(kva), 8, search_block_id);
         }
-        else{//软件位无，则需要新分配物理页
+        else{
             uint64_t kva = uvmalloc(stval, (*current_running)->pgdir, 
                                     _PAGE_PRESENT | _PAGE_READ | _PAGE_WRITE | _PAGE_EXEC |_PAGE_ACCESSED | _PAGE_USER);//分配出一块空间,并且这里肯定不是页表，也不用被pin住
         }
@@ -159,47 +167,39 @@ void handle_pagefault_store(regs_context_t *regs, uint64_t stval, uint64_t scaus
     uint16_t search_block_id;//从磁盘中取出时的扇区号
     PTE * search_PTE_swap;
 
-    search_PTE_swap = (PTE*)walk(stval,(*current_running)->pgdir,ALLOC);
-    assert(search_PTE_swap);
+    search_PTE_swap = (PTE*)walk(stval,(*current_running)->pgdir,VOID);
+    if(!search_PTE_swap){
+        printk("Segmentation Fault");
+        regs->sepc = regs->sepc + 4;
+        return;
+    }
     
-    if(*search_PTE_swap & _PAGE_PRESENT){//p位有效
+    /*
+     * p位有效：wirte位无，说明是写时复制，需进行uvmcopy
+     * p位有效：wirte位有，重新给出即可
+     * p位无效：软件位有，在硬盘上
+     * p位无效：软件位无，还未分配即进行访问，报错(对于一个地址，规定先malloc建立映射，然后对该地址进行访问时分配一个物理页)
+     */
+    if(*search_PTE_swap & _PAGE_PRESENT){
         if(*search_PTE_swap & _PAGE_WRITE)
             set_attribute(search_PTE_swap, get_attribute(*search_PTE_swap,PA_ATTRIBUTE_MASK) |_PAGE_PRESENT |_PAGE_ACCESSED |_PAGE_READ |_PAGE_DIRTY |_PAGE_WRITE);
         else {
-            uint64_t src_kva = pa2kva(get_pa(*search_PTE_swap));//已经找到的表项，将其中的物理地址提取出来
-            uint64_t dest_kva = uvmalloc(stval, (*current_running)->pgdir, 
-                                        get_attribute(*search_PTE_swap,PA_ATTRIBUTE_MASK) |_PAGE_PRESENT |_PAGE_ACCESSED |_PAGE_READ |_PAGE_DIRTY |_PAGE_WRITE);//分配出一块空间
-
-            memcpy((uint8_t*)dest_kva, (uint8_t*)src_kva, PAGE_SIZE);
-
-            page_general[kva2pgindex(src_kva)].using--;//对应的物理页的使用数量会增加！
-            screen_move_cursor(0,4);
-            printk("doing copy_on_write!");
+            uvmcopy(stval, (*current_running)->pgdir);
         }
     }
     else{
-        if((*search_PTE_swap & _PAGE_SOFT)){//软件位有，则是在硬盘上
+        if((*search_PTE_swap & _PAGE_SOFT)){
             //确定扇区上的扇区号，分配一页，并将扇区读入
-            search_block_id = (uint16_t)get_pfn(*search_PTE_swap);//确定扇区上的扇区号
+            search_block_id = (uint16_t)get_pfn(*search_PTE_swap);
             uint64_t kva = uvmalloc(stval, (*current_running)->pgdir, 
                                     _PAGE_PRESENT | _PAGE_READ | _PAGE_WRITE | _PAGE_EXEC |_PAGE_ACCESSED| _PAGE_DIRTY| _PAGE_USER);
-
             bios_sd_read(kva2pa(kva), 8, search_block_id);
         }
-        else{//软件位无，则需要新分配物理页
-            if(stval >= 0xffffffc000000000){
-                screen_move_cursor(0,7);
-                printk("address fault !");
-                do_exit();
-            }else{
-                uint64_t kva = uvmalloc(stval, (*current_running)->pgdir, 
-                                    _PAGE_PRESENT | _PAGE_READ | _PAGE_WRITE | _PAGE_EXEC |_PAGE_ACCESSED| _PAGE_DIRTY| _PAGE_USER);
-            }
+        else{
+            uint64_t kva = uvmalloc(stval, (*current_running)->pgdir, 
+                                _PAGE_PRESENT | _PAGE_READ | _PAGE_WRITE | _PAGE_EXEC |_PAGE_ACCESSED| _PAGE_DIRTY| _PAGE_USER);
         }
     }
 
     local_flush_tlb_all();
-    //这里相当于也是完成了一次啊allocpage_helper的工作
 }
-
-void uvmcopy(){}

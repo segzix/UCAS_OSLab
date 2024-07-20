@@ -37,8 +37,9 @@
 #define FREEMEM_KERNEL (INIT_KERNEL_STACK+PAGE_SIZE)//由这里开始内核自由分配
 #define TEMP_PAGE_START 0x50000000
 #define PAGE_NUM 512
-#define SHARE_PAGE_NUM 32
+#define SHARE_PAGE_NUM 16
 #define SHM_PAGE_STARTVA 0x80000000
+#define HEAP_STARTVA 0x90000000
 
 enum WALK{
     FIND,   //找寻一个空闲的pte表项并返回最终的pte表项
@@ -55,25 +56,17 @@ typedef struct page_allocated{
     int valid;//是否被分配，已经被分配则置为1
     
     int pin;//如果置成1，则该页不允许被换出
-    int using;//如果是共享内存，该变量记录有多少个进程正在共享
+    int used;//如果是共享内存，该变量记录有多少个进程正在共享
 
     PTE* pte;
 }page_allocated;
 
 typedef struct share_page{
-    int valid;//是否被分配，已经被分配则置为1
-    
     int key;
-    int using;
-    int pin;//如果置成1，则该页不允许被换出
-
-    uintptr_t kva;//对应的内核虚地址
+    int pg_index;//对应的内核虚地址
 }share_page;
 
 extern ptr_t allocPage(int numPage,int pin,PTE* pgdir);
-void free_all_pagemapping(PTE * baseAddr);
-void free_all_pagetable(PTE* baseAddr);
-void free_all_pageframe(ptr_t baseAddr);
 extern uint16_t swap_block_id;
 extern page_allocated page_general[PAGE_NUM];
 extern share_page share_pages[SHARE_PAGE_NUM];
@@ -92,22 +85,31 @@ extern ptr_t allocLargePage(int numPage);
 #endif
 
 // TODO [P4-task1] */
-extern void* kmalloc(size_t size);
 extern void share_pgtable(PTE* dest_pgdir, PTE* src_pgdir);
 uintptr_t walk(uintptr_t va, PTE* pgdir, enum WALK walk);
+PTE* mappages(uintptr_t va, PTE* pgdir, uintptr_t pa, uint64_t perm);
+void pgcopy(PTE* dest_pgdir, PTE* src_pgdir, uint8_t level);
+void uvmcopy(uintptr_t cpkva, PTE* pgdir);
+void pin_page(uintptr_t kva);
 
-// TODO [P4-task4]: shm_page_get/dt */
+/*
+ * alloc && free
+ */
+uintptr_t kmalloc();
+uintptr_t kalloc();
+uintptr_t palloc(PTE* pte);
+uintptr_t uvmalloc(uintptr_t va, PTE* pgdir, uint64_t perm);
+
+void uvmfreeall(PTE* pgdir);
+uintptr_t uvmfree(PTE* pgdir, uintptr_t va);
+void mapfree(PTE* pgdir);
+void kmfree(uintptr_t kva);
+
+/*syscall*/
+uintptr_t mmalloc(uint32_t size);
 uintptr_t shm_page_get(int key);
 void shm_page_dt(uintptr_t addr);
 pid_t do_fork();
-void pin_page(uintptr_t kva);
-
-PTE* mappages(uintptr_t va, PTE* pgdir, uintptr_t pa, uint64_t perm);
-uintptr_t uvmalloc(uintptr_t va, PTE* pgdir, uint64_t perm);
-uintptr_t kalloc();
-uintptr_t malloc();
-uintptr_t palloc(PTE* pte);
-void pgcopy(PTE* dest_pgdir, PTE* src_pgdir, uint8_t level);
 
 static inline uint32_t kva2pgindex(uintptr_t kva)
 {

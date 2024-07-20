@@ -79,4 +79,7 @@
 #define SYSCALL_LSEEK 79
 #define SYSCALL_LN 80
 
+#define SYSCALL_MMALLOC 81
+#define SYSCALL_MMFREE 82
+
 #endif

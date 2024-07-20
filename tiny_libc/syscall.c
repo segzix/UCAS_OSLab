@@ -401,4 +401,9 @@ int sys_ln(char *src_path, char *dst_path)
     return invoke_syscall(SYSCALL_LN,src_path,dst_path,IGNORE,IGNORE,IGNORE);
 }
 
+uintptr_t sys_mmalloc(uint32_t size)
+{
+    return invoke_syscall(SYSCALL_MMALLOC,size,IGNORE,IGNORE,IGNORE,IGNORE);
+}
+
 /************************************************************/

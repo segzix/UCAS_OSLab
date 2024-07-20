@@ -100,4 +100,5 @@ int sys_rmfile(char *file_name);
 int sys_lseek(int fd, int offset, int whence);
 int sys_ln(char *src_path, char *dst_path);
 
+uintptr_t sys_mmalloc(uint32_t size);
 #endif
