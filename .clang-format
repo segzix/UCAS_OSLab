@@ -1,0 +1,26 @@
+# 基于 LLVM 配置修改
+BasedOnStyle: LLVM
+# 语言 Cpp
+Language: Cpp
+# 使用空格而不是 Tab
+UseTab: Never
+# 缩进 4 字符
+IndentWidth: 4
+TabWidth: 2
+# 访问修饰符（public）等靠左对齐
+AccessModifierOffset: -4
+# 最大列宽度
+ColumnLimit: 100
+# 是否允许短的函数，语句块等单独一行
+AllowShortIfStatementsOnASingleLine: Never
+AllowShortBlocksOnASingleLine: Empty
+AllowShortFunctionsOnASingleLine: Empty
+# 函数初始化元素右对齐
+# AlignArrayOfStructures: Right
+# 函数返回值类型不换行
+AlwaysBreakAfterReturnType: None
+# 函数定义如果换行函数名需要缩进
+IndentWrappedFunctionNames: true
+# 函数的参数要么在同一行，要么各占一行
+BinPackParameters: false
+AllowAllParametersOfDeclarationOnNextLine: false

@@ -42,9 +42,13 @@
 #define HEAP_STARTVA 0x90000000
 
 enum WALK{
-    FIND,   //找寻一个空闲的pte表项并返回最终的pte表项
-    ALLOC,  //根据给出的虚地址进行分配并返回最终的
-    VOID
+    ALLOC,  //根据给出的虚地址返回最终的pte表项(中间若发现没有映射则进行分配)
+    VOID    //根据给出的虚地址返回最终的pte表项(中间若发现没有映射直接返回0)
+};
+
+enum PIN{
+    UNPINED,
+    PINED
 };
 
 /* Rounding; only works for n = power of two */
@@ -53,11 +57,9 @@ enum WALK{
 #define PXMASK          0x1FF
 
 typedef struct page_allocated{
-    int valid;//是否被分配，已经被分配则置为1
-    
-    int pin;//如果置成1，则该页不允许被换出
-    int used;//如果是共享内存，该变量记录有多少个进程正在共享
-
+    uint8_t valid;  //是否被分配，已经被分配则置为1
+    uint8_t used;   //如果是共享内存，该变量记录有多少个进程正在共享
+    enum PIN pin;
     PTE* pte;
 }page_allocated;
 
@@ -66,12 +68,10 @@ typedef struct share_page{
     int pg_index;//对应的内核虚地址
 }share_page;
 
-extern ptr_t allocPage(int numPage,int pin,PTE* pgdir);
-extern uint16_t swap_block_id;
+uint16_t swap_block_id = 0x200;
+uint16_t swap_page_id;
 extern page_allocated page_general[PAGE_NUM];
 extern share_page share_pages[SHARE_PAGE_NUM];
-// TODO [P4-task1] */
-void freePage(ptr_t baseAddr);
 
 // #define S_CORE
 // NOTE: only need for S-core to alloc 2MB large page
@@ -89,15 +89,17 @@ extern void share_pgtable(PTE* dest_pgdir, PTE* src_pgdir);
 uintptr_t walk(uintptr_t va, PTE* pgdir, enum WALK walk);
 PTE* mappages(uintptr_t va, PTE* pgdir, uintptr_t pa, uint64_t perm);
 void pgcopy(PTE* dest_pgdir, PTE* src_pgdir, uint8_t level);
-void uvmcopy(uintptr_t cpkva, PTE* pgdir);
+void uvmcopy(PTE* expte);
 void pin_page(uintptr_t kva);
+unsigned swap_out();
+void setPTE(PTE* pte, uintptr_t pa, uint64_t perm);
 
 /*
  * alloc && free
  */
 uintptr_t kmalloc();
 uintptr_t kalloc();
-uintptr_t palloc(PTE* pte);
+uintptr_t palloc(PTE* pte, uint64_t perm);
 uintptr_t uvmalloc(uintptr_t va, PTE* pgdir, uint64_t perm);
 
 void uvmfreeall(PTE* pgdir);
@@ -108,7 +110,7 @@ void kmfree(uintptr_t kva);
 /*syscall*/
 uintptr_t mmalloc(uint32_t size);
 uintptr_t shm_page_get(int key);
-void shm_page_dt(uintptr_t addr);
+void shm_page_dt(uintptr_t va);
 pid_t do_fork();
 
 static inline uint32_t kva2pgindex(uintptr_t kva)

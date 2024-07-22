@@ -128,6 +128,7 @@ void handle_pagefault_access(regs_context_t *regs, uint64_t stval, uint64_t scau
     uint16_t search_block_id;//从磁盘中取出时的扇区号
     PTE * search_PTE_swap;
 
+    //若walk不到地址，说明映射还没有建立，报段错误
     search_PTE_swap = (PTE*)walk(stval,(*current_running)->pgdir,VOID);
     if(!search_PTE_swap){
         printk("Segmentation Fault");
@@ -141,20 +142,21 @@ void handle_pagefault_access(regs_context_t *regs, uint64_t stval, uint64_t scau
      * p位无效：软件位无，还未分配即进行访问，报错(对于一个地址，规定先malloc建立映射，然后对该地址进行访问时分配一个物理页)
      */
     if(*search_PTE_swap & _PAGE_PRESENT){
-        set_attribute(search_PTE_swap, get_attribute(*search_PTE_swap,PA_ATTRIBUTE_MASK) |_PAGE_PRESENT |_PAGE_ACCESSED |_PAGE_READ);
+        set_attribute(search_PTE_swap, 
+                    get_attribute(*search_PTE_swap,PA_ATTRIBUTE_MASK) |_PAGE_PRESENT |_PAGE_ACCESSED |_PAGE_READ);
     }
     else{
         if((*search_PTE_swap & _PAGE_SOFT)){
             //确定扇区上的扇区号，分配一页，并将扇区读入
             search_block_id = (uint16_t)get_pfn(*search_PTE_swap);//确定扇区上的扇区号
-            uint64_t kva = uvmalloc(stval, (*current_running)->pgdir, 
-                                    _PAGE_PRESENT | _PAGE_READ | _PAGE_WRITE | _PAGE_EXEC |_PAGE_ACCESSED | _PAGE_USER);//分配出一块空间,并且这里肯定不是页表，也不用被pin住
-
+            uint64_t kva = palloc(search_PTE_swap, 
+                _PAGE_PRESENT | _PAGE_READ | _PAGE_WRITE | _PAGE_EXEC |_PAGE_ACCESSED | _PAGE_USER);
             bios_sd_read(kva2pa(kva), 8, search_block_id);
         }
         else{
-            uint64_t kva = uvmalloc(stval, (*current_running)->pgdir, 
-                                    _PAGE_PRESENT | _PAGE_READ | _PAGE_WRITE | _PAGE_EXEC |_PAGE_ACCESSED | _PAGE_USER);//分配出一块空间,并且这里肯定不是页表，也不用被pin住
+            palloc(search_PTE_swap, 
+                _PAGE_PRESENT | _PAGE_READ | _PAGE_WRITE | _PAGE_EXEC |_PAGE_ACCESSED | _PAGE_USER);
+            
         }
     }
 
@@ -167,6 +169,7 @@ void handle_pagefault_store(regs_context_t *regs, uint64_t stval, uint64_t scaus
     uint16_t search_block_id;//从磁盘中取出时的扇区号
     PTE * search_PTE_swap;
 
+    //若walk不到地址，说明映射还没有建立，报段错误
     search_PTE_swap = (PTE*)walk(stval,(*current_running)->pgdir,VOID);
     if(!search_PTE_swap){
         printk("Segmentation Fault");
@@ -178,26 +181,27 @@ void handle_pagefault_store(regs_context_t *regs, uint64_t stval, uint64_t scaus
      * p位有效：wirte位无，说明是写时复制，需进行uvmcopy
      * p位有效：wirte位有，重新给出即可
      * p位无效：软件位有，在硬盘上
-     * p位无效：软件位无，还未分配即进行访问，报错(对于一个地址，规定先malloc建立映射，然后对该地址进行访问时分配一个物理页)
+     * p位无效：软件位无，mmaloc完还未进行分配
      */
     if(*search_PTE_swap & _PAGE_PRESENT){
         if(*search_PTE_swap & _PAGE_WRITE)
-            set_attribute(search_PTE_swap, get_attribute(*search_PTE_swap,PA_ATTRIBUTE_MASK) |_PAGE_PRESENT |_PAGE_ACCESSED |_PAGE_READ |_PAGE_DIRTY |_PAGE_WRITE);
+            set_attribute(search_PTE_swap, 
+                        get_attribute(*search_PTE_swap,PA_ATTRIBUTE_MASK) |_PAGE_PRESENT |_PAGE_ACCESSED |_PAGE_READ |_PAGE_DIRTY |_PAGE_WRITE);
         else {
-            uvmcopy(stval, (*current_running)->pgdir);
+            uvmcopy(search_PTE_swap);
         }
     }
     else{
         if((*search_PTE_swap & _PAGE_SOFT)){
             //确定扇区上的扇区号，分配一页，并将扇区读入
             search_block_id = (uint16_t)get_pfn(*search_PTE_swap);
-            uint64_t kva = uvmalloc(stval, (*current_running)->pgdir, 
-                                    _PAGE_PRESENT | _PAGE_READ | _PAGE_WRITE | _PAGE_EXEC |_PAGE_ACCESSED| _PAGE_DIRTY| _PAGE_USER);
+            uint64_t kva = palloc(search_PTE_swap, 
+                _PAGE_PRESENT | _PAGE_READ | _PAGE_WRITE | _PAGE_EXEC |_PAGE_ACCESSED | _PAGE_DIRTY| _PAGE_USER);
             bios_sd_read(kva2pa(kva), 8, search_block_id);
         }
         else{
-            uint64_t kva = uvmalloc(stval, (*current_running)->pgdir, 
-                                _PAGE_PRESENT | _PAGE_READ | _PAGE_WRITE | _PAGE_EXEC |_PAGE_ACCESSED| _PAGE_DIRTY| _PAGE_USER);
+            palloc(search_PTE_swap, 
+                _PAGE_PRESENT | _PAGE_READ | _PAGE_WRITE | _PAGE_EXEC |_PAGE_ACCESSED | _PAGE_DIRTY| _PAGE_USER);
         }
     }
 

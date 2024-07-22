@@ -313,7 +313,7 @@ static void init_page_general(void)
     
     for(num_pages = 0; num_pages < PAGE_NUM; num_pages++){
         page_general[num_pages].valid = 0;
-        page_general[num_pages].pin = 0;
+        page_general[num_pages].pin = UNPINED;
         page_general[num_pages].used = 0;
         page_general[num_pages].pte = NULL;
     }
