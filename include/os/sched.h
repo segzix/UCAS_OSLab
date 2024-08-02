@@ -78,10 +78,9 @@ typedef struct pcb
 
 
     /* process id */
-    pid_t truepid;//这个字段用来标记如果是线程，它是由哪个线程启的
     pid_t pid;
     tid_t tid;
-    unsigned thread_num;
+    pid_t ppid;
 
     ptr_t kernel_stack_base;
     ptr_t user_stack_base;
@@ -184,6 +183,7 @@ extern int do_kill(pid_t pid);
 extern int do_waitpid(pid_t pid);
 extern int do_process_show();
 extern pid_t do_getpid();
+int pid2id(int pid);
 
 void do_task_set_p(pid_t pid, int mask);
 int do_task_set(int mask,char *name, int argc, char *argv[]);
@@ -191,9 +191,16 @@ int do_task_set(int mask,char *name, int argc, char *argv[]);
 // void do_thread_create(pid_t *thread, void *thread_entrypoint, void *arg);
 void do_thread_create(pid_t *thread, void *thread_entrypoint, void *arg);
 pcb_t* get_pcb();
+void srcrel(int id);
 /************************************************************/
 
-void init_pcb_mm(int id, int taskid);
+enum FORK{
+    FORK,
+    NOTFORK,
+};
+
+void init_pcb_mm(int id, int taskid, enum FORK fork);
+void init_tcb_mm(int id, void *thread_entrypoint, void *arg);
 int kernel_argc;
 char kernel_arg[5][200];
 char *kernel_argv[5];

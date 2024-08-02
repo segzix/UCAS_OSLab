@@ -222,7 +222,7 @@ void parse_command(){
                 break;
             }
             
-            if(!sys_kill(pid)){
+            if(sys_kill(pid)){
                 check_clear();
                 printf(" \n(QAQ)Cannot kill task (pid=%d): Task Does Not Exist!\n", pid);
                 print_location_y++;

@@ -61,7 +61,6 @@ uint16_t num_threads;
 uint16_t num_tasks;//记录已经有过的进程数
 int version = 2; // version must between 0 and 9
 char buf[VERSION_BUF];
-extern void ret_from_exception();//conflict
 
 // Task info array
 task_info_t tasks[TASK_MAXNUM];
@@ -143,120 +142,6 @@ static void init_task_info(void)
     // NOTE: You need to get some related arguments from bootblock first
 }
 
-/************************************************************/
-void init_pcb_stack(
-    ptr_t kernel_stack, ptr_t user_stack, ptr_t entry_point,
-    pcb_t *pcb,int argc, char *argv[])//这里的userstack是虚地址，并且是内核平坦映射下的虚地址
-{
-    int i;
-    
-    regs_context_t *pt_regs =
-        (regs_context_t *)(kernel_stack - sizeof(regs_context_t));
-    uintptr_t argv_base = user_stack - sizeof(uintptr_t)*(argc + 1);
-    pcb->user_sp = pcb->user_sp - sizeof(uintptr_t)*(argc + 1);
-
-    //准备将该进程运行时的一些需要写寄存器的值全部放入栈中
-    pt_regs->regs[1]    = (reg_t)entry_point;             //ra
-    pt_regs->regs[4]    = (reg_t)pcb;                     //tp
-    pt_regs->regs[10]   = (reg_t)argc;                    //a0寄存器，命令行参数长度
-    // pt_regs->regs[11]   = argv_base;
-    pt_regs->regs[11]   = pcb->user_sp;//这里是传的命令行参数的地址(后面user_sp还得减)
-    pt_regs->sepc       = (reg_t)entry_point;             //sepc
-    pt_regs->sstatus    = (reg_t)((SR_SPIE & ~SR_SPP) | SR_SUM);     //sstatus
-    pt_regs->sbadaddr   = 0;
-    pt_regs->scause     = 0;
-
-     /* TODO: [p2-task3] initialization of registers on kernel stack
-      * HINT: sp, ra, sepc, sstatus
-      * NOTE: To run the task in user mode, you should set corresponding bits
-      *     of sstatus(SPP, SPIE, etc.).
-      */
-    
-
-
-    /* TODO: [p2-task1] set sp to simulate just returning from switch_to
-     * NOTE: you should prepare a stack, and push some values to
-     * simulate a callee-saved context.
-     */
-    switchto_context_t *pt_switchto =
-        (switchto_context_t *)((ptr_t)pt_regs - sizeof(switchto_context_t));
-    //初始化该进程控制块中的sp指针
-    pt_switchto->regs[0] = (reg_t)ret_from_exception;    //ra
-    pt_switchto->regs[1] = (reg_t)(pt_regs);      //sp
-
-    uint64_t user_sp_now = argv_base;
-    uintptr_t* argv_ptr = (uintptr_t*)argv_base;
-    for(i=0; i<argc; i++){
-        uint32_t len = strlen(argv[i]);
-        user_sp_now = user_sp_now - len - 1;
-        pcb->user_sp = pcb->user_sp - len - 1;
-
-        (*argv_ptr) = pcb->user_sp;
-        strcpy((char*)user_sp_now,argv[i]);
-        argv_ptr++;
-    }
-    (*argv_ptr) = 0;
-
-    //  uint64_t user_sp_va = argv_va_base;
-    //                 uint64_t user_sp_pa = argv_pa_base;
-    //                 uintptr_t * argv_ptr = (ptr_t)argv_va_base;
-    //                 for(int i=0; i<argc; i++){
-    //                     uint32_t len = strlen(argv[i]);
-    //                     user_sp_va = user_sp_va - len - 1;
-    //                     user_sp_pa = user_sp_pa - len - 1;
-    //                     (*argv_ptr) = user_sp_pa;
-    //                     strcpy(user_sp_va,argv[i]);
-    //                     argv_ptr ++;
-    //                 }
-    // int user_stack_size =  user_stack - user_sp_now;
-    // int siz_alignment = ((user_stack_size/16) + !(user_stack_size%128==0))*16;
-    // user_sp_now = user_stack - siz_alignment;
-
-    // user_sp_now = user_sp_now & (~0xf);
-    pcb->user_sp = pcb->user_sp & (~0xf);
-
-    pt_regs->regs[2]  = (reg_t)pcb->user_sp;     //sp
-    // pcb->user_sp=(reg_t)user_sp_now;
-
-    pcb->kernel_sp = (reg_t)pt_switchto;
-}
-
-void init_tcb_stack(
-    ptr_t kernel_stack, ptr_t user_stack, ptr_t entry_point,
-    tcb_t *tcb,int arg)
-{
-    regs_context_t *pt_regs =
-        (regs_context_t *)(kernel_stack - sizeof(regs_context_t));
-    //准备将该进程运行时的一些需要写寄存器的值全部放入栈中
-    pt_regs->regs[1]    = (reg_t)entry_point;             //ra
-    pt_regs->regs[2]    = (reg_t)user_stack;              //sp//注意这个地方由于不需要放命令行参数因此直接将用户虚地址放进来
-    pt_regs->regs[4]    = (reg_t)tcb;                     //tp
-    pt_regs->regs[10]   = (reg_t)arg;                     //a0传参
-    pt_regs->sepc       = (reg_t)entry_point;             //sepc
-    pt_regs->sstatus    = (reg_t)((SR_SPIE & ~SR_SPP) | SR_SUM);     //sstatus
-    pt_regs->sbadaddr   = 0;
-    pt_regs->scause     = 0;
-
-     /* TODO: [p2-task3] initialization of registers on kernel stack
-      * HINT: sp, ra, sepc, sstatus
-      * NOTE: To run the task in user mode, you should set corresponding bits
-      *     of sstatus(SPP, SPIE, etc.).
-      */
-
-
-    /* TODO: [p2-task1] set sp to simulate just returning from switch_to
-     * NOTE: you should prepare a stack, and push some values to
-     * simulate a callee-saved context.
-     */
-    switchto_context_t *pt_switchto =
-        (switchto_context_t *)((ptr_t)pt_regs - sizeof(switchto_context_t));
-    //初始化该进程控制块中的sp指针
-    pt_switchto->regs[0] = (reg_t)ret_from_exception;    //ra
-    pt_switchto->regs[1] = (reg_t)(pt_regs);      //sp
-
-    tcb->kernel_sp = (uint64_t)pt_switchto;
-}
-
 static void init_pcb(void)
 {
     /* TODO: [p2-task1] load needed tasks and init their corresponding PCB */
@@ -334,10 +219,9 @@ static void init_shell(void)
     pcb[num_tasks].wait_list.prev = &pcb[num_tasks].wait_list;
     pcb[num_tasks].wait_list.next = &pcb[num_tasks].wait_list;
     pcb[num_tasks].kill = 0;
-    pcb[num_tasks].truepid = num_tasks + 2;
     pcb[num_tasks].pid = num_tasks + 2;
     pcb[num_tasks].tid = 0;
-    pcb[num_tasks].thread_num = 0;
+    pcb[num_tasks].ppid = get_pcb()->pid;
     pcb[num_tasks].hart_mask = 0x3;
     pcb[num_tasks].current_mask = 0x0;
     pcb[num_tasks].pwd = 0;

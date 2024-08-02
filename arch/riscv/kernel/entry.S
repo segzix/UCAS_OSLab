@@ -13,9 +13,6 @@
   //将内核栈对应的此时的sp放在sp中
   //对sp做减法，准备保存trapframe
 
-  //sd sp, PCB_KERNEL_SP(tp)
-  //将内核栈的sp保存到pcb的kernel_stack中
-
   sd ra, OFFSET_REG_RA(sp)   
   //将用户栈的sp保存到trapframe中    
   sd gp, OFFSET_REG_GP(sp)
