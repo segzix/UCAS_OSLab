@@ -8,6 +8,38 @@
 #include <os/task.h>
 
 extern void ret_from_exception();
+uint32_t genpid = 2;
+
+void init_shell(void) {
+    int taskid = 0;
+    strcpy(pcb[0].pcb_name, "shell");
+
+    /*pid,tid和父进程的pid*/
+    pcb[0].pid =  genpid++;
+    pcb[0].tid = 0;
+    pcb[0].ppid = get_pcb()->pid;
+
+    init_pcb_mm(0, taskid, NOTFORK);
+
+    pcb[0].recycle = 0;
+    pcb[0].cursor_x = 0;
+    pcb[0].cursor_y = 0;
+    pcb[0].wakeup_time = 0;
+    pcb[0].wait_list.prev = &pcb[0].wait_list;
+    pcb[0].wait_list.next = &pcb[0].wait_list;
+    pcb[0].kill = 0;
+    pcb[0].hart_mask = 0x3;
+    pcb[0].current_mask = 0x0;
+    pcb[0].pwd = 0;
+    strcpy(pcb[0].pwd_dir, "/");
+    for (int k = 0; k < TASK_LOCK_MAX; k++) {
+        pcb[0].mutex_lock_key[k] = 0;
+    }
+
+    list_add(&pcb[0].list, &ready_queue);
+    pcb[0].status = TASK_READY;
+    /* TODO: [p2-task1] remember to initialize 'current_running' */
+}
 
 pid_t do_exec(char *name, int argc, char *argv[]) {
     int taskid = -1;
@@ -33,17 +65,17 @@ pid_t do_exec(char *name, int argc, char *argv[]) {
         return -1;
 
     /*找寻pcbid*/
-    for (int i = hash(pid, NUM_MAX_TASK), j = 0; j < NUM_MAX_TASK; i = (i + 1) % NUM_MAX_TASK, j++)
+    for (int i = hash(genpid, NUM_MAX_TASK), j = 0; j < NUM_MAX_TASK; i = (i + 1) % NUM_MAX_TASK, j++)
         if (pcb[i].status == TASK_EXITED) {
             id = i;
-            memcpy((void *)pcb[id].pcb_name, (void *)tasks[id].task_name, 32);
+            memcpy((void *)pcb[id].pcb_name, (void *)tasks[taskid].task_name, 32);
             break;
         }
     if (id == -1)
         return -1;
 
     /*pid,tid和父进程的pid*/
-    pcb[id].pid = pid++;
+    pcb[id].pid = genpid++;
     pcb[id].ppid = (*current_running)->pid;
     pcb[id].tid = 0;
 
@@ -67,27 +99,25 @@ pid_t do_exec(char *name, int argc, char *argv[]) {
 
     list_add(&(pcb[id].list), &ready_queue);
     pcb[id].status = TASK_READY;
-    num_tasks++;
     return pcb[id].pid;
 }
 
 void do_thread_create(pid_t *thread, void *thread_entrypoint, void *arg) {
-    uintptr_t kva_user_stack;
     current_running = get_current_cpu_id() ? &current_running_1 : &current_running_0;
     int id = -1;
 
     /*找寻pcbid*/
-    for (int i = hash(pid, NUM_MAX_TASK), j = 0; j < NUM_MAX_TASK; i = (i + 1) % NUM_MAX_TASK, j++)
+    for (int i = hash(genpid, NUM_MAX_TASK), j = 0; j < NUM_MAX_TASK; i = (i + 1) % NUM_MAX_TASK, j++)
         if (pcb[i].status == TASK_EXITED) {
             id = i;
-            memcpy((void *)pcb[id].pcb_name, (void *)tasks[id].task_name, 32);
+            memcpy((void *)pcb[id].pcb_name, (void *)(*current_running)->pcb_name, 32);
             break;
         }
     if (id == -1)
         return;
 
     /*pid,tid和父进程的pid*/
-    pcb[id].pid = pid++;
+    pcb[id].pid = genpid++;
     pcb[id].tid = (*current_running)->tid + 1;
     pcb[id].ppid = (*current_running)->pid;
 
@@ -108,16 +138,10 @@ void do_thread_create(pid_t *thread, void *thread_entrypoint, void *arg) {
         pcb[id].mutex_lock_key[k] = 0;
     }
 
-    ptr_t entry_point = (ptr_t)thread_entrypoint;
-
-    memcpy((void *)pcb[id].pcb_name, (void *)(*current_running)->pcb_name, 32);
-
     list_add(&(pcb[id].list), &ready_queue);
     *thread = pcb[id].pid;
 
     pcb[id].status = TASK_READY;
-
-    num_tasks++;
     return;
 }
 
@@ -129,17 +153,17 @@ pid_t do_fork() {
     current_running = get_current_cpu_id() ? &current_running_1 : &current_running_0;
 
     /*找寻pcbid*/
-    for (int i = hash(pid, NUM_MAX_TASK), j = 0; j < NUM_MAX_TASK; i = (i + 1) % NUM_MAX_TASK, j++)
+    for (int i = hash(genpid, NUM_MAX_TASK), j = 0; j < NUM_MAX_TASK; i = (i + 1) % NUM_MAX_TASK, j++)
         if (pcb[i].status == TASK_EXITED) {
             id = i;
-            memcpy((void *)pcb[id].pcb_name, (void *)tasks[id].task_name, 32);
+            memcpy((void *)pcb[id].pcb_name, (void *)(*current_running)->pcb_name, 32);
             break;
         }
     if (id == -1)
         return -1;
 
     /*pid,tid和父进程的pid*/
-    pcb[id].pid = pid++;
+    pcb[id].pid = genpid++;
     pcb[id].tid = 0;
     pcb[id].ppid = (*current_running)->pid;
 
@@ -159,11 +183,8 @@ pid_t do_fork() {
         pcb[id].mutex_lock_key[k] = 0;
     }
 
-    memcpy((void *)pcb[id].pcb_name, (void *)(*current_running)->pcb_name, 32);
-
     list_add(&(pcb[id].list), &ready_queue);
     pcb[id].status = TASK_READY;
-    num_tasks++;
 
     return pcb[id].pid;
 }

@@ -229,7 +229,7 @@ elf: $(ELF_BOOT) $(ELF_DECOMPRESS) $(ELF_MAIN) $(LIB_TINYC) $(ELF_USER)
 # -----------------------------------------------------------------------
 
 $(ELF_CREATEIMAGE): $(SRC_CREATEIMAGE) $(SRC_DEFLATE_1) $(SRC_DEFLATE_2)
-	$(HOST_CC) $^ -o $@ -ggdb -Wall -I$(DIR_DEFLATE) -I$(DIR_ARCH)/include -DFREESTANDING
+	$(HOST_CC) $^ -o $@ -g -ggdb -Wall -I$(DIR_DEFLATE) -I$(DIR_ARCH)/include -DFREESTANDING
 
 image: $(ELF_CREATEIMAGE) $(ELF_BOOT) $(ELF_DECOMPRESS) $(ELF_MAIN) $(ELF_USER)
 # 运行createimage文件

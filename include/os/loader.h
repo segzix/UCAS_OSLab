@@ -3,6 +3,6 @@
 
 #include <type.h>
 
-uint64_t load_task_img(int taskid,uintptr_t pgdir,int pid);
+uint64_t load_task_img(int taskid,uintptr_t pgdir);
 
 #endif

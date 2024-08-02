@@ -200,47 +200,6 @@ static void init_share_page(void)
 // }
 //初始时将所有的程序加载到内存中来
 
-static void init_shell(void)
-{
-    uintptr_t kva_user_stack;
-
-    pcb[num_tasks].recycle = 0;
-    pcb[num_tasks].pgdir = (PTE*)kalloc();//分配根目录页//这里的给出的用户映射的虚地址没有任何意义  //这里是2因为能确定是shell
-    //clear_pgdir(pcb[num_tasks].pgdir); //清空根目录页
-    share_pgtable(pcb[num_tasks].pgdir,(PTE*)pa2kva(PGDIR_PA));//内核地址映射拷贝
-    load_task_img(num_tasks,(uintptr_t)pcb[num_tasks].pgdir,2);//load进程并且为给进程建立好地址映射
-
-    pcb[num_tasks].kernel_sp = kalloc() + PAGE_SIZE;//不是页表，但是要被pin住//只要没有所谓的用户对应的地址，va全部放0
-    pcb[num_tasks].user_sp   = USER_STACK_ADDR;
-
-    kva_user_stack = uvmalloc(pcb[num_tasks].user_sp - PAGE_SIZE, pcb[num_tasks].pgdir, 
-                        _PAGE_PRESENT | _PAGE_READ | _PAGE_WRITE | _PAGE_EXEC | _PAGE_USER);
-
-    pcb[num_tasks].wait_list.prev = &pcb[num_tasks].wait_list;
-    pcb[num_tasks].wait_list.next = &pcb[num_tasks].wait_list;
-    pcb[num_tasks].kill = 0;
-    pcb[num_tasks].pid = num_tasks + 2;
-    pcb[num_tasks].tid = 0;
-    pcb[num_tasks].ppid = get_pcb()->pid;
-    pcb[num_tasks].hart_mask = 0x3;
-    pcb[num_tasks].current_mask = 0x0;
-    pcb[num_tasks].pwd = 0;
-    strcpy(pcb[num_tasks].pwd_dir,"/");
-    for(int k = 0;k < TASK_LOCK_MAX;k++){
-        pcb[num_tasks].mutex_lock_key[k] = 0;
-    }
-    strcpy(pcb[num_tasks].pcb_name, "shell");
-    init_pcb_stack( pcb[num_tasks].kernel_sp, kva_user_stack, 
-                    tasks[num_tasks].task_entrypoint, &pcb[num_tasks],0,0);//记住这里的使用内核的映射去初始化栈的
-
-    list_add(&pcb[num_tasks].list, &ready_queue);
-    pcb[num_tasks].status = TASK_READY; 
-
-    num_tasks++;
-    /* TODO: [p2-task1] remember to initialize 'current_running' */
-
-}
-
 static void init_syscall(void)
 {
     syscall[SYSCALL_SLEEP]          = (long(*)())do_sleep;

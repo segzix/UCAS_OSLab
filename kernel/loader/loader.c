@@ -5,7 +5,7 @@
 #include <type.h>
 #include <os/mm.h>
 
-uint64_t load_task_img(int taskid,PTE* pgdir,int pid)
+uint64_t load_task_img(int taskid, PTE* pgdir)
 {
     uint32_t task_block_id;
     uint32_t task_block_num;
