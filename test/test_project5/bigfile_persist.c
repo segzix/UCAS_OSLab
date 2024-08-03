@@ -1,9 +1,7 @@
 #include <stdint.h>
 #include <stdio.h>
-#include <string.h>
 #include <unistd.h>
 #include <time.h>
-uint32_t * write_buffer = 0x10000000;
 #define WRITE_BLOCK_NUM 32
 #define FILE_256KB  18
 #define POINT_8KB 0x2000
@@ -44,7 +42,7 @@ int main(int argc, char *argv[])
 
         // printf("\npersist read %dMB: ",i<<2);
         sys_lseek(fd,(i << FILE_256KB),SEEK_SET);
-        sys_fread(fd, &b, sizeof(int));
+        sys_fread(fd, (char*)&b, sizeof(int));
         if(b != i)
             printf("read error!");
     }

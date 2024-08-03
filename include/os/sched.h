@@ -108,7 +108,7 @@ typedef struct pcb
      * 0x03 core 0/1
      */
     int hart_mask;
-    int current_mask;
+    int cpu;
 
     /* pgdir */
     PTE* pgdir;
@@ -126,11 +126,11 @@ extern uint16_t num_tasks;
 extern uint16_t num_threads;
 extern uint16_t task_num;
 void init_pcb_stack(
-    ptr_t kernel_stack, ptr_t user_stack, ptr_t entry_point,
+    ptr_t kernel_stack, ptr_t kva_user_stack, ptr_t entry_point,
     pcb_t *pcb,int argc, char *argv[]);
 void init_tcb_stack(
-    ptr_t kernel_stack, ptr_t user_stack, ptr_t entry_point, 
-    tcb_t *tcb,int arg);
+    ptr_t kernel_stack, ptr_t kva_user_stack, ptr_t entry_point, 
+    tcb_t *tcb,void* arg);
 
 
 

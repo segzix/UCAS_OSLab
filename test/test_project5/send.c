@@ -1,7 +1,6 @@
-#include <stdio.h>
-#include <unistd.h>
-#include <string.h>
-#include <stdint.h>
+#include "stdio.h"
+#include "unistd.h"
+#include "stdint.h"
 
 static uint32_t buffer0[256] = {
     0xffffffff, 0x5500ffff, 0xf77db57d, 0x00450008, 0x0000d400, 0x11ff0040,

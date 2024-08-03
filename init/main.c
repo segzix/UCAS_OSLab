@@ -153,7 +153,7 @@ static void init_pcb(void)
         pcb[num_pcbs].pid = -1;
         pcb[num_pcbs].kill = 0;
         pcb[num_pcbs].hart_mask = 0x0;
-        pcb[num_pcbs].current_mask = 0x0;
+        pcb[num_pcbs].cpu = 0x0;
         pcb[num_pcbs].pwd = 0;
         strcpy(pcb[num_pcbs].pwd_dir,"/");
     }

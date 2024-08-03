@@ -5,14 +5,20 @@
 #include "os/time.h"
 #include "printk.h"
 
+/*
+ * !!!
+ * 为什么这里不能用get_pcb()，因为要明白现在curRun1与curRun2这两个地方存放的值需要进行变化，
+ * 而要变化就一定得知道这两个的地址
+ * 因此需要通过curRun根据当前所处的核来指向curRun1或curRun2，然后进行修改
+ * 如果直接调用get_pcb()，将直接获得当前curRun1(或curRun2)的值，
+ * 后续根据switchto进行对curRun1(或curRun2)修改时将无法做到
+ */
 
 void do_scheduler(void) {
     spin_lock_acquire(&ready_spin_lock);
     list_node_t *list_check;
-    int cpu_hartmask;
-    // bios_set_timer(get_ticks() + TIMER_INTERVAL);
     current_running = get_current_cpu_id() ? &current_running_1 : &current_running_0;
-    cpu_hartmask = get_current_cpu_id() ? 0x2 : 0x1;
+    int curcpu = get_current_cpu_id() ? 0x2 : 0x1;
     check_sleeping();
 
     do_resend();
@@ -43,12 +49,13 @@ void do_scheduler(void) {
     //注意这里如果status为BLOCKED则不用执行上面的操作，因为已经加入到对应lock的block_queue中了
 
     list_check = ready_queue.next;
+    //此时对curRun1(curRun2)进行了修改
     (*current_running) = list_entry(ready_queue.next, pcb_t, list);
-    while ((cpu_hartmask & (*current_running)->hart_mask) == 0) {
+    while ((curcpu & (*current_running)->hart_mask) == 0) {
         list_check = list_check->next;
         (*current_running) = list_entry(list_check, pcb_t, list);
     }
-    (*current_running)->current_mask = cpu_hartmask;
+    (*current_running)->cpu = curcpu;
 
     list_del(&((*current_running)->list));
     (*current_running)->status = TASK_RUNNING;
@@ -96,13 +103,13 @@ void do_exit(void) {
 
 int do_kill(pid_t pid) {
     int id = pid2id(pid);
-    if(id == -1)
+    if (id == -1)
         return 1;
 
-    if(pcb[id].status == TASK_BLOCKED){
+    if (pcb[id].status == TASK_BLOCKED) {
         list_del(&pcb[id].list);
         srcrel(id);
-    }else{
+    } else {
         pcb[id].kill = 1;
     }
 

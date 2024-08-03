@@ -1,8 +1,7 @@
 #ifndef TIME_H
 #define TIME_H
 
-#include <stdint.h>
-#include <unistd.h>
+#include "stdint.h"
 
 #define CLOCKS_PER_SEC (sys_get_timebase())
 

@@ -1,4 +1,5 @@
 #include <mailbox.h>
+#include <stdlib.h>
 
 const uint32_t MOD_ADLER = 65521;
 

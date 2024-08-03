@@ -1,7 +1,5 @@
-#include <syscall.h>
-#include <stdint.h>
-#include <kernel.h>
-#include <unistd.h>
+#include "syscall.h"
+#include "unistd.h"
 
 static const long IGNORE = 0L;
 
@@ -244,7 +242,7 @@ void sys_semaphore_destroy(int sema_idx)
 
 int sys_mbox_open(char * name)
 {
-    return invoke_syscall(SYSCALL_MBOX_OPEN, name, IGNORE, IGNORE, IGNORE, IGNORE);
+    return invoke_syscall(SYSCALL_MBOX_OPEN, (long)name, IGNORE, IGNORE, IGNORE, IGNORE);
     /* TODO: [p3-task2] call invoke_syscall to implement sys_mbox_open */
 }
 
@@ -256,13 +254,13 @@ void sys_mbox_close(int mbox_id)
 
 int sys_mbox_send(int mbox_idx, void *msg, int msg_length)
 {
-    return invoke_syscall(SYSCALL_MBOX_SEND, mbox_idx, msg, msg_length, IGNORE, IGNORE);
+    return invoke_syscall(SYSCALL_MBOX_SEND, mbox_idx, (long)msg, msg_length, IGNORE, IGNORE);
     /* TODO: [p3-task2] call invoke_syscall to implement sys_mbox_send */
 }
 
 int sys_mbox_recv(int mbox_idx, void *msg, int msg_length)
 {
-    return invoke_syscall(SYSCALL_MBOX_RECV, mbox_idx, msg, msg_length, IGNORE, IGNORE);
+    return invoke_syscall(SYSCALL_MBOX_RECV, mbox_idx, (long)msg, msg_length, IGNORE, IGNORE);
     /* TODO: [p3-task2] call invoke_syscall to implement sys_mbox_recv */
 }
 
@@ -274,18 +272,18 @@ void sys_task_set_p(pid_t pid, int mask)
 
 int sys_task_set(int mask,char *name, int argc, char *argv[])
 {
-    return invoke_syscall(SYSCALL_TASK_SET, mask, name, argc, argv, IGNORE);
+    return invoke_syscall(SYSCALL_TASK_SET, mask, (long)name, argc, (long)argv, IGNORE);
 }
 
 void* sys_shmpageget(int key)
 {
-    return invoke_syscall(SYSCALL_SHM_GET, key, IGNORE, IGNORE, IGNORE, IGNORE);
+    return (void*)invoke_syscall(SYSCALL_SHM_GET, key, IGNORE, IGNORE, IGNORE, IGNORE);
     /* TODO: [p4-task4] call invoke_syscall to implement sys_shmpageget */
 }
 
 void sys_shmpagedt(void *addr)
 {
-    invoke_syscall(SYSCALL_SHM_DT, addr, IGNORE, IGNORE, IGNORE, IGNORE);
+    invoke_syscall(SYSCALL_SHM_DT, (long)addr, IGNORE, IGNORE, IGNORE, IGNORE);
     /* TODO: [p4-task4] call invoke_syscall to implement sys_shmpagedt */
 }
 
@@ -307,18 +305,18 @@ int pthread_join(pid_t thread){
 int sys_net_send(void *txpacket, int length)
 {
     /* TODO: [p5-task1] call invoke_syscall to implement sys_net_send */
-    return invoke_syscall(SYSCALL_NET_SEND,txpacket,(uintptr_t)length,IGNORE,IGNORE,IGNORE);
+    return invoke_syscall(SYSCALL_NET_SEND,(long)txpacket,(uintptr_t)length,IGNORE,IGNORE,IGNORE);
 }
 
 int sys_net_recv(void *rxbuffer, int pkt_num, int *pkt_lens)
 {
     /* TODO: [p5-task2] call invoke_syscall to implement sys_net_recv */
-    return invoke_syscall(SYSCALL_NET_RECV,rxbuffer,(uintptr_t)pkt_num,pkt_lens,IGNORE,IGNORE);
+    return invoke_syscall(SYSCALL_NET_RECV,(long)rxbuffer,(uintptr_t)pkt_num,(long)pkt_lens,IGNORE,IGNORE);
 }
 
 int sys_net_recv_stream(void *buffer, int *nbytes)
 {
-    return invoke_syscall(SYSCALL_NET_RECV_STREAM,buffer,nbytes,IGNORE,IGNORE,IGNORE);
+    return invoke_syscall(SYSCALL_NET_RECV_STREAM,(long)buffer,(long)nbytes,IGNORE,IGNORE,IGNORE);
 }
 
 int sys_mkfs(void)
@@ -333,42 +331,42 @@ int sys_statfs(void)
 
 int sys_cd(char *path)
 {
-    return invoke_syscall(SYSCALL_CD,path,IGNORE,IGNORE,IGNORE,IGNORE);
+    return invoke_syscall(SYSCALL_CD,(long)path,IGNORE,IGNORE,IGNORE,IGNORE);
 }
 
 int sys_mkdir(char *dir_name)
 {
-    return invoke_syscall(SYSCALL_MKDIR,dir_name,IGNORE,IGNORE,IGNORE,IGNORE);
+    return invoke_syscall(SYSCALL_MKDIR,(long)dir_name,IGNORE,IGNORE,IGNORE,IGNORE);
 }
 
 int sys_ls(int argc, char *argv[])
 {
-    return invoke_syscall(SYSCALL_LS,argc,argv,IGNORE,IGNORE,IGNORE);
+    return invoke_syscall(SYSCALL_LS,argc,(long)argv,IGNORE,IGNORE,IGNORE);
 }
 
 int sys_rmdir(char *dir_name)
 {
-    return invoke_syscall(SYSCALL_RMDIR,dir_name,IGNORE,IGNORE,IGNORE,IGNORE);
+    return invoke_syscall(SYSCALL_RMDIR,(long)dir_name,IGNORE,IGNORE,IGNORE,IGNORE);
 }
 
 void sys_getpwdname(char *pwd_name)
 {
-    invoke_syscall(SYSCALL_GETPWDNAME,pwd_name,IGNORE,IGNORE,IGNORE,IGNORE);
+    invoke_syscall(SYSCALL_GETPWDNAME,(long)pwd_name,IGNORE,IGNORE,IGNORE,IGNORE);
 }
 
 int sys_fopen(char *path, int mode)
 {
-    return invoke_syscall(SYSCALL_FOPEN,path,mode,IGNORE,IGNORE,IGNORE);
+    return invoke_syscall(SYSCALL_FOPEN,(long)path,mode,IGNORE,IGNORE,IGNORE);
 }
 
 int sys_fread(int fd, char *buff, int length)
 {
-    return invoke_syscall(SYSCALL_FREAD,fd,buff,length,IGNORE,IGNORE); 
+    return invoke_syscall(SYSCALL_FREAD,fd,(long)buff,length,IGNORE,IGNORE); 
 }
 
 int sys_fwrite(int fd, char *buff, int length)
 {
-    return invoke_syscall(SYSCALL_FWRITE,fd,buff,length,IGNORE,IGNORE);
+    return invoke_syscall(SYSCALL_FWRITE,fd,(long)buff,length,IGNORE,IGNORE);
 }
 
 int sys_fclose(int fd)
@@ -378,17 +376,17 @@ int sys_fclose(int fd)
 
 int sys_touch(char *filename)
 {
-    return invoke_syscall(SYSCALL_TOUCH,filename,IGNORE,IGNORE,IGNORE,IGNORE);
+    return invoke_syscall(SYSCALL_TOUCH,(long)filename,IGNORE,IGNORE,IGNORE,IGNORE);
 }
 
 int sys_cat(char *filename)
 {
-    return invoke_syscall(SYSCALL_CAT,filename,IGNORE,IGNORE,IGNORE,IGNORE);
+    return invoke_syscall(SYSCALL_CAT,(long)filename,IGNORE,IGNORE,IGNORE,IGNORE);
 }
 
 int sys_rmfile(char *filename)
 {
-    return invoke_syscall(SYSCALL_RMFILE,filename,IGNORE,IGNORE,IGNORE,IGNORE);
+    return invoke_syscall(SYSCALL_RMFILE,(long)filename,IGNORE,IGNORE,IGNORE,IGNORE);
 }
 
 int sys_lseek(int fd, int offset, int whence)
@@ -398,7 +396,7 @@ int sys_lseek(int fd, int offset, int whence)
 
 int sys_ln(char *src_path, char *dst_path)
 {
-    return invoke_syscall(SYSCALL_LN,src_path,dst_path,IGNORE,IGNORE,IGNORE);
+    return invoke_syscall(SYSCALL_LN,(long)src_path,(long)dst_path,IGNORE,IGNORE,IGNORE);
 }
 
 uintptr_t sys_mmalloc(uint32_t size)

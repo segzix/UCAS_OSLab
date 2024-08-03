@@ -1,5 +1,5 @@
-#include <stdlib.h>
 
+#include "stdint.h"
 static int x = 0;
 
 void srand(uint32_t seed)

@@ -15,7 +15,6 @@
 
 extern void ret_from_exception();
 pcb_t pcb[NUM_MAX_TASK];
-tcb_t tcb[NUM_MAX_TASK];
 const ptr_t pid0_stack = 0xffffffc050900000;
 const ptr_t pid1_stack = 0xffffffc0508ff000;
 pcb_t pid0_pcb = {.pid = 0,
@@ -23,7 +22,7 @@ pcb_t pid0_pcb = {.pid = 0,
                   .kernel_sp = (ptr_t)pid0_stack,
                   .user_sp = (ptr_t)pid0_stack,
                   .hart_mask = 0x1,
-                  .current_mask = 0x1,
+                  .cpu = 0x1,
                   .pcb_name = "pid0",
                   //每个核对应的都有可以跑的
 
@@ -36,7 +35,7 @@ pcb_t pid1_pcb = {.pid = 1,
                   .kernel_sp = (ptr_t)pid1_stack,
                   .user_sp = (ptr_t)pid1_stack,
                   .hart_mask = 0x2,
-                  .current_mask = 0x2,
+                  .cpu = 0x2,
                   .pcb_name = "pid1",
                   //每个核对应的都有可以跑的
 
@@ -150,15 +149,15 @@ void init_pcb_mm(int id, int taskid, enum FORK fork) {
     } else {
         pcb_t *curpcb = get_pcb();
         pgcopy(pcb[id].pgdir, curpcb->pgdir, 2);
-        
+
         regs_context_t *pt_regs = (regs_context_t *)(pcb[id].kernel_sp - sizeof(regs_context_t));
         switchto_context_t *pt_switchto =
             (switchto_context_t *)((ptr_t)pt_regs - sizeof(switchto_context_t));
-        //trapframe段拷贝
+        // trapframe段拷贝
         memcpy((void *)pt_regs, (void *)(curpcb->kernel_sp - sizeof(regs_context_t)),
                sizeof(regs_context_t));
 
-        //fork进程独有：tp寄存器，a0返回0，switchto后返回ret_from_ex，switchto设置trapframe内核栈地址
+        // fork进程独有：tp寄存器，a0返回0，switchto后返回ret_from_ex，switchto设置trapframe内核栈地址
         pt_regs->regs[4] = (reg_t)(&pcb[id]); // tp
         pt_regs->regs[10] = (reg_t)0;
         pt_switchto->regs[0] = (reg_t)ret_from_exception;
@@ -169,7 +168,6 @@ void init_pcb_mm(int id, int taskid, enum FORK fork) {
 }
 
 void init_tcb_mm(int id, void *thread_entrypoint, void *arg) {
-    uintptr_t kva_user_stack;
 
     /*指定根目录页地址，堆地址，内核栈地址(直接分配完毕)，用户栈地址(一个线程分配一页)*/
     pcb[id].pgdir = get_pcb()->pgdir;
@@ -177,16 +175,13 @@ void init_tcb_mm(int id, void *thread_entrypoint, void *arg) {
     pcb[id].kernel_sp = kalloc() + 1 * PAGE_SIZE;
     pcb[id].user_sp = USER_STACK_ADDR + PAGE_SIZE * pcb[id].tid;
 
-    /*
-     * 分配用户栈空间
-     */
-    kva_user_stack = uvmalloc(pcb[id].user_sp - PAGE_SIZE, pcb[id].pgdir,
-                              _PAGE_PRESENT | _PAGE_READ | _PAGE_WRITE | _PAGE_EXEC | _PAGE_USER) +
-                     1 * PAGE_SIZE;
+    /*分配用户栈空间*/
+    uvmalloc(pcb[id].user_sp - PAGE_SIZE, pcb[id].pgdir,
+             _PAGE_PRESENT | _PAGE_READ | _PAGE_WRITE | _PAGE_EXEC | _PAGE_USER);
 
     /*初始化用户栈*/
     init_tcb_stack(pcb[id].kernel_sp, pcb[id].user_sp, (uintptr_t)thread_entrypoint, &pcb[id],
-                   (uint64_t)arg); //这里直接传用户的虚地址即可
+                   arg); //这里直接传用户的虚地址即可
 }
 
 int pid2id(int pid) {

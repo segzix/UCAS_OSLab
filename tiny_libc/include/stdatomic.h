@@ -3,7 +3,7 @@
 
 /* from linux/arch/riscv/include/asm/cmpxchg.h and atomic.h */
 
-#include <stdint.h>
+#include "stdint.h"
 
 typedef volatile uint32_t atomic_uint32_t;
 typedef volatile uint64_t atomic_uint64_t;

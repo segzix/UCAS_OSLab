@@ -1,8 +1,6 @@
 #ifndef __INCLUDE_KERNEL_H__
 #define __INCLUDE_KERNEL_H__
 
-#include <stdint.h>
-
 #define KERNEL_JMPTAB_BASE 0x51ffff00
 typedef enum {
     CONSOLE_PUTSTR,

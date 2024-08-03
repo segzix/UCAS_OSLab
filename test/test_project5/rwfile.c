@@ -1,5 +1,4 @@
 #include <stdio.h>
-#include <string.h>
 #include <unistd.h>
 
 #define O_RD (1lu << 0)

@@ -28,7 +28,6 @@
 
 #include <stdlib.h>
 #include <string.h>
-#include <ctype.h>
 
 int itoa(int num, char* str, int len, int base)
 {

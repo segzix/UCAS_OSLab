@@ -1,7 +1,6 @@
 #include <stdio.h>
 #include <unistd.h>
 #include <stdint.h>
-#include <string.h>
 
 #define MAX_RECV_CNT 32
 #define RX_PKT_SIZE 200

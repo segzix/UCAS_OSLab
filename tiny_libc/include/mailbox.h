@@ -1,8 +1,8 @@
 #ifndef __INCLUDE_MAILBOX_H__
 #define __INCLUDE_MAILBOX_H__
 
-#include <stdint.h>
-#include <unistd.h>
+#include "stdint.h"
+#include "unistd.h"
 
 #define MAX_MBOX_LENGTH (64)
 

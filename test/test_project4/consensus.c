@@ -4,7 +4,6 @@
 #include <stddef.h>
 #include <stdatomic.h>
 #include <pthread.h>
-#include <assert.h>
 
 #define MAGIC 0xdeadbeefdeadbeeflu
 #define SHMP_KEY 42
@@ -30,7 +29,7 @@ int is_first(consensus_vars_t *vars)
 
 pid_t decide(pid_t prev, pid_t mypid, atomic_long* consensus)
 {
-    static int decide = 0;
+    //static int decide = 0;
     pid_t ret;
     if (*consensus == prev) {
         *consensus = mypid;

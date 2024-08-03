@@ -1,8 +1,7 @@
 #ifndef __STDLIB_H__
 #define __STDLIB_H__
 
-#include <stdint.h>
-#include <stddef.h>
+#include "stdint.h"
 
 #define RAND_MAX (INT32_MAX)
 
