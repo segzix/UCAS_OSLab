@@ -149,8 +149,6 @@ pcb_t ** current_running;
 pcb_t * current_running_0;
 pcb_t * current_running_1;
 
-extern pid_t process_id;
-
 extern pcb_t pcb[NUM_MAX_TASK];
 extern tcb_t tcb[NUM_MAX_TASK];
 

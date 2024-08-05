@@ -1,3 +1,4 @@
+#include <stdint.h>
 #include <time.h>
 #include <mailbox.h>
 #include <pthread.h>

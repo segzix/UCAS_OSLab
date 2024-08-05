@@ -7,9 +7,12 @@
 #include <os/string.h>
 #include <os/task.h>
 
-extern void ret_from_exception();
 uint32_t genpid = 2;
 
+/************************************************************/
+/*
+ * shell(所有用户态进程的父进程初始化)
+ */
 void init_shell(void) {
     int taskid = 0;
     strcpy(pcb[0].pcb_name, "shell");
@@ -41,6 +44,9 @@ void init_shell(void) {
     /* TODO: [p2-task1] remember to initialize 'current_running' */
 }
 
+/*
+ * 创建进程
+ */
 pid_t do_exec(char *name, int argc, char *argv[]) {
     int taskid = -1;
     int id = -1;
@@ -103,6 +109,9 @@ pid_t do_exec(char *name, int argc, char *argv[]) {
     return pcb[id].pid;
 }
 
+/*
+ * 创建线程
+ */
 void do_thread_create(pid_t *thread, void *thread_entrypoint, void *arg) {
     current_running = get_current_cpu_id() ? &current_running_1 : &current_running_0;
     int id = -1;
@@ -193,82 +202,6 @@ pid_t do_fork() {
 }
 
 /************************************************************/
-void init_pcb_stack(ptr_t kernel_stack, ptr_t kva_user_stack, ptr_t entry_point, pcb_t *pcb,
-                    int argc, char *argv[]) {
-    regs_context_t *pt_regs = (regs_context_t *)(kernel_stack - sizeof(regs_context_t));
-    switchto_context_t *pt_switchto =
-        (switchto_context_t *)((ptr_t)pt_regs - sizeof(switchto_context_t));
-
-    /*
-     * kva_user_stack与user_sp对应的是同一个物理页面的内核与用户虚地址，要区别对待，同时做减法
-     */
-    uintptr_t argv_base = kva_user_stack - sizeof(uintptr_t) * (argc + 1);
-    pcb->user_sp = pcb->user_sp - sizeof(uintptr_t) * (argc + 1);
-
-    /*初始化ra,tp,a0,a1寄存器，传递命令行参数长度和地址*/
-    pt_regs->regs[1] = (reg_t)entry_point;
-    pt_regs->regs[4] = (reg_t)pcb;
-    pt_regs->regs[10] = (reg_t)argc;
-    pt_regs->regs[11] = argv_base;
-
-    /*初始化sepc,sstatus,sbadaddr,scause寄存器*/
-    pt_regs->sepc = (reg_t)entry_point;
-    pt_regs->sstatus = (reg_t)((SR_SPIE & ~SR_SPP) | SR_SUM);
-    pt_regs->sbadaddr = 0;
-    pt_regs->scause = 0;
-
-    /*初始化上下文中的ra寄存器,sp指针*/
-    pt_switchto->regs[0] = (reg_t)ret_from_exception;
-    pt_switchto->regs[1] = (reg_t)(pt_regs);
-
-    //对命令行参数进行处理
-    uintptr_t user_sp_now = argv_base;
-    uintptr_t *argv_ptr = (uintptr_t *)argv_base;
-    for (int i = 0; i < argc; i++) {
-        // sp--
-        uint32_t len = strlen(argv[i]);
-        user_sp_now = user_sp_now - len - 1;
-        pcb->user_sp = pcb->user_sp - len - 1;
-
-        //设置栈
-        (*argv_ptr) = user_sp_now;
-        strcpy((char *)user_sp_now, argv[i]);
-        argv_ptr++;
-    }
-    (*argv_ptr) = 0;
-    pcb->user_sp &= (~0xf);
-
-    /*初始化trapframe中用户sp指针，进程控制块中的内核sp指针*/
-    pt_regs->regs[2] = (reg_t)pcb->user_sp; // sp
-    pcb->kernel_sp = (reg_t)pt_switchto;
-}
-
-void init_tcb_stack(ptr_t kernel_stack, ptr_t kva_user_stack, ptr_t entry_point, tcb_t *tcb,
-                    void *arg) {
-    regs_context_t *pt_regs = (regs_context_t *)(kernel_stack - sizeof(regs_context_t));
-    switchto_context_t *pt_switchto =
-        (switchto_context_t *)((ptr_t)pt_regs - sizeof(switchto_context_t));
-
-    /*初始化trapframe中的ra,sp,tp,a0,寄存器，传递arg指针参数*/
-    pt_regs->regs[1] = (reg_t)entry_point;
-    pt_regs->regs[2] = (reg_t)kva_user_stack;
-    pt_regs->regs[4] = (reg_t)tcb;
-    pt_regs->regs[10] = (reg_t)arg;
-
-    /*初始化sepc,sstatus,sbadaddr,scause寄存器*/
-    pt_regs->sepc = (reg_t)entry_point;
-    pt_regs->sstatus = (reg_t)((SR_SPIE & ~SR_SPP) | SR_SUM);
-    pt_regs->sbadaddr = 0;
-    pt_regs->scause = 0;
-
-    /*初始化上下文中的spra寄存器,sp指针*/
-    pt_switchto->regs[0] = (reg_t)ret_from_exception;
-    pt_switchto->regs[1] = (reg_t)(pt_regs);
-
-    /*初始化进程控制块中的内核sp指针*/
-    tcb->kernel_sp = (uint64_t)pt_switchto;
-}
-
 void do_task_set_p(pid_t pid, int mask) {
     int id = pid - 2;
     if (id < 0 || id >= NUM_MAX_TASK) {

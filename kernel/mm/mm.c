@@ -9,7 +9,6 @@
 #include <printk.h>
 
 // NOTE: A/C-core
-static ptr_t kernMemCurr = FREEMEM_KERNEL;
 page_allocated page_general[PAGE_NUM];
 share_page share_pages[SHARE_PAGE_NUM];
 uint16_t swap_block_id = 0x200;
@@ -45,7 +44,6 @@ void setPTE(PTE *pte, uintptr_t pa, uint64_t perm) {
 uintptr_t walk(uintptr_t va, PTE *pgdir, enum WALK walk) {
     va &= VA_MASK;
     PTE *pgdir_t = pgdir;
-    int pid = get_pcb()->pid;
     unsigned level;
 
     for (level = 2; level > 0; level--) {
@@ -245,7 +243,6 @@ void kmfree(uintptr_t kva) {
  * 取消所有的用户页表映射
  */
 void uvmfreeall(PTE *pgdir) {
-    PTE *pgdir_t = pgdir;
     PTE *pmd, *pmd2;
     uintptr_t freekva;
 
