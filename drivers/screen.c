@@ -39,16 +39,16 @@ static void vt100_hidden_cursor()
 /* write a char */
 static void screen_write_ch(char ch)
 {
-    current_running = get_current_cpu_id()? &current_running_1 : &current_running_0;
+    pcb_t* current_running = get_pcb();
     if (ch == '\n')
     {
-        (*current_running)->cursor_x = 0;
-        (*current_running)->cursor_y++;
+        current_running->cursor_x = 0;
+        current_running->cursor_y++;
     }
     else
     {
-        new_screen[SCREEN_LOC((*current_running)->cursor_x, (*current_running)->cursor_y)] = ch;
-        (*current_running)->cursor_x++;
+        new_screen[SCREEN_LOC(current_running->cursor_x, current_running->cursor_y)] = ch;
+        current_running->cursor_x++;
     }
 }
 
@@ -61,7 +61,7 @@ void init_screen(void)
 
 void screen_clear(int begin,int end)
 {
-    current_running = get_current_cpu_id()? &current_running_1 : &current_running_0;
+    pcb_t* current_running = get_pcb();
     int i, j;
     for (i = begin; i < end; i++)
     {
@@ -70,16 +70,16 @@ void screen_clear(int begin,int end)
             new_screen[SCREEN_LOC(j, i)] = ' ';
         }
     }
-    (*current_running)->cursor_x = 0;
-    (*current_running)->cursor_y = 0;
+    current_running->cursor_x = 0;
+    current_running->cursor_y = 0;
     screen_reflush();
 }
 
 void screen_move_cursor(int x, int y)
 {
-    current_running = get_current_cpu_id()? &current_running_1 : &current_running_0;
-    (*current_running)->cursor_x = x;
-    (*current_running)->cursor_y = y;
+    pcb_t* current_running = get_pcb();
+    current_running->cursor_x = x;
+    current_running->cursor_y = y;
     vt100_move_cursor(x, y);
 }
 
@@ -102,7 +102,7 @@ void screen_write(char *buff)
  */
 void screen_reflush(void)
 {
-    current_running = get_current_cpu_id()? &current_running_1 : &current_running_0;
+    pcb_t* current_running = get_pcb();
     int i, j;
 
     /* here to reflush screen buffer to serial port */
@@ -121,5 +121,5 @@ void screen_reflush(void)
     }
 
     /* recover cursor position */
-    vt100_move_cursor((*current_running)->cursor_x, (*current_running)->cursor_y);
+    vt100_move_cursor(current_running->cursor_x, current_running->cursor_y);
 }

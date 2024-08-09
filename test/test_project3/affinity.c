@@ -15,7 +15,6 @@ int main(int argc, char *argv[])
     srand(42);
     sys_move_cursor(1, 1);
     printf("start test cpu affinity, pids = {");
-    int single_core_result = 0;
 
     pid_t pids[INTEGER_TEST_NUM] = {0};
     for (int i = 0; i < INTEGER_TEST_NUM; ++i) {

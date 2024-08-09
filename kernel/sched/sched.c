@@ -51,7 +51,7 @@ spin_lock_t ready_spin_lock = {UNLOCKED};
 spin_lock_t sleep_spin_lock = {UNLOCKED};
 
 /* current running task PCB */
-pcb_t **current_running;
+// pcb_t **current_running;
 pcb_t *current_running_0;
 pcb_t *current_running_1;
 //在main.c中初始化为只想pid0_pcb的pcb指针！
@@ -111,10 +111,6 @@ void srcrel(int id) {
     while (pcb[id].wait_list.next != &pcb[id].wait_list)
         do_unblock(pcb[id].wait_list.next);
     spin_lock_release(&pcb[id].wait_lock);
-}
-
-pcb_t *get_pcb() {
-    return *(get_current_cpu_id() ? &current_running_1 : &current_running_0);
 }
 
 int pid2id(int pid) {

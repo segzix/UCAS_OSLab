@@ -2,7 +2,6 @@
 #include <unistd.h>
 #include <stdlib.h>
 #include <assert.h>
-#include <string.h>
 
 #define MAX_ITERATION 150
 #define INTEGER_TEST_CHUNK 100000

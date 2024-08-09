@@ -177,7 +177,7 @@ void e1000_init(void)
 int e1000_transmit(void *txpacket, int length)
 {
     /* TODO: [p5-task1] Transmit one packet from txpacket */
-    current_running = get_current_cpu_id()? &current_running_1 : &current_running_0;
+    pcb_t* current_running = get_pcb();
 
     uint32_t tail = e1000_read_reg(e1000,E1000_TDT);
 
@@ -197,7 +197,7 @@ int e1000_transmit(void *txpacket, int length)
     spin_lock_acquire(&send_block_spin_lock);
     while(!(tx_desc_array[tail].status & E1000_TXD_STAT_DD)){
         e1000_write_reg(e1000, E1000_IMS, E1000_IMS_TXQE);
-        do_block(&(*current_running)->list, &send_block_queue,&send_block_spin_lock);
+        do_block(&(current_running->list), &send_block_queue,&send_block_spin_lock);
     }
     spin_lock_release(&send_block_spin_lock);
 
@@ -213,7 +213,7 @@ int e1000_transmit(void *txpacket, int length)
 int e1000_poll(void *rxbuffer)
 {
     /* TODO: [p5-task2] Receive one packet and put it into rxbuffer */
-    current_running = get_current_cpu_id()? &current_running_1 : &current_running_0;
+    pcb_t* current_running = get_pcb();
 
     uint32_t tail = e1000_read_reg(e1000,E1000_RDT);
 
@@ -224,7 +224,7 @@ int e1000_poll(void *rxbuffer)
     spin_lock_acquire(&recv_block_spin_lock);
     while(!(rx_desc_array[tail].status & E1000_RXD_STAT_DD)){
         e1000_write_reg(e1000, E1000_IMS, E1000_IMS_RXDMT0);
-        do_block(&(*current_running)->list, &recv_block_queue,&recv_block_spin_lock);
+        do_block(&(current_running->list), &recv_block_queue,&recv_block_spin_lock);
     }
     spin_lock_release(&recv_block_spin_lock);
     

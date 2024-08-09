@@ -6,9 +6,6 @@
 #include <asm.h>
 #include <csr.h>
 
-//# define KERNEL_STACK		0x50501000
-//# define KERNEL_STACK1		0x50502000
-
 #define KERNEL_STACK 		0xffffffc050900000
 #define KERNEL_STACK1   0xffffffc0508ff000
 
@@ -34,24 +31,17 @@ head_endloop:
   mv    t0,zero 
   mv    t1,zero
 
-  /* TODO: [p1-task2] clear BSS for flat non-ELF images */
-
+  /* setup C environment */
   la    tp, pid0_pcb
-  //ld    sp, pid0_stack
   li    sp,KERNEL_STACK
-  #la    sp,KERNEL_STACK
 
-  la    t1,main
-  jalr  t1
-  #call  main
+  call  main
 
-  /* TODO: [p1-task2] setup C environment */
 secondary:
   la tp, pid1_pcb
   li sp, KERNEL_STACK1
 
-  la    t1,main
-  jalr  t1
+  call  main
 
 loop:
   wfi

@@ -16,7 +16,7 @@ int do_mkfs(void)
 {
     // TODO [P6-task1]: Implement do_mkfs
     // init_fdesc_array();
-    current_running = get_current_cpu_id() ? &current_running_1 : &current_running_0;
+    pcb_t* current_running = get_pcb();
 
     superblock_t *superblock = (superblock_t *) super_block;//超级块不能用tempblock，因为这个信息后面还有用
 
@@ -76,7 +76,7 @@ int do_mkfs(void)
     printk("> [FS] Setting inode...\n");
     inode_t* inode = (inode_t*)init_block(superblock->inodetable_offset,1);
     inode->mode = INODE_DIR;
-    inode->owner_pid = (*current_running)->pid;
+    inode->owner_pid = current_running->pid;
     inode->hardlinks = 0;
     inode->fd_index = 0xff;
     inode->filesz = 0;
@@ -141,16 +141,16 @@ int do_statfs(void)
 
 int do_cd(char *path)
 {
-    current_running = get_current_cpu_id() ? &current_running_1 : &current_running_0;
+    pcb_t* current_running = get_pcb();
 
     char* name = path;
     if(name[0] == '/'){
-        (*current_running)->pwd = 0;//为什么这里只能存ino号？因为如果后面进行修改，那么必然是应该在inodetable上进行修改
+        current_running->pwd = 0;//为什么这里只能存ino号？因为如果后面进行修改，那么必然是应该在inodetable上进行修改
         name++;
     }
 
     uint32_t search_ino;
-    if((search_ino = inopath2ino((*current_running)->pwd, name)) == -1){
+    if((search_ino = inopath2ino(current_running->pwd, name)) == -1){
         return 0;
     }
     else{
@@ -158,12 +158,12 @@ int do_cd(char *path)
             printk("> [FS] Cannot cd to a file\n");
             return 0;
         }
-        (*current_running)->pwd = search_ino;
+        current_running->pwd = search_ino;
     }
 
     char* pwd_name = path;
     if (*pwd_name == '/') {
-        strcpy((*current_running)->pwd_dir, pwd_name);//绝对路径则直接拷贝
+        strcpy(current_running->pwd_dir, pwd_name);//绝对路径则直接拷贝
     }
     else{
         if(*pwd_name == '.'){//代表有.可能需要将工作目录退回
@@ -172,31 +172,31 @@ int do_cd(char *path)
             //退出时要么为'/'要么为'\0
             int catsign = !(*pwd_name == '\0');//如果为'\0'那么不再需要粘贴后面
             *pwd_name = '\0';//清零方便进行字符串比较
-            if (!strcmp(path,"..") && strcmp((*current_running)->pwd_dir, "/")) {//此种情况需要返回上一级目录,即为..且进程路径不为根目录
-                char* pwd_temp = (*current_running)->pwd_dir;
+            if (!strcmp(path,"..") && strcmp(current_running->pwd_dir, "/")) {//此种情况需要返回上一级目录,即为..且进程路径不为根目录
+                char* pwd_temp = current_running->pwd_dir;
                 while(*pwd_temp != '\0')//准备将最后的/给变为'\0'
                     pwd_temp++;
                 while(*pwd_temp != '/')
                     pwd_temp--;
 
-                if(pwd_temp == (*current_running)->pwd_dir){//考虑到如果顶到头了，那么必须往后走一位置为0(即已经为根目录了)
+                if(pwd_temp == current_running->pwd_dir){//考虑到如果顶到头了，那么必须往后走一位置为0(即已经为根目录了)
                     pwd_temp++;
                 }
                 *pwd_temp = '\0';
             }
-            int rootsign = strcmp((*current_running)->pwd_dir, "/") && catsign;//如果不为'/'那么需要粘上'/'
+            int rootsign = strcmp(current_running->pwd_dir, "/") && catsign;//如果不为'/'那么需要粘上'/'
             //并且前提是后面的东西也想粘贴上去
             if(rootsign)
-                strcat((*current_running)->pwd_dir, "/");
+                strcat(current_running->pwd_dir, "/");
             if (catsign) {
                 pwd_name++;
-                strcat((*current_running)->pwd_dir, pwd_name);//将两者路径拼接在一起
+                strcat(current_running->pwd_dir, pwd_name);//将两者路径拼接在一起
             }
         }
         else {
-            if(strcmp((*current_running)->pwd_dir, "/"))
-                strcat((*current_running)->pwd_dir, "/");
-            strcat((*current_running)->pwd_dir, pwd_name);
+            if(strcmp(current_running->pwd_dir, "/"))
+                strcat(current_running->pwd_dir, "/");
+            strcat(current_running->pwd_dir, pwd_name);
         }
     }
 
@@ -208,8 +208,8 @@ int do_mkdir(char *dir_name){
     //NOTE: dentries are in the data block now
     //Child dir has the same name as parent dir?
 
-    current_running = get_current_cpu_id() ? &current_running_1 : &current_running_0;
-    if(inopath2ino((*current_running)->pwd, dir_name) != -1)
+    pcb_t* current_running = get_pcb();
+    if(inopath2ino(current_running->pwd, dir_name) != -1)
         return 0;
     //pwd是当前的父目录，然后直接把名字送进去，会返回对应的ino号或者返回0
 
@@ -224,13 +224,13 @@ int do_mkdir(char *dir_name){
     strcpy((char *)(dentry[0].name), (char *)".");//name拷贝
 
     dentry[1].dentry_valid = 1;
-    dentry[1].ino = (*current_running)->pwd;
+    dentry[1].ino = current_running->pwd;
     strcpy((char *)(dentry[1].name), (char *)"..");//name拷贝
 
     write_file(new_inode, (char*)dentry, new_inode->filesz, 2*sizeof(dentry_t));
     //作为一个目录项，其中的dentry号全部设置好
 
-    inode_t* father_inode = ino2inode_t((*current_running)->pwd);
+    inode_t* father_inode = ino2inode_t(current_running->pwd);
     dentry_t father_dentry;
 
     // uint32_t fatherinode_bcacheid = ((uint8_t*)father_inode-(uint8_t*)bcaches)/sizeof(bcache_t);
@@ -250,7 +250,7 @@ int do_mkdir(char *dir_name){
 int do_ls(int argc, char *argv[]){
     //Update current directory
     //read_inode(&cur_dir_inode, cur_dir_inode.inode_id);
-    current_running = get_current_cpu_id() ? &current_running_1 : &current_running_0;
+    pcb_t* current_running = get_pcb();
 
     int option = 0;//-l相关信息
     int option_path = 0;//是否有路径相关信息
@@ -275,10 +275,10 @@ int do_ls(int argc, char *argv[]){
     uint32_t dentry_offset = 0;
 
 
-    curr_ino = (*current_running)->pwd;
+    curr_ino = current_running->pwd;
 
     if(option_path){//需要考虑路径的
-        char* name;
+        char* name = NULL;
         int sign = 0;
         if(argc == 1)
             name = argv[0];
@@ -291,7 +291,7 @@ int do_ls(int argc, char *argv[]){
         }
         //注意这里和cd一样的，首先要返回文件的ino号生成inode
         //如果是绝对路径，则从ino号为0开始找；如果是相对路径，则从当前工作目录开始找
-        if((curr_ino = inopath2ino((sign ? 0 : (*current_running)->pwd), name)) == -1){
+        if((curr_ino = inopath2ino((sign ? 0 : current_running->pwd), name)) == -1){
             printk("> [FS] No such file/directory \n");
             return 0;
         }
@@ -329,28 +329,26 @@ int do_rmdirfile(char *dir_name){
     //NOTE: dentries are in the data block now
     //Child dir has the same name as parent dir?
 
-    current_running = get_current_cpu_id() ? &current_running_1 : &current_running_0;
+    pcb_t* current_running = get_pcb();
 
     uint32_t rm_ino;
-    inode_t* rm_inode;
     inode_t* father_inode;
 
-    if((rm_ino = inopath2ino((*current_running)->pwd, dir_name)) == -1)
+    if((rm_ino = inopath2ino(current_running->pwd, dir_name)) == -1)
         return 0;
     //pwd是当前的父目录，然后直接把名字送进去，会返回对应的ino号或者返回0
     if(!strcmp(dir_name, ".") || !strcmp(dir_name, ".."))
         return 0;
     //.和..不能删除
 
-    rm_inode = ino2inode_t(rm_ino);
-    father_inode = ino2inode_t((*current_running)->pwd);
+    father_inode = ino2inode_t(current_running->pwd);
 
     dentry_t dentry_last;//最后一个目录项，准备拷贝到前面
     dentry_t* dentry_replace;
 
-    dentry_replace = (dentry_t*)name_search_offset(father_inode, dir_name);//根据父目录的inode_t和name直接锁定要被替换掉的目录项的地址
+    dentry_replace = (dentry_t*)(uint64_t)name_search_offset(father_inode, dir_name);//根据父目录的inode_t和name直接锁定要被替换掉的目录项的地址
     read_file(father_inode, (char *)(&dentry_last), father_inode->filesz-sizeof(dentry_t), sizeof(dentry_t));
-    write_file(father_inode,(char *)(&dentry_last), (uint32_t)dentry_replace, sizeof(dentry_t));
+    write_file(father_inode,(char *)(&dentry_last), (uint64_t)dentry_replace, sizeof(dentry_t));
     //将父目录的data块中的dentry项进行处理
 
     father_inode->filesz -= sizeof(dentry_t);
@@ -365,13 +363,11 @@ int do_rmdirfile(char *dir_name){
 }
 
 void do_getpwdname(char* pwd_name){
-    current_running = get_current_cpu_id() ? &current_running_1 : &current_running_0;
-    strcpy(pwd_name, (*current_running)->pwd_dir);
+    strcpy(pwd_name, get_pcb()->pwd_dir);
 }
 
 int do_fopen(char *path, int mode)
 {
-    current_running = get_current_cpu_id() ? &current_running_1 : &current_running_0;
     // TODO [P6-task2]: Implement do_fopen
     int fd = -1;
 
@@ -385,7 +381,7 @@ int do_fopen(char *path, int mode)
     //如果是绝对路径，则从ino号为0开始找；如果是相对路径，则从当前工作目录开始找
 
     uint32_t file_ino;
-    if((file_ino = inopath2ino((sign ? 0 : (*current_running)->pwd), name)) == -1){//没有这个文件
+    if((file_ino = inopath2ino((sign ? 0 : get_pcb()->pwd), name)) == -1){//没有这个文件
         printk("> [FS] No such file/directory \n");
         return fd;
     }
@@ -475,14 +471,14 @@ int do_fclose(int fd)
 int do_touch(char *filename)
 {
     // TODO [P6-task2]: Implement do_touch
-    current_running = get_current_cpu_id() ? &current_running_1 : &current_running_0;
+    pcb_t* current_running = get_pcb();
     uint32_t len = strlen(filename);//name length
     if(len == 0 || strcheck(filename, '/') || strcheck(filename, ' ') || filename[0] == '-' || filename[0] == '.'){
         printk("> [FS] Illegal name!\n");
         return 0;
     }
 
-    if(inopath2ino((*current_running)->pwd, filename) != -1){
+    if(inopath2ino(current_running->pwd, filename) != -1){
         printk("> [FS] name already existed!\n");
         return 0;
     }//名字已经存在
@@ -490,7 +486,7 @@ int do_touch(char *filename)
     uint32_t new_ino = alloc_inode(INODE_FILE);//先给文件分配出一个inode
     //这个时候还没有分配文件描述符，因此不用管，仍为-1
 
-    inode_t* father_inode = ino2inode_t((*current_running)->pwd);
+    inode_t* father_inode = ino2inode_t(current_running->pwd);
     dentry_t father_dentry;
 
     father_dentry.dentry_valid = 1;
@@ -515,7 +511,7 @@ int do_cat(char *filename)
     }
     //注意这里和cd一样的，首先要返回文件的ino号生成inode
     //如果是绝对路径，则从ino号为0开始找；如果是相对路径，则从当前工作目录开始找
-    if((file_ino = inopath2ino((sign ? 0 : (*current_running)->pwd), name)) == -1){
+    if((file_ino = inopath2ino((sign ? 0 : get_pcb()->pwd), name)) == -1){
         printk("> [FS] No such file/directory \n");
         return 0;
     }
@@ -546,7 +542,7 @@ int do_lseek(int fd, int offset, int whence)
     inode_t* file_inode = ino2inode_t(file_ino);
 
     inode_t buff_inode;
-    memcpy(&buff_inode, file_inode, sizeof(inode_t));//栈上暂时保存
+    memcpy((void*)&buff_inode, (void*)file_inode, sizeof(inode_t));//栈上暂时保存
 
     switch(whence){
         case SEEK_SET:
@@ -574,7 +570,7 @@ int do_lseek(int fd, int offset, int whence)
     }
 
     file_inode = ino2inode_t(file_ino);//前面都是用栈上的inode做的，这里再次读出来并且翻译后写入
-    memcpy(file_inode, &buff_inode, sizeof(inode_t));//栈上暂时保存的值放到其中
+    memcpy((void*)file_inode, (void*)&buff_inode, sizeof(inode_t));//栈上暂时保存的值放到其中
     uint32_t inode_id = ((uint8_t*)file_inode-(uint8_t*)bcaches)/sizeof(bcache_t);
     bwrite(bcaches[inode_id].block_id, bcaches[inode_id].bcache_block);
     return fdescs[fd].r_cursor;  // the resulting offset location from the beginning of the file
@@ -585,12 +581,13 @@ int do_ln(char *src_path, char *dst_path)
 {   
     int sign = 0;
     char* srcname = src_path;
+    pcb_t* current_running = get_pcb();
     if(srcname[0] == '/'){
         srcname++;
         sign = 1;
     }
     uint32_t src_ino;
-    if((src_ino = inopath2ino((sign ? 0 : (*current_running)->pwd), srcname)) == -1){
+    if((src_ino = inopath2ino((sign ? 0 : current_running->pwd), srcname)) == -1){
         printk("> [FS] No such source file/dirctory!\n");
         return 0;
     }
@@ -633,7 +630,7 @@ int do_ln(char *src_path, char *dst_path)
         sign = 1;
     }//先行判断
     uint32_t dst_ino;
-    if((dst_ino = inopath2ino((sign ? 0 : (*current_running)->pwd), dstname)) == -1){
+    if((dst_ino = inopath2ino((sign ? 0 : current_running->pwd), dstname)) == -1){
         printk("> [FS] No such source file/dirctory!\n");
         return 0;
     }

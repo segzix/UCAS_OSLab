@@ -16,16 +16,10 @@ long sys_get_tick(void);
 int sys_mutex_init(int key);
 void sys_mutex_acquire(int mutex_idx);
 void sys_mutex_release(int mutex_idx);
-// <<<<<<< HEAD
-// void sys_thread_create(uint64_t addr,uint64_t thread_id);
-// void sys_thread_yield(void);
-// /************************************************************/
-// /* Do not touch this comment. Reserved for future projects. */
-// =======
 
 /************************************************************/
 /* TODO: [P3 task1] ps, getchar */
-int sys_ps();
+int sys_ps(char* buf);
 int sys_getchar(void);
 
 /* TODO: [P3 task1] exec, exit, kill waitpid */
@@ -64,7 +58,7 @@ int sys_mbox_send(int mbox_idx, void *msg, int msg_length);
 int sys_mbox_recv(int mbox_idx, void *msg, int msg_length);
 
 
-void sys_task_set_p(pid_t pid, int mask);
+void sys_task_set_p(pid_t pid, int mask, char* buf);
 int sys_task_set(int mask,char *name, int argc, char *argv[]);
 
 /* TODO: [P4-task5] shmpageget/dt */

@@ -12,4 +12,7 @@ int printv(const char *fmt, ...);
 /* (QEMU-only) save print content to logfile */
 int printl(const char *fmt, ...);
 
+/* save print content to destbuf */
+int sprintk(char* dstbuf, const char *fmt, ...);
+
 #endif

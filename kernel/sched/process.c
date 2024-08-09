@@ -51,7 +51,7 @@ pid_t do_exec(char *name, int argc, char *argv[]) {
     int taskid = -1;
     int id = -1;
 
-    current_running = get_current_cpu_id() ? &current_running_1 : &current_running_0;
+    pcb_t* current_running = get_pcb();
     /* TODO [P3-TASK1] exec exit kill waitpid ps*/
 
     /*将用户的arg参数先拷贝到内核中，以免换页换出*/
@@ -79,11 +79,11 @@ pid_t do_exec(char *name, int argc, char *argv[]) {
             break;
         }
     if (id == -1)
-        return -1;
+        return -2;
 
     /*pid,tid和父进程的pid*/
     pcb[id].pid = genpid++;
-    pcb[id].ppid = (*current_running)->pid;
+    pcb[id].ppid = current_running->pid;
     pcb[id].tid = 0;
 
     init_pcb_mm(id, taskid, NOTFORK);
@@ -95,8 +95,8 @@ pid_t do_exec(char *name, int argc, char *argv[]) {
     pcb[id].wait_list.prev = &pcb[id].wait_list;
     pcb[id].wait_list.next = &pcb[id].wait_list;
     pcb[id].kill = 0;
-    pcb[id].hart_mask = (*current_running)->hart_mask;
-    pcb[id].pwd = (*current_running)->pwd;
+    pcb[id].hart_mask = current_running->hart_mask;
+    pcb[id].pwd = current_running->pwd;
     // pwd_dir只用管shell显示，这里不做拷贝
 
     for (int k = 0; k < TASK_LOCK_MAX; k++) {
@@ -113,7 +113,7 @@ pid_t do_exec(char *name, int argc, char *argv[]) {
  * 创建线程
  */
 void do_thread_create(pid_t *thread, void *thread_entrypoint, void *arg) {
-    current_running = get_current_cpu_id() ? &current_running_1 : &current_running_0;
+    pcb_t* current_running = get_pcb();
     int id = -1;
 
     /*找寻pcbid*/
@@ -121,7 +121,7 @@ void do_thread_create(pid_t *thread, void *thread_entrypoint, void *arg) {
          i = (i + 1) % NUM_MAX_TASK, j++)
         if (pcb[i].status == TASK_EXITED) {
             id = i;
-            memcpy((void *)pcb[id].pcb_name, (void *)(*current_running)->pcb_name, 32);
+            memcpy((void *)pcb[id].pcb_name, (void *)current_running->pcb_name, 32);
             break;
         }
     if (id == -1)
@@ -129,8 +129,8 @@ void do_thread_create(pid_t *thread, void *thread_entrypoint, void *arg) {
 
     /*pid,tid和父进程的pid*/
     pcb[id].pid = genpid++;
-    pcb[id].tid = (*current_running)->tid + 1;
-    pcb[id].ppid = (*current_running)->pid;
+    pcb[id].tid = current_running->tid + 1;
+    pcb[id].ppid = current_running->pid;
 
     init_tcb_mm(id, thread_entrypoint, arg);
 
@@ -141,7 +141,7 @@ void do_thread_create(pid_t *thread, void *thread_entrypoint, void *arg) {
     pcb[id].wait_list.prev = &pcb[id].wait_list;
     pcb[id].wait_list.next = &pcb[id].wait_list;
     pcb[id].kill = 0;
-    pcb[id].hart_mask = (*current_running)->hart_mask;
+    pcb[id].hart_mask = current_running->hart_mask;
 
     // clean_temp_page(pcb[id].pgdir);
 
@@ -161,14 +161,14 @@ void do_thread_create(pid_t *thread, void *thread_entrypoint, void *arg) {
  */
 pid_t do_fork() {
     int id = -1;
-    current_running = get_current_cpu_id() ? &current_running_1 : &current_running_0;
+    pcb_t* current_running = get_pcb();
 
     /*找寻pcbid*/
     for (int i = hash(genpid, NUM_MAX_TASK), j = 0; j < NUM_MAX_TASK;
          i = (i + 1) % NUM_MAX_TASK, j++)
         if (pcb[i].status == TASK_EXITED) {
             id = i;
-            memcpy((void *)pcb[id].pcb_name, (void *)(*current_running)->pcb_name, 32);
+            memcpy((void *)pcb[id].pcb_name, (void *)current_running->pcb_name, 32);
             break;
         }
     if (id == -1)
@@ -177,7 +177,7 @@ pid_t do_fork() {
     /*pid,tid和父进程的pid*/
     pcb[id].pid = genpid++;
     pcb[id].tid = 0;
-    pcb[id].ppid = (*current_running)->pid;
+    pcb[id].ppid = current_running->pid;
 
     //这里taskid无用
     init_pcb_mm(id, 0, FORK);
@@ -189,7 +189,7 @@ pid_t do_fork() {
     pcb[id].wait_list.prev = &pcb[id].wait_list;
     pcb[id].wait_list.next = &pcb[id].wait_list;
     pcb[id].kill = 0;
-    pcb[id].hart_mask = (*current_running)->hart_mask;
+    pcb[id].hart_mask = current_running->hart_mask;
 
     for (int k = 0; k < TASK_LOCK_MAX; k++) {
         pcb[id].mutex_lock_key[k] = 0;
@@ -202,64 +202,64 @@ pid_t do_fork() {
 }
 
 /************************************************************/
-void do_task_set_p(pid_t pid, int mask) {
-    int id = pid - 2;
-    if (id < 0 || id >= NUM_MAX_TASK) {
-        printk("> [Taskset] Pid number not in use. \n\r");
+void do_task_set_p(pid_t pid, int mask, char* buf) {
+    int id = pid2id(pid);
+    if (id==-1){
+        sprintk(buf, "> [Taskset] PID number not in use. \n");
         return;
     }
     if (mask > 3 || mask < 1) {
-        printk("> [Taskset] Core number not in use. \n\r");
+        sprintk(buf, "> [Taskset] Core number not in use. \n");
         return;
     }
-    if (pcb[id].status == TASK_EXITED)
+    if (pcb[id].status == TASK_EXITED){
+        sprintk(buf, "> [Taskset] Process has exited. \n");
         return;
+    }
     pcb[id].hart_mask = mask;
 }
 
 int do_task_set(int mask, char *name, int argc, char *argv[]) {
     int pid = do_exec(name, argc, argv);
-    do_task_set_p(pid, mask);
+    if(pid < 0)
+        return pid;
+    do_task_set_p(pid, mask, NULL);
     return pid;
 }
 
 pid_t do_getpid() {
-    current_running = get_current_cpu_id() ? &current_running_1 : &current_running_0;
-    return (*current_running)->pid;
+    return get_pcb()->pid;
 }
 
-int do_process_show() {
+int do_process_show(char* buf) {
     int i = 0;
     int add_lines = 1;
-    printk("\n[Process Table]: \n");
+    sprintk(buf, "[Process Table]: \n");
     while (i < NUM_MAX_TASK) {
         switch (pcb[i].status) {
         case TASK_RUNNING:
-            printk("[%d] NAME : %s  PID : %d TID : %d STATUS : TASK_RUNNING ", i, pcb[i].pcb_name,
+            sprintk(buf, "[%d] NAME: %s PID: %d TID: %d STATUS: RUNNING ", i, pcb[i].pcb_name,
                    pcb[i].pid, pcb[i].tid);
             if (pcb[i].cpu == 0x1)
-                printk("Running on core 0\n");
+                sprintk(buf, "Running on core 0\n");
             else if (pcb[i].cpu == 0x2)
-                printk("Running on core 1\n");
-            printk("hart_mask : %d\n", pcb[i].hart_mask);
-            add_lines += 2;
+                sprintk(buf, "Running on core 1\n");
             break;
         case TASK_READY:
-            printk("[%d] NAME : %s  PID : %d TID : %d STATUS : TASK_READY\n", i, pcb[i].pcb_name,
-                   pcb[i].pid, pcb[i].tid);
-            printk("hart_mask : %d\n", pcb[i].hart_mask);
-            add_lines += 2;
+            sprintk(buf, "[%d] NAME: %s PID: %d TID: %d STATUS: READY\n", i, pcb[i].pcb_name, pcb[i].pid,
+                   pcb[i].tid);
             break;
         case TASK_BLOCKED:
-            printk("[%d] NAME : %s  PID : %d TID : %d STATUS : TASK_BLOCKED\n", i, pcb[i].pcb_name,
+            sprintk(buf, "[%d] NAME: %s PID: %d TID: %d STATUS: BLOCKED\n", i, pcb[i].pcb_name,
                    pcb[i].pid, pcb[i].tid);
-            printk("hart_mask : %d\n", pcb[i].hart_mask);
-            add_lines += 2;
             break;
         default:
             break;
         }
-
+        if (pcb[i].status != TASK_EXITED) {
+            sprintk(buf, "hart_mask : 0x%x\n", pcb[i].hart_mask);
+            add_lines += 2;
+        }
         i++;
     }
 

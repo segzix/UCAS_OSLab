@@ -1,5 +1,6 @@
 #include "os/mm.h"
 #include "os/sched.h"
+#include "os/smp.h"
 #include "os/task.h"
 #include "os/loader.h"
 #include <os/string.h>

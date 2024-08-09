@@ -45,6 +45,7 @@
 #include <os/sched.h>
 #include <os/irq.h>
 #include <os/kernel.h>
+#include <os/string.h>
 
 static unsigned int mini_strlen(const char *s)
 {
@@ -288,5 +289,32 @@ int printl(const char *fmt, ...)
     ret = _vprint(fmt, va, bios_logging);
     va_end(va);
 
+    return ret;
+}
+
+/****** sprintk ******/
+
+char strbuf[256];
+
+static void _output_string(char *buff)
+{
+    strcpy(strbuf, buff);
+}
+
+int vsprintk(const char *fmt, va_list _va)
+{
+    return _vprint(fmt, _va, _output_string);
+}
+
+int sprintk(char* dstbuf, const char *fmt, ...)
+{
+    int ret = 0;
+    va_list va;
+
+    va_start(va, fmt);
+    ret = vsprintk(fmt, va);
+    va_end(va);
+
+    strcat(dstbuf, strbuf);
     return ret;
 }

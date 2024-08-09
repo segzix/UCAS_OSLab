@@ -145,7 +145,6 @@ extern spin_lock_t sleep_spin_lock;
 
 /* current running task PCB */
 // extern pcb_t * volatile current_running;
-pcb_t ** current_running;
 pcb_t * current_running_0;
 pcb_t * current_running_1;
 
@@ -177,17 +176,16 @@ extern pid_t do_exec(char *name, int argc, char *argv[]);
 extern void do_exit(void);
 extern int do_kill(pid_t pid);
 extern int do_waitpid(pid_t pid);
-extern int do_process_show();
+int do_process_show(char* buf);
 extern pid_t do_getpid();
 int pid2id(int pid);
 
-void do_task_set_p(pid_t pid, int mask);
+void do_task_set_p(pid_t pid, int mask, char* buf);
 int do_task_set(int mask,char *name, int argc, char *argv[]);
 
 // void do_thread_create(pid_t *thread, void *thread_entrypoint, void *arg);
 void do_thread_create(pid_t *thread, void *thread_entrypoint, void *arg);
- void init_shell(void);
-pcb_t* get_pcb();
+void init_shell(void);
 void srcrel(int id);
 /************************************************************/
 

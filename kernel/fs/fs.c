@@ -18,10 +18,6 @@ uint32_t blockid2sectorid(uint32_t block_id){
     return (SUPER_START + block_id) << 3;
 }
 
-// uint32_t sectorid2blockid(uint32_t sector_id){
-//     return (sector_id >> 3);
-// }
-
 void init_bcache(void){
     for(int i = 0;i < BCACHE_NUM;i++)
         bcaches[i].bcache_valid = 0;
@@ -188,13 +184,15 @@ uint32_t alloc_block(int zero, int64_t bcache_offset){
     return block_id;
 }
 
-int freebit(char* blockbitmap, uint32_t blockid){
+int freebit(uint8_t* blockbitmap, uint32_t blockid){
     uint32_t byteid;
     uint32_t byteoffset;
 
     byteid = blockid/8;//看看是第几个byte
     byteoffset = blockid%8;
     blockbitmap[byteid] &= ~(1 << byteoffset);//将该位清空
+
+    return 0;
 }
 
 int free_inodeblock(inode_t* inode){//将一个inode所有的block块全部给清空
@@ -217,7 +215,7 @@ int free_inodeblock(inode_t* inode){//将一个inode所有的block块全部给�
         bwrite(superblock->blockbitmap_offset + inode->direct[2]/BLOCK_BIT_SIZ, blockbitmap);
     }
     if(inode->indirect_1){//第一层
-        uint32_t* indirect1map = bread(inode->indirect_1);//这里读的不是blockbitmap，而是数据块中的间指块
+        uint32_t* indirect1map = (uint32_t*)bread(inode->indirect_1);//这里读的不是blockbitmap，而是数据块中的间指块
         for(uint32_t i = 0;i < BLOCK_SIZ/4;i++){
 
 
@@ -235,12 +233,12 @@ int free_inodeblock(inode_t* inode){//将一个inode所有的block块全部给�
         bwrite(superblock->blockbitmap_offset + inode->indirect_1/BLOCK_BIT_SIZ, blockbitmap);
     }
     if(inode->indirect_2){//第一层
-        uint32_t* indirect2map1 = bread(inode->indirect_2);
+        uint32_t* indirect2map1 = (uint32_t*)bread(inode->indirect_2);
         for(uint32_t i = 0;i < BLOCK_SIZ/4;i++){
 
 
             if(indirect2map1[i]){//第二层
-                uint32_t* indirect2map2 = bread(indirect2map1[i]);
+                uint32_t* indirect2map2 = (uint32_t*)bread(indirect2map1[i]);
                 for(uint32_t j = 0;j < BLOCK_SIZ/4;j++){
 
 
@@ -264,6 +262,8 @@ int free_inodeblock(inode_t* inode){//将一个inode所有的block块全部给�
         freebit(blockbitmap, inode->indirect_2%BLOCK_BIT_SIZ);
         bwrite(superblock->blockbitmap_offset + inode->indirect_2/BLOCK_BIT_SIZ, blockbitmap);
     }
+
+    return 0;
 }
 
 /*
@@ -289,7 +289,7 @@ uint32_t countbyte(uint8_t* count_block){//根据已有的count_block来读出�
     return cnt;
 }
 
-int allocbyte(char* count_block){
+int allocbyte(uint8_t* count_block){
     uint32_t cnt = 0;
 
     for(uint32_t i = 0;i < BLOCK_SIZ;i++){
@@ -304,14 +304,14 @@ int allocbyte(char* count_block){
 }
 
 unsigned alloc_inode(uint8_t mode){//returns an inode id
-    current_running = get_current_cpu_id() ? &current_running_1 : &current_running_0;
+    pcb_t* current_running = get_pcb();
 
     superblock_t *superblock = (superblock_t *) super_block;
     uint32_t inode_id;
     uint32_t inodetable_id;
     uint32_t inodetable_offset;
 
-    char* inodebytemap;
+    uint8_t* inodebytemap;
     inode_t* inodetable;
 
     inodebytemap = bread(superblock->inodebytemap_offset);
@@ -328,7 +328,7 @@ unsigned alloc_inode(uint8_t mode){//returns an inode id
     memset(&inodetable[inodetable_offset], 0, sizeof(inode_t));
     //一定一定要先刷0！！！！就和分配出一个block一样的道理！！先刷零了再赋值！！
     inodetable[inodetable_offset].mode = mode;
-    inodetable[inodetable_offset].owner_pid = (*current_running)->pid;
+    inodetable[inodetable_offset].owner_pid = current_running->pid;
     inodetable[inodetable_offset].filesz = 0;
     inodetable[inodetable_offset].mtime = get_timer();
     inodetable[inodetable_offset].fd_index = 0xff;
@@ -367,6 +367,8 @@ int rmfile(uint32_t ino){//这个函数用于删除一个目录或者文件
         bwrite(superblock->inodebytemap_offset, inodebytemap);
         //然后把inodebytemap中的mask无效掉
     }
+
+    return 0;
 }
 /*
 inode相关的分配函数见上
@@ -474,10 +476,9 @@ void bigfile_alloc(inode_t* inode, uint32_t offset){//与searchdatapoint基本�
 
         uint8_t* indirect1_point = (uint8_t*)bread(inode->indirect_1);
         uint32_t* point = (uint32_t*)indirect1_point + (offset - DIRECT_BLOCK_SIZ * BLOCK_SIZ) / BLOCK_SIZ;//point块，还不是目录块
-        uint32_t temp_point = *point;
 
         if(!(*point))//说明还没有进行过对应数据块的分配
-            temp_point = alloc_block(0,(int64_t)point);//分配，分配的同时,point指针出的blockid号也已经置好
+            alloc_block(0,(int64_t)point);//分配，分配的同时,point指针出的blockid号也已经置好
     }
     else{//标号位于二级间接块内
         if(!inode->indirect_2){//说明还没有进行过对应数据块的分配
@@ -493,11 +494,10 @@ void bigfile_alloc(inode_t* inode, uint32_t offset){//与searchdatapoint基本�
 
         uint8_t* indirect2_point2 = (uint8_t*)bread(temp_point1);
         uint32_t* point2 = (uint32_t*)indirect2_point2 + ((offset - INDIRECT1_BLOCK_SIZ * BLOCK_SIZ) % (BLOCK_SIZ * POINT_PER_BLOCK)) / BLOCK_SIZ;//point块，还不是目录块
-        uint32_t temp_point2 = *point2;
         //这里的操作需要稍微注意一下
 
         if(!(*point2))//说明还没有进行过对应数据块的分配
-            temp_point2 = alloc_block(0,(int64_t)point2);
+            alloc_block(0,(int64_t)point2);
     }
 }
 
@@ -509,12 +509,10 @@ int write_file(inode_t* inode, char* string, uint32_t start, uint32_t length){//
 
     uint32_t seg_length;
 
-    superblock_t *superblock = (superblock_t *) super_block;
-
     inode_t buff_inode;
     uint32_t buff_ino = ((((uint8_t*)inode - (uint8_t*)bcaches)%sizeof(bcache_t)) - 8)/sizeof(inode_t);
     //通过inode来获得ino//这个实际上只考虑了一个inodetable
-    memcpy(&buff_inode, inode, sizeof(inode_t));//栈上暂时保存
+    memcpy((void*)&buff_inode, (void*)inode, sizeof(inode_t));//栈上暂时保存
 
     while(length){
         bcache_start = search_datapoint(&buff_inode, start);
@@ -540,7 +538,7 @@ int write_file(inode_t* inode, char* string, uint32_t start, uint32_t length){//
     buff_inode.mtime = get_timer();
 
     inode = ino2inode_t(buff_ino);//前面都是用栈上的inode做的，这里再次读出来并且翻译后写入
-    memcpy(inode, &buff_inode, sizeof(inode_t));//栈上暂时保存的值放到其中
+    memcpy((void*)inode, (void*)&buff_inode, sizeof(inode_t));//栈上暂时保存的值放到其中
     uint32_t bcache_inode_index = ((uint8_t*)inode - (uint8_t*)bcaches)/sizeof(bcache_t);
     bwrite(bcaches[bcache_inode_index].block_id, bcaches[bcache_inode_index].bcache_block);//落盘
 
@@ -561,7 +559,7 @@ int read_file(inode_t* inode, char* string, uint32_t start, uint32_t length){//i
     inode_t buff_inode;
     uint32_t buff_ino = ((((uint8_t*)inode - (uint8_t*)bcaches)%sizeof(bcache_t)) - 8)/sizeof(inode_t);
     //通过inode来获得ino
-    memcpy(&buff_inode, inode, sizeof(inode_t));//栈上暂时保存
+    memcpy((void*)&buff_inode, (void*)inode, sizeof(inode_t));//栈上暂时保存
 
     while(length){
         bcache_start = search_datapoint(&buff_inode, start);
@@ -578,7 +576,7 @@ int read_file(inode_t* inode, char* string, uint32_t start, uint32_t length){//i
     }
 
     inode = ino2inode_t(buff_ino);//前面都是用栈上的inode做的，这里再次读出来并且翻译后写入
-    memcpy(inode, &buff_inode, sizeof(inode_t));//栈上暂时保存的值放到其中
+    memcpy((void*)inode, (void*)&buff_inode, sizeof(inode_t));//栈上暂时保存的值放到其中
     //这里需要吗？可能不需要，但是我认为要把inode对应的东西重新加载到bcache中来
 
     return 1;
@@ -658,7 +656,6 @@ int inopath2ino(uint32_t base_ino, char * dir_name){//根据给出的目录和�
     //1.已经不是目录，自然不能cd，打印不可打开后返回
     //2.这一级已经结束，找到这一级的inode之后直接返回，这里的判断条件就是最后不是'/'而是'\0'
     inode_t* base_inode = ino2inode_t(base_ino);
-    uint32_t next_ino;
     dentry_t* dentry;
 
     if(!sign){//当级没有结束

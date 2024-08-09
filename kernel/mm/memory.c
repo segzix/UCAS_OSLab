@@ -17,7 +17,7 @@ extern void ret_from_exception();
  * 根据key值建立共享页(默认共享页用户虚地址从0x80000000开始)
  */
 uintptr_t shm_page_get(int key) {
-    current_running = get_current_cpu_id() ? &current_running_1 : &current_running_0;
+    pcb_t* current_running = get_pcb();
     uint8_t find;
     uintptr_t va;
     uint32_t index = hash(key, SHARE_PAGE_NUM);
@@ -47,14 +47,14 @@ startshm:
         uint32_t pgindex = share_pages[index].pg_index;
 
         //直接建立用户虚地址的映射,并将对应的页面used++
-        PTE *pte = mappages(va, (*current_running)->pgdir, kva2pa(pgindex2kva(pgindex)),
+        PTE *pte = mappages(va, current_running->pgdir, kva2pa(pgindex2kva(pgindex)),
                             _PAGE_PRESENT | _PAGE_READ | _PAGE_WRITE | _PAGE_EXEC | _PAGE_USER);
         assert(pte);
         page_general[pgindex].used++;
     } else {
         //分配出用户对应虚地址的共享页
         uintptr_t kva =
-            uvmalloc(va, (*current_running)->pgdir,
+            uvmalloc(va, current_running->pgdir,
                      _PAGE_PRESENT | _PAGE_READ | _PAGE_WRITE | _PAGE_EXEC | _PAGE_USER);
 
         //给共享页打上key和对应的页面(初始化share_pages)
@@ -71,8 +71,7 @@ startshm:
  */
 void shm_page_dt(uintptr_t va) {
     uintptr_t kva;
-    current_running = get_current_cpu_id() ? &current_running_1 : &current_running_0;
-    kva = uvmfree((*current_running)->pgdir, va);
+    kva = uvmfree(get_pcb()->pgdir, va);
 
     unsigned pgindex = kva2pgindex(kva);
     uint32_t shindex;

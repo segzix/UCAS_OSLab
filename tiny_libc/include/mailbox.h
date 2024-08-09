@@ -13,7 +13,7 @@ typedef struct MsgHeader
     pid_t sender;
 } MsgHeader_t;
 
-uint32_t adler32(char *data, size_t len);
+uint32_t adler32(const char *data, size_t len);
 void generateRandomString(char* buf, int len);
 
 

@@ -11,4 +11,5 @@ void pthread_create(pthread_t *thread,
 int pthread_join(pthread_t thread)
 {
     /* TODO: [p4-task4] implement pthread_join */
+    return 0;
 }

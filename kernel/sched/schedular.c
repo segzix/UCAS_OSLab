@@ -16,14 +16,14 @@
 void do_scheduler(void) {
     spin_lock_acquire(&ready_spin_lock);
     list_node_t *list_check;
-    current_running = get_current_cpu_id() ? &current_running_1 : &current_running_0;
+    pcb_t* current_running = get_pcb();
     int curcpu = get_current_cpu_id() ? 0x2 : 0x1;
 
     /*检查睡眠队列，网络重传检测，回收物理页*/
     check_sleeping();
     do_resend();
     //当前是shell,并且经过了exit需要被回收，同时不是子线程，同时shell的不允许被回收
-    if ((*current_running)->pid == 2) {
+    if (current_running->pid == 2) {
         for (unsigned i = 0; i < NUM_MAX_TASK; i++) {
             if ((pcb[i].pid != 2) && pcb[i].recycle && !pcb[i].tid) {
                 //取消末级页，取消映射，回收内核栈
@@ -35,45 +35,35 @@ void do_scheduler(void) {
         }
     }
 
-    pcb_t *prev_running = (*current_running);
+    pcb_t *prev_running = current_running;
 
     // RUNNING->READY(BLOCKED不用改，已在队列中)
-    if ((*current_running)->status == TASK_RUNNING) {
-        list_add(&((*current_running)->list), &ready_queue);
-        (*current_running)->status = TASK_READY;
+    if (current_running->status == TASK_RUNNING) {
+        list_add(&(current_running->list), &ready_queue);
+        current_running->status = TASK_READY;
     }
 
     // READY->RUNNING(简易调度算法，考虑mask是否允许在该核上运行)
     list_check = ready_queue.next;
-    (*current_running) = list_entry(ready_queue.next, pcb_t, list);
-    while ((curcpu & (*current_running)->hart_mask) == 0) {
+    current_running = list_entry(ready_queue.next, pcb_t, list);
+    while ((curcpu & current_running->hart_mask) == 0) {
         list_check = list_check->next;
-        (*current_running) = list_entry(list_check, pcb_t, list);
+        current_running = list_entry(list_check, pcb_t, list);
     }
-    (*current_running)->cpu = curcpu;
-    list_del(&((*current_running)->list));
-    (*current_running)->status = TASK_RUNNING;
+    set_pcb(current_running);
+    current_running->cpu = curcpu;
+    list_del(&(current_running->list));
+    current_running->status = TASK_RUNNING;
 
     //设置根目录页，刷tlb，icache
-    set_satp(SATP_MODE_SV39, (*current_running)->pid,
-             kva2pa((uintptr_t)(*current_running)->pgdir) >> NORMAL_PAGE_SHIFT);
+    set_satp(SATP_MODE_SV39, current_running->pid,
+             kva2pa((uintptr_t)((current_running)->pgdir)) >> NORMAL_PAGE_SHIFT);
     local_flush_tlb_all();
     local_flush_icache_all();
 
     spin_lock_release(&ready_spin_lock);
 
-    switch_to(prev_running, (*current_running));
-}
-
-/*
- * 进入睡眠，设置苏醒时间并阻塞至睡眠队列中
- */
-void do_sleep(uint32_t sleep_time) {
-    spin_lock_acquire(&sleep_spin_lock);
-    pcb_t *curpcb = get_pcb();
-    curpcb->wakeup_time = get_timer() + sleep_time;
-    do_block(&(curpcb->list), &sleep_queue, &sleep_spin_lock);
-    spin_lock_release(&sleep_spin_lock);
+    switch_to(prev_running, current_running);
 }
 
 /*

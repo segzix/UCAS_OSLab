@@ -54,8 +54,7 @@ int do_net_recv_stream(void *buffer, int *nbytes) {
         e1000_poll(temp_buffer);
         get_pcb()->netstream.ACK_valid = 1;
 
-        //数据包头开始的地方与数据段开始的地方
-        char *start_buffer = temp_buffer + START_OFFSET;
+        //数据段开始的地方
         char *data_buffer = temp_buffer + SIZE_SEGMENT_OFFSET;
 
         //获得当前数据段的序号，长度和魔数标记

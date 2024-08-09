@@ -1,57 +1,53 @@
 #include "os/smp.h"
-#include <os/irq.h>
-#include <os/time.h>
-#include <os/sched.h>
-#include <os/string.h>
-#include <os/kernel.h>
-#include <printk.h>
 #include <assert.h>
-#include <screen.h>
+#include <cpparg.h>
+#include <e1000.h>
+#include <os/irq.h>
+#include <os/kernel.h>
 #include <os/mm.h>
 #include <os/net.h>
+#include <os/sched.h>
+#include <os/string.h>
+#include <os/time.h>
 #include <pgtable.h>
 #include <plic.h>
-#include <e1000.h>
+#include <printk.h>
+#include <screen.h>
 
 handler_t irq_table[IRQC_COUNT];
 handler_t exc_table[EXCC_COUNT];
 
-void interrupt_helper(regs_context_t *regs, uint64_t stval, uint64_t scause)
-{
-    //lock_kernel();
+void interrupt_helper(regs_context_t *regs, uint64_t stval, uint64_t scause) {
+    // lock_kernel();
 
-    current_running = get_current_cpu_id() ? &current_running_1 : &current_running_0;
-    if((*current_running)->kill == 1)
+    pcb_t* current_running = get_pcb();
+    if (current_running->kill == 1)
         do_exit();
 
-    if(scause & (1UL << 63)){
+    if (scause & (1UL << 63)) {
         scause = scause & (~(1UL << 63));
         (*irq_table[scause])(regs, stval, scause);
-    }
-    else{
+    } else {
         (*exc_table[scause])(regs, stval, scause);
     }
 
-    if((*current_running)->kill == 1)
+    if (current_running->kill == 1)
         do_exit();
-    //stval传递为interrupt值，确定类型
+    // stval传递为interrupt值，确定类型
     // TODO: [p2-task3] & [p2-task4] interrupt handler.
     // call corresponding handler by the value of `scause`
-    //unlock_kernel();
-
+    // unlock_kernel();
 }
 
-void handle_irq_timer(regs_context_t *regs, uint64_t stval, uint64_t scause)
-{
-    //disable_preempt();
+void handle_irq_timer(regs_context_t *regs, uint64_t stval, uint64_t scause) {
+    // disable_preempt();
     bios_set_timer(get_ticks() + TIMER_INTERVAL);
     do_scheduler();
     // TODO: [p2-task4] clock interrupt handler.
     // Note: use bios_set_timer to reset the timer and remember to reschedule
 }
 
-void handle_irq_ext(regs_context_t *regs, uint64_t stval, uint64_t scause)
-{
+void handle_irq_ext(regs_context_t *regs, uint64_t stval, uint64_t scause) {
     uint32_t plic_ID = plic_claim();
 
     /*
@@ -59,9 +55,9 @@ void handle_irq_ext(regs_context_t *regs, uint64_t stval, uint64_t scause)
      * 0：双核时之前另一核处理过
      * 其他情况
      */
-    if(plic_ID == PLIC_E1000_QEMU_IRQ || plic_ID == PLIC_E1000_PYNQ_IRQ)
+    if (plic_ID == PLIC_E1000_QEMU_IRQ || plic_ID == PLIC_E1000_PYNQ_IRQ)
         net_handle_irq();
-    else if(plic_ID == 0)
+    else if (plic_ID == 0)
         return;
     else
         handle_other(regs, stval, scause);
@@ -71,17 +67,16 @@ void handle_irq_ext(regs_context_t *regs, uint64_t stval, uint64_t scause)
     // Note: plic_claim and plic_complete will be helpful ...
 }
 
-void init_exception()
-{
-    exc_table[EXCC_SYSCALL]         = (handler_t)handle_syscall;
+void init_exception() {
+    exc_table[EXCC_SYSCALL] = (handler_t)handle_syscall;
     exc_table[EXCC_INST_MISALIGNED] = (handler_t)handle_other;
-    exc_table[EXCC_INST_ACCESS]     = (handler_t)handle_other;
-    exc_table[EXCC_BREAKPOINT]      = (handler_t)handle_other;
-    exc_table[EXCC_LOAD_ACCESS]     = (handler_t)handle_other;
-    exc_table[EXCC_STORE_ACCESS]    = (handler_t)handle_other;
+    exc_table[EXCC_INST_ACCESS] = (handler_t)handle_other;
+    exc_table[EXCC_BREAKPOINT] = (handler_t)handle_other;
+    exc_table[EXCC_LOAD_ACCESS] = (handler_t)handle_other;
+    exc_table[EXCC_STORE_ACCESS] = (handler_t)handle_other;
     exc_table[EXCC_INST_PAGE_FAULT] = (handler_t)handle_pagefault_access;
     exc_table[EXCC_LOAD_PAGE_FAULT] = (handler_t)handle_pagefault_access;
-    exc_table[EXCC_STORE_PAGE_FAULT]= (handler_t)handle_pagefault_store;
+    exc_table[EXCC_STORE_PAGE_FAULT] = (handler_t)handle_pagefault_store;
     /* TODO: [p2-task3] initialize exc_table */
     /* NOTE: handle_syscall, handle_other, etc.*/
 
@@ -101,115 +96,112 @@ void init_exception()
     /* TODO: [p2-task3] set up the entrypoint of exceptions */
 }
 
-void handle_other(regs_context_t *regs, uint64_t stval, uint64_t scause)
-{
-    char* reg_name[] = {
-        "zero "," ra  "," sp  "," gp  "," tp  ",
-        " t0  "," t1  "," t2  ","s0/fp"," s1  ",
-        " a0  "," a1  "," a2  "," a3  "," a4  ",
-        " a5  "," a6  "," a7  "," s2  "," s3  ",
-        " s4  "," s5  "," s6  "," s7  "," s8  ",
-        " s9  "," s10 "," s11 "," t3  "," t4  ",
-        " t5  "," t6  "
-    };
+void handle_other(regs_context_t *regs, uint64_t stval, uint64_t scause) {
+    char *reg_name[] = {"zero ", " ra  ", " sp  ", " gp  ", " tp  ", " t0  ", " t1  ", " t2  ",
+                        "s0/fp", " s1  ", " a0  ", " a1  ", " a2  ", " a3  ", " a4  ", " a5  ",
+                        " a6  ", " a7  ", " s2  ", " s3  ", " s4  ", " s5  ", " s6  ", " s7  ",
+                        " s8  ", " s9  ", " s10 ", " s11 ", " t3  ", " t4  ", " t5  ", " t6  "};
     for (int i = 0; i < 32; i += 3) {
         for (int j = 0; j < 3 && i + j < 32; ++j) {
-            printk("%s : %016lx ",reg_name[i+j], regs->regs[i+j]);
+            printk("%s : %016lx ", reg_name[i + j], regs->regs[i + j]);
         }
         printk("\n\r");
     }
-    printk("sstatus: 0x%lx sbadaddr: 0x%lx scause: %lu\n\r",
-           regs->sstatus, regs->sbadaddr, regs->scause);
+    printk("sstatus: 0x%lx sbadaddr: 0x%lx scause: %lu\n\r", regs->sstatus, regs->sbadaddr,
+           regs->scause);
     printk("sepc: 0x%lx\n\r", regs->sepc);
     printk("tval: 0x%lx cause: 0x%lx\n", stval, scause);
     assert(0);
 }
 
-void handle_pagefault_access(regs_context_t *regs, uint64_t stval, uint64_t scause)
-{
-    current_running = get_current_cpu_id() ? &current_running_1 : &current_running_0;
-    uint16_t search_block_id;//从磁盘中取出时的扇区号
-    PTE * search_PTE_swap;
+void handle_pagefault_access(regs_context_t *regs, uint64_t stval, uint64_t scause) {
+    pcb_t* current_running = get_pcb();
+    uint16_t search_block_id; //从磁盘中取出时的扇区号
+    PTE *search_PTE_swap;
 
+#ifdef SAFEALLOC
     //若walk不到地址，说明映射还没有建立，报段错误
-    search_PTE_swap = (PTE*)walk(stval,(*current_running)->pgdir,VOID);
-    if(!search_PTE_swap){
+    search_PTE_swap = (PTE *)walk(stval, (*current_running)->pgdir, VOID);
+    if (!search_PTE_swap) {
         printk("Segmentation Fault");
         regs->sepc = regs->sepc + 4;
         return;
     }
-    
+#else
+    search_PTE_swap = (PTE *)walk(stval, current_running->pgdir, ALLOC);
+#endif
+
     /*
      * p位有效：access位无，重新给出即可
      * p位无效：软件位有，在硬盘上
      * p位无效：软件位无，mmaloc完还未进行分配
      */
-    if(*search_PTE_swap & _PAGE_PRESENT){
-        set_attribute(search_PTE_swap, 
-                    get_attribute(*search_PTE_swap,PA_ATTRIBUTE_MASK) |_PAGE_PRESENT |_PAGE_ACCESSED |_PAGE_READ);
-    }
-    else{
-        if((*search_PTE_swap & _PAGE_SOFT)){
+    if (*search_PTE_swap & _PAGE_PRESENT) {
+        set_attribute(search_PTE_swap, get_attribute(*search_PTE_swap, PA_ATTRIBUTE_MASK) |
+                                           _PAGE_PRESENT | _PAGE_ACCESSED | _PAGE_READ);
+    } else {
+        if ((*search_PTE_swap & _PAGE_SOFT)) {
             //确定扇区上的扇区号，分配一页，并将扇区读入
-            search_block_id = (uint16_t)get_pfn(*search_PTE_swap);//确定扇区上的扇区号
-            uint64_t kva = palloc(search_PTE_swap, 
-                _PAGE_PRESENT | _PAGE_READ | _PAGE_WRITE | _PAGE_EXEC |_PAGE_ACCESSED | _PAGE_USER);
+            search_block_id = (uint16_t)get_pfn(*search_PTE_swap); //确定扇区上的扇区号
+            uint64_t kva = palloc(search_PTE_swap, _PAGE_PRESENT | _PAGE_READ | _PAGE_WRITE |
+                                                       _PAGE_EXEC | _PAGE_ACCESSED | _PAGE_USER);
             bios_sd_read(kva2pa(kva), 8, search_block_id);
-        }
-        else{
-            palloc(search_PTE_swap, 
-                _PAGE_PRESENT | _PAGE_READ | _PAGE_WRITE | _PAGE_EXEC |_PAGE_ACCESSED | _PAGE_USER);
-            
+        } else {
+            palloc(search_PTE_swap, _PAGE_PRESENT | _PAGE_READ | _PAGE_WRITE | _PAGE_EXEC |
+                                        _PAGE_ACCESSED | _PAGE_USER);
         }
     }
 
-    page_general[kva2pgindex(pa2kva(get_pfn(*search_PTE_swap)<<NORMAL_PAGE_SHIFT))].fqy = 1;
+    page_general[kva2pgindex(pa2kva(get_pfn(*search_PTE_swap) << NORMAL_PAGE_SHIFT))].fqy = 1;
 
     local_flush_tlb_all();
 }
 
-void handle_pagefault_store(regs_context_t *regs, uint64_t stval, uint64_t scause)
-{
-    current_running = get_current_cpu_id() ? &current_running_1 : &current_running_0;
-    uint16_t search_block_id;//从磁盘中取出时的扇区号
-    PTE * search_PTE_swap;
+void handle_pagefault_store(regs_context_t *regs, uint64_t stval, uint64_t scause) {
+    pcb_t* current_running = get_pcb();
+    uint16_t search_block_id; //从磁盘中取出时的扇区号
+    PTE *search_PTE_swap;
 
+#ifdef SAFEALLOC
     //若walk不到地址，说明映射还没有建立，报段错误
-    search_PTE_swap = (PTE*)walk(stval,(*current_running)->pgdir,VOID);
-    if(!search_PTE_swap){
+    search_PTE_swap = (PTE *)walk(stval, (*current_running)->pgdir, VOID);
+    if (!search_PTE_swap) {
         printk("Segmentation Fault");
         regs->sepc = regs->sepc + 4;
         return;
     }
-    
+#else
+    search_PTE_swap = (PTE *)walk(stval, current_running->pgdir, ALLOC);
+#endif
+
     /*
      * p位有效：wirte位无，说明是写时复制，需进行uvmcopy
      * p位有效：wirte位有，重新给出即可
      * p位无效：软件位有，在硬盘上
      * p位无效：软件位无，mmaloc完还未进行分配
      */
-    if(*search_PTE_swap & _PAGE_PRESENT){
-        if(*search_PTE_swap & _PAGE_WRITE)
-            set_attribute(search_PTE_swap, 
-                        get_attribute(*search_PTE_swap,PA_ATTRIBUTE_MASK) |_PAGE_PRESENT |_PAGE_ACCESSED |_PAGE_READ |_PAGE_DIRTY |_PAGE_WRITE);
+    if (*search_PTE_swap & _PAGE_PRESENT) {
+        if (*search_PTE_swap & _PAGE_WRITE)
+            set_attribute(search_PTE_swap, get_attribute(*search_PTE_swap, PA_ATTRIBUTE_MASK) |
+                                               _PAGE_PRESENT | _PAGE_ACCESSED | _PAGE_READ |
+                                               _PAGE_DIRTY | _PAGE_WRITE);
         else {
             uvmcopy(search_PTE_swap);
         }
-    }
-    else{
-        if((*search_PTE_swap & _PAGE_SOFT)){
+    } else {
+        if ((*search_PTE_swap & _PAGE_SOFT)) {
             //确定扇区上的扇区号，分配一页，并将扇区读入
             search_block_id = (uint16_t)get_pfn(*search_PTE_swap);
-            uint64_t kva = palloc(search_PTE_swap, 
-                _PAGE_PRESENT | _PAGE_READ | _PAGE_WRITE | _PAGE_EXEC |_PAGE_ACCESSED | _PAGE_DIRTY| _PAGE_USER);
+            uint64_t kva =
+                palloc(search_PTE_swap, _PAGE_PRESENT | _PAGE_READ | _PAGE_WRITE | _PAGE_EXEC |
+                                            _PAGE_ACCESSED | _PAGE_DIRTY | _PAGE_USER);
             bios_sd_read(kva2pa(kva), 8, search_block_id);
-        }
-        else{
-            palloc(search_PTE_swap, 
-                _PAGE_PRESENT | _PAGE_READ | _PAGE_WRITE | _PAGE_EXEC |_PAGE_ACCESSED | _PAGE_DIRTY| _PAGE_USER);
+        } else {
+            palloc(search_PTE_swap, _PAGE_PRESENT | _PAGE_READ | _PAGE_WRITE | _PAGE_EXEC |
+                                        _PAGE_ACCESSED | _PAGE_DIRTY | _PAGE_USER);
         }
     }
-    
-    page_general[kva2pgindex(pa2kva(get_pfn(*search_PTE_swap)<<NORMAL_PAGE_SHIFT))].fqy = 1;
+
+    page_general[kva2pgindex(pa2kva(get_pfn(*search_PTE_swap) << NORMAL_PAGE_SHIFT))].fqy = 1;
     local_flush_tlb_all();
 }

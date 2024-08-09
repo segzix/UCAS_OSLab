@@ -29,12 +29,8 @@ head_endloop:
 
   /* TODO: [p1-task2] clear BSS for flat non-ELF images */
   //为deflate函数创造环境，创造完环境并执行完后再直接跳转到kernel
-
   la    sp,DEFLATE_STACK
-  //设置压缩程序栈指针
-
-  la    t1,main
-  jalr  t1
+  call main
 
   /* TODO: [p1-task2] setup C environment */
   la    t1,KERNEL  # jump to   KERNEL
