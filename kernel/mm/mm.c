@@ -9,8 +9,6 @@
 #include <printk.h>
 
 // NOTE: A/C-core
-page_allocated page_general[PAGE_NUM];
-share_page share_pages[SHARE_PAGE_NUM];
 uint16_t swap_block_id = 0x200;
 uint16_t swap_page_id;
 

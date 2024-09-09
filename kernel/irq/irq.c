@@ -33,14 +33,9 @@ void interrupt_helper(regs_context_t *regs, uint64_t stval, uint64_t scause) {
 
     if (current_running->kill == 1)
         do_exit();
-    // stval传递为interrupt值，确定类型
-    // TODO: [p2-task3] & [p2-task4] interrupt handler.
-    // call corresponding handler by the value of `scause`
-    // unlock_kernel();
 }
 
 void handle_irq_timer(regs_context_t *regs, uint64_t stval, uint64_t scause) {
-    // disable_preempt();
     bios_set_timer(get_ticks() + TIMER_INTERVAL);
     do_scheduler();
     // TODO: [p2-task4] clock interrupt handler.

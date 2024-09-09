@@ -30,17 +30,16 @@
 #define INCLUDE_SCHEDULER_H_
 
 #include "hash.h"
+#include "os/lock.h"
 #include "os/net.h"
 #include "pgtable.h"
-#include "os/lock.h" 
 
 #define NUM_MAX_TASK 32
 #define TASK_LOCK_MAX 16
 extern uint16_t task_num;
 
 /* used to save register infomation */
-typedef struct regs_context
-{
+typedef struct regs_context {
     /* Saved main processor registers.*/
     reg_t regs[32];
 
@@ -52,8 +51,7 @@ typedef struct regs_context
 } regs_context_t;
 
 /* used to save register infomation in switch_to */
-typedef struct switchto_context
-{
+typedef struct switchto_context {
     /* Callee saved registers.*/
     reg_t regs[14];
 } switchto_context_t;
@@ -65,20 +63,18 @@ typedef enum {
     TASK_EXITED,
 } task_status_t;
 
-enum FORK{
+enum FORK {
     FORK,
     NOTFORK,
 };
 
 /* Process Control Block */
-typedef struct pcb
-{
+typedef struct pcb {
     /* register context */
     // NOTE: this order must be preserved, which is defined in regs.h!!
     reg_t kernel_sp;
     reg_t user_sp;
-    char  pcb_name[32];//for debugging
-
+    char pcb_name[32]; // for debugging
 
     /* process id */
     pid_t pid;
@@ -107,7 +103,7 @@ typedef struct pcb
     /* time(seconds) to wake up sleeping PCB */
     uint64_t wakeup_time;
 
-    /* mask 
+    /* mask
      * 0x01 core 0
      * 0x02 core 1
      * 0x03 core 0/1
@@ -118,15 +114,15 @@ typedef struct pcb
     uint8_t prior;
 
     /* pgdir */
-    PTE* pgdir;
+    PTE *pgdir;
     uintptr_t heap;
     unsigned recycle;
 
     uint32_t pwd;
-    char pwd_dir[64];//用来记录当前工作路径
+    char pwd_dir[64]; //用来记录当前工作路径
 
     netStream netstream;
-} pcb_t,tcb_t;
+} pcb_t, tcb_t;
 
 /* ready queue to run */
 extern list_head ready_queue;
@@ -140,19 +136,19 @@ extern list_head sleep_queue;
 extern spin_lock_t sleep_spin_lock;
 
 /* current running task PCB */
-pcb_t * current_running_0;
-pcb_t * current_running_1;
+pcb_t *current_running_0;
+pcb_t *current_running_1;
 extern pcb_t pid0_pcb;
 extern pcb_t pid1_pcb;
 pcb_t pcb[NUM_MAX_TASK];
 
 /*sched function for shedular*/
 #ifdef MLFQ
-pcb_t* MLFQsched(int curcpu, pcb_t* currunning);
+pcb_t *MLFQsched(int curcpu, pcb_t *currunning);
 void MLFQupprior();
 void init_queues();
 #else
-pcb_t* RRsched(int curcpu, pcb_t* currunning);
+pcb_t *RRsched(int curcpu, pcb_t *currunning);
 #endif
 extern void switch_to(pcb_t *prev, pcb_t *next);
 void do_scheduler(void);
@@ -163,13 +159,11 @@ void do_unblock(list_node_t *);
 /*proc function for process*/
 void clean_temp_page(uint64_t pgdir_addr);
 void srcrel(int id);
-//pcb与tcb的初始化
-void init_pcb_stack(
-    ptr_t kernel_stack, ptr_t kva_user_stack, ptr_t entry_point,
-    pcb_t *pcb,int argc, char *argv[]);
-void init_tcb_stack(
-    ptr_t kernel_stack, ptr_t kva_user_stack, ptr_t entry_point, 
-    tcb_t *tcb,void* arg);
+// pcb与tcb的初始化
+void init_pcb_stack(ptr_t kernel_stack, ptr_t kva_user_stack, ptr_t entry_point, pcb_t *pcb,
+                    int argc, char *argv[]);
+void init_tcb_stack(ptr_t kernel_stack, ptr_t kva_user_stack, ptr_t entry_point, tcb_t *tcb,
+                    void *arg);
 void init_pcb_mm(int id, int taskid, enum FORK fork);
 void init_tcb_mm(int id, void *thread_entrypoint, void *arg);
 
@@ -185,7 +179,7 @@ void do_thread_create(pid_t *thread, void *thread_entrypoint, void *arg);
 void do_exit(void);
 int do_kill(pid_t pid);
 int do_waitpid(pid_t pid);
-int do_process_show(char* buf);
+int do_process_show(char *buf);
 
 // pid&&id
 pid_t do_getpid();
@@ -197,9 +191,9 @@ static inline int pid2id(int pid) {
     return -1;
 };
 
-//cpu task
-void do_task_set_p(pid_t pid, int mask, char* buf);
-int do_task_set(int mask,char *name, int argc, char *argv[]);
+// cpu task
+void do_task_set_p(pid_t pid, int mask, char *buf);
+int do_task_set(int mask, char *name, int argc, char *argv[]);
 
 /************************************************************/
 

@@ -13,7 +13,7 @@ static inline pcb_t *get_pcb() {
     return get_current_cpu_id() ? current_running_1 : current_running_0;
 }
 static inline void set_pcb(pcb_t *pcb) {
-    if(!get_current_cpu_id())
+    if (!get_current_cpu_id())
         current_running_0 = pcb;
     else
         current_running_1 = pcb;
