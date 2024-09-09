@@ -1,14 +1,8 @@
 #include <asm/biosdef.h>
 #include <csr.h>
+#include <mminit.h>
 // deflate size location (os_size could be sectors [p1-task3] or bytes [p1-task4])
 .equ deflate_block_size_loc, 0x502001fe
-
-// BIOS function entry (jump here to use BIOS APIs)
-.equ bios_func_entry, 0x50150000
-
-// deflate&&kernel function entry 
-.equ deflate, 0x53000000
-.equ kernel, 0x50201000
 
 .text
 .global main
@@ -19,21 +13,17 @@ main:
 	// a0 is mhartid
 	bnez a0, secondary
 
-	// call BIOS to print message
-	li   	a7,BIOS_PUTSTR
-	la 		a0,msg
-	jal  	bios_func_entry 
-
 	// call BIOS to load deflate
-	li   	a7,BIOS_SDREAD
-	la 		a0,deflate
-	la 	 	t1,deflate_block_size_loc
-	lh	 	a1,0(t1)
-	li		a2,1
-	jal  	bios_func_entry 
+	li   	a7, BIOS_SDREAD
+	la 		a0, DEFLATE_ADDR
+	la 	 	t1, deflate_block_size_loc
+	lh	 	a1, 0(t1)
+	li		a2, 1
+	li		t0, BIOS_FUNC_ENTRY
+	jalr  	t0
 
 	// start deflate
-	la 		t1,deflate
+	li 		t1, DEFLATE_ADDR
 	jr		t1
 
 	/************************************************************/
@@ -46,7 +36,7 @@ secondary:
 	csrw CSR_SIE, zero
 	csrw CSR_SIP, zero
 
-	la t0, kernel
+	li t0, KERNEL
 	csrw CSR_STVEC, t0
 
 	li t0, SIE_SSIE

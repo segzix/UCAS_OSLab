@@ -49,6 +49,7 @@
 #include <screen.h>
 #include <sys/syscall.h>
 #include <type.h>
+#include "mminit.h"
 
 #define TASK_INFO_LOC 0xffffffc0502001f4 //记录taskinfo位置信息
 

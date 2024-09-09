@@ -5,10 +5,7 @@
 
 #include <asm.h>
 #include <csr.h>
-
-/* maybe you need another stack for booting? */
-.equ kernel_stack0_for_boot, 		0x50900000
-.equ kernel_stack1_for_boot,   0x508ff000
+#include <mminit.h>
 
 .section ".bootkernel_entry","ax"
 ENTRY(_boot)
@@ -24,13 +21,13 @@ ENTRY(_boot)
   csrr a0, CSR_MHARTID
   bnez a0, secondary
 
-  la sp, kernel_stack0_for_boot
+  li sp, PID0_STACK
   // this will never return
   call boot_kernel
 
   secondary:
 
-  la sp, kernel_stack1_for_boot
+  li sp, PID1_STACK
   // this will never return
   call boot_kernel
 

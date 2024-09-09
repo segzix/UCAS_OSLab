@@ -37,10 +37,10 @@ MINICOM         = minicom
 
 CFLAGS          = -O0 -fno-builtin -nostdlib -nostdinc -Wall -mcmodel=medany -ggdb3
 
-BOOT_INCLUDE    = -I$(DIR_ARCH)/include
+BOOT_INCLUDE    = -I$(DIR_ARCH)/include -Iinclude
 BOOT_CFLAGS     = $(CFLAGS) $(BOOT_INCLUDE) -Wl,--defsym=TEXT_START=$(BOOTLOADER_ENTRYPOINT) -T riscv.lds
 
-DECOMPRESS_INCLUDE  = -I$(DIR_DEFLATE) -I$(DIR_ARCH)/include #-Iinclude
+DECOMPRESS_INCLUDE  = -I$(DIR_DEFLATE) -I$(DIR_ARCH)/include -Iinclude
 DECOMPRESS_CFLAGS   = $(CFLAGS) $(DECOMPRESS_INCLUDE) -Wl,--defsym=TEXT_START=$(DECOMPRESS_ENTRYPOINT) -T riscv.lds
 
 KERNEL_INCLUDE  = -I$(DIR_ARCH)/include -Iinclude -Idrivers 
@@ -89,7 +89,7 @@ DIR_DECOMPRESS     = ./decompress
 
 BOOTLOADER_ENTRYPOINT   = 0x50200000
 DECOMPRESS_ENTRYPOINT   = 0x53000000
-KERNEL_ENTRYPOINT       = 0xffffffc050202000
+KERNEL_ENTRYPOINT       = 0xffffffc050201000
 USER_ENTRYPOINT         = 0x10000
 
 # -----------------------------------------------------------------------

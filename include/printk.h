@@ -1,8 +1,6 @@
 #ifndef INCLUDE_PRINTK_H_
 #define INCLUDE_PRINTK_H_
 
-#include <stdarg.h>
-
 /* kernel print */
 int printk(const char *fmt, ...);
 

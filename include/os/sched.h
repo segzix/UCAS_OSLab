@@ -29,14 +29,14 @@
 #ifndef INCLUDE_SCHEDULER_H_
 #define INCLUDE_SCHEDULER_H_
 
+#include "hash.h"
 #include "os/net.h"
 #include "pgtable.h"
-#include <os/lock.h>
-#include <type.h>
-#include <os/list.h>
+#include "os/lock.h" 
 
 #define NUM_MAX_TASK 32
 #define TASK_LOCK_MAX 16
+extern uint16_t task_num;
 
 /* used to save register infomation */
 typedef struct regs_context
@@ -64,6 +64,11 @@ typedef enum {
     TASK_READY,
     TASK_EXITED,
 } task_status_t;
+
+enum FORK{
+    FORK,
+    NOTFORK,
+};
 
 /* Process Control Block */
 typedef struct pcb
@@ -123,87 +128,82 @@ typedef struct pcb
     netStream netstream;
 } pcb_t,tcb_t;
 
-/*main.c中定义的变量和函数*/
-extern uint16_t num_tasks;
-extern uint16_t num_threads;
-extern uint16_t task_num;
-void init_pcb_stack(
-    ptr_t kernel_stack, ptr_t kva_user_stack, ptr_t entry_point,
-    pcb_t *pcb,int argc, char *argv[]);
-void init_tcb_stack(
-    ptr_t kernel_stack, ptr_t kva_user_stack, ptr_t entry_point, 
-    tcb_t *tcb,void* arg);
-
-
-
-
 /* ready queue to run */
 extern list_head ready_queue;
 extern spin_lock_t ready_spin_lock;
-
+#ifdef MLFQ
 extern list_node_t ready_queues[];
+#endif
 
 /* sleep queue to be blocked in */
 extern list_head sleep_queue;
 extern spin_lock_t sleep_spin_lock;
 
 /* current running task PCB */
-// extern pcb_t * volatile current_running;
 pcb_t * current_running_0;
 pcb_t * current_running_1;
-
-extern pcb_t pcb[NUM_MAX_TASK];
-extern tcb_t tcb[NUM_MAX_TASK];
-
 extern pcb_t pid0_pcb;
 extern pcb_t pid1_pcb;
-extern const ptr_t pid0_stack;
-extern const ptr_t pid1_stack;
+pcb_t pcb[NUM_MAX_TASK];
 
-void clean_temp_page(uint64_t pgdir_addr);
+/*sched function for shedular*/
+#ifdef MLFQ
+pcb_t* MLFQsched(int curcpu, pcb_t* currunning);
+void MLFQupprior();
+void init_queues();
+#else
+pcb_t* RRsched(int curcpu, pcb_t* currunning);
+#endif
 extern void switch_to(pcb_t *prev, pcb_t *next);
 void do_scheduler(void);
-// void do_thread_scheduler(void);
 void do_sleep(uint32_t);
-
 void do_block(list_node_t *pcb_node, list_head *queue, spin_lock_t *lock);
 void do_unblock(list_node_t *);
 
+/*proc function for process*/
+void clean_temp_page(uint64_t pgdir_addr);
+void srcrel(int id);
+//pcb与tcb的初始化
+void init_pcb_stack(
+    ptr_t kernel_stack, ptr_t kva_user_stack, ptr_t entry_point,
+    pcb_t *pcb,int argc, char *argv[]);
+void init_tcb_stack(
+    ptr_t kernel_stack, ptr_t kva_user_stack, ptr_t entry_point, 
+    tcb_t *tcb,void* arg);
+void init_pcb_mm(int id, int taskid, enum FORK fork);
+void init_tcb_mm(int id, void *thread_entrypoint, void *arg);
+
 /************************************************************/
-/* TODO [P3-TASK1] exec exit kill waitpid ps*/
+/* exec exit kill waitpid ps */
+void init_shell(void);
 #ifdef S_CORE
 extern pid_t do_exec(int id, int argc, uint64_t arg0, uint64_t arg1, uint64_t arg2);
 #else
 extern pid_t do_exec(char *name, int argc, char *argv[]);
 #endif
-
-extern void do_exit(void);
-extern int do_kill(pid_t pid);
-extern int do_waitpid(pid_t pid);
+void do_thread_create(pid_t *thread, void *thread_entrypoint, void *arg);
+void do_exit(void);
+int do_kill(pid_t pid);
+int do_waitpid(pid_t pid);
 int do_process_show(char* buf);
-extern pid_t do_getpid();
-int pid2id(int pid);
 
+// pid&&id
+pid_t do_getpid();
+static inline int pid2id(int pid) {
+    int id = hash(pid, NUM_MAX_TASK);
+    for (int i = 0; i < NUM_MAX_TASK; i++, id = (id + 1) % NUM_MAX_TASK)
+        if (pid == pcb[id].pid)
+            return id;
+    return -1;
+};
+
+//cpu task
 void do_task_set_p(pid_t pid, int mask, char* buf);
 int do_task_set(int mask,char *name, int argc, char *argv[]);
 
-// void do_thread_create(pid_t *thread, void *thread_entrypoint, void *arg);
-void do_thread_create(pid_t *thread, void *thread_entrypoint, void *arg);
-void init_shell(void);
-void srcrel(int id);
-pcb_t* RRsched(int curcpu, pcb_t* currunning);
-pcb_t* MLFQsched(int curcpu, pcb_t* currunning);
-void MLFQupprior();
-void init_queues();
 /************************************************************/
 
-enum FORK{
-    FORK,
-    NOTFORK,
-};
-
-void init_pcb_mm(int id, int taskid, enum FORK fork);
-void init_tcb_mm(int id, void *thread_entrypoint, void *arg);
+/*kernel mem for argc&&argv*/
 int kernel_argc;
 char kernel_arg[5][200];
 char *kernel_argv[5];

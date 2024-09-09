@@ -5,9 +5,8 @@
 
 #include <asm.h>
 #include <csr.h>
+#include <mminit.h>
 
-#define DEFLATE_STACK		0x53100000
-#define KERNEL		      0x50201000
 .section ".entry_function","ax"
 ENTRY(_start)
   /* Mask all interrupts */
@@ -19,21 +18,17 @@ ENTRY(_start)
 
 head_loop:
   blt   t1, t0, head_endloop # if t0 <= t1 then endloop
-  sb    zero,0(t0)
-  addi  t0,t0,1
+  sb    zero, 0(t0)
+  addi  t0, t0, 1
   j     head_loop
 head_endloop:
-  
-  mv    t0,zero 
-  mv    t1,zero
 
-  /* TODO: [p1-task2] clear BSS for flat non-ELF images */
-  //为deflate函数创造环境，创造完环境并执行完后再直接跳转到kernel
-  la    sp,DEFLATE_STACK
+  /* setup C environment for deflate */ 
+  li    sp, DEFLATE_STACK
   call  main
 
-  /* TODO: [p1-task2] setup C environment */
-  la    t1,KERNEL  # jump to   KERNEL
+  // jump to KERNEL
+  li    t1, KERNEL
   jr    t1
   
 

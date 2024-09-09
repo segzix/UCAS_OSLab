@@ -1,13 +1,13 @@
 #include <common.h>
 #include <asm/biosdef.h>
+#include <mminit.h>
 
-#define BIOS_FUNC_ENTRY 0xffffffc050150000
 #define IGNORE 0
 
 static long call_bios(long which, long arg0, long arg1, long arg2, long arg3, long arg4)
 {
     long (*bios_func)(long,long,long,long,long,long,long,long) = \
-        (long (*)(long,long,long,long,long,long,long,long))BIOS_FUNC_ENTRY;
+        (long (*)(long,long,long,long,long,long,long,long))BIOS_FUNC_ENTRY_KVA;
 
     return bios_func(arg0, arg1, arg2, arg3, arg4, IGNORE, IGNORE, which);
 }

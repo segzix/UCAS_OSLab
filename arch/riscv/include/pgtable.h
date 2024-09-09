@@ -123,7 +123,7 @@ static inline void set_attribute(PTE *entry, uint64_t bits)
     /* TODO: [P4-task1] */
 }
 
-static inline void clear_pgdir(uintptr_t pgdir_addr)
+static inline void cleanpage(uintptr_t pgdir_addr)
 {
     uint64_t *pgdir = (uint64_t *)pgdir_addr;
     for(int i = 0; i < 512; i++){

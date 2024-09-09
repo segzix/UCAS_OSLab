@@ -5,6 +5,7 @@
 #include <type.h>
 #include <os/mm.h>
 #include <os/loader.h>
+#include "mminit.h"
 
 uint64_t load_task_img(int taskid, PTE* pgdir)
 {

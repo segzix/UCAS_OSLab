@@ -12,14 +12,10 @@ crt0_loop:
     addi  t2, t2, 1
     j     crt0_loop
 crt0_endloop:
-  
-    mv    t2,zero
-    mv    t1,zero
     
     /* TODO: [p1-task3] setup C runtime environment for the user program */
 
     call main
-
     call sys_exit
     RET
     

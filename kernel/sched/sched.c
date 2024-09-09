@@ -13,41 +13,9 @@
 #include <os/time.h>
 #include <pgtable.h>
 #include <printk.h>
+#include <mminit.h>
 
 extern void ret_from_exception();
-pcb_t pcb[NUM_MAX_TASK];
-const ptr_t pid0_stack = 0xffffffc050900000;
-const ptr_t pid1_stack = 0xffffffc0508ff000;
-pcb_t pid0_pcb = {.pid = 0,
-                  .tid = 0,
-                  .kernel_sp = (ptr_t)pid0_stack,
-                  .user_sp = (ptr_t)pid0_stack,
-                  .hart_mask = 0x1,
-                  .cpu = 0x1,
-                  .cputime = 0x1,
-                  .prior = 0,
-                  .pcb_name = "pid0",
-                  //每个核对应的都有可以跑的
-
-                  .pgdir = (PTE *)(PGDIR_PA + KVA_OFFSET),
-                  .recycle = 0,
-                  .list = {NULL, NULL},
-                  .status = TASK_RUNNING};
-pcb_t pid1_pcb = {.pid = 1,
-                  .tid = 0,
-                  .kernel_sp = (ptr_t)pid1_stack,
-                  .user_sp = (ptr_t)pid1_stack,
-                  .hart_mask = 0x2,
-                  .cpu = 0x2,
-                  .cputime = 0x1,
-                  .prior = 0,
-                  .pcb_name = "pid1",
-                  //每个核对应的都有可以跑的
-
-                  .pgdir = (PTE *)(PGDIR_PA + KVA_OFFSET),
-                  .recycle = 0,
-                  .list = {NULL, NULL},
-                  .status = TASK_RUNNING};
 //初始化内核进程pcb
 #ifdef MLFQ
 #define MLFQNUM 3
@@ -71,6 +39,37 @@ spin_lock_t sleep_spin_lock = {UNLOCKED};
 pcb_t *current_running_0;
 pcb_t *current_running_1;
 //在main.c中初始化为只想pid0_pcb的pcb指针！
+
+pcb_t pid0_pcb = {.pid = 0,
+                  .tid = 0,
+                  .kernel_sp = (ptr_t)PID0_STACK_KVA,
+                  .user_sp = (ptr_t)PID0_STACK_KVA,
+                  .hart_mask = 0x1,
+                  .cpu = 0x1,
+                  .cputime = 0x1,
+                  .prior = 0,
+                  .pcb_name = "pid0",
+                  //每个核对应的都有可以跑的
+
+                  .pgdir = (PTE *)(PGDIR_PA + KVA_OFFSET),
+                  .recycle = 0,
+                  .list = {NULL, NULL},
+                  .status = TASK_RUNNING};
+pcb_t pid1_pcb = {.pid = 1,
+                  .tid = 0,
+                  .kernel_sp = (ptr_t)PID1_STACK_KVA,
+                  .user_sp = (ptr_t)PID1_STACK_KVA,
+                  .hart_mask = 0x2,
+                  .cpu = 0x2,
+                  .cputime = 0x1,
+                  .prior = 0,
+                  .pcb_name = "pid1",
+                  //每个核对应的都有可以跑的
+
+                  .pgdir = (PTE *)(PGDIR_PA + KVA_OFFSET),
+                  .recycle = 0,
+                  .list = {NULL, NULL},
+                  .status = TASK_RUNNING};
 
 void clean_temp_page(uint64_t pgdir_addr) {
     PTE *pgdir = (PTE *)pgdir_addr;
@@ -130,14 +129,6 @@ void srcrel(int id) {
     while (pcb[id].wait_list.next != &pcb[id].wait_list)
         do_unblock(pcb[id].wait_list.next);
     spin_lock_release(&pcb[id].wait_lock);
-}
-
-int pid2id(int pid) {
-    int id = hash(pid, NUM_MAX_TASK);
-    for (int i = 0; i < NUM_MAX_TASK; i++, id = (id + 1) % NUM_MAX_TASK)
-        if (pid == pcb[id].pid)
-            return id;
-    return -1;
 }
 
 pcb_t *RRsched(int curcpu, pcb_t* currunning) {

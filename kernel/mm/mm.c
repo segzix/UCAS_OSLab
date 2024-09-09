@@ -25,7 +25,7 @@ ptr_t allocLargePage(int numPage) {
 }
 #endif
 
-/**********basic mm function***********/
+/********** basic mm function ***********/
 
 /*
  * 设置页表项
@@ -79,7 +79,7 @@ uintptr_t walk(uintptr_t va, PTE *pgdir, enum WALK walk) {
  */
 unsigned swap_out() {
 
-    PTE *swap_PTE; //将要换出去的物理页对应的表项
+    PTE *swap_PTE;
     uint8_t judge_pg;
     static int k=0;
 
@@ -93,10 +93,10 @@ unsigned swap_out() {
             swap_PTE = page_general[swap_page_id].pte;
             judge_pg = !(*swap_PTE & (_PAGE_EXEC | _PAGE_READ | _PAGE_WRITE));
 
-            //目前采取保守策略，不换出页表(否则性能会很差)
+            // 目前采取保守策略，不换出页表(否则性能会很差)
             if (!judge_pg) {
                 if (page_general[swap_page_id].fqy == 0) {
-                    //物理页free，设置表项，将物理页写进硬盘
+                    // 物理页free，设置表项，将物理页写进硬盘
                     uintptr_t kva = pgindex2kva(swap_page_id);
                     kmfree(kva);
                     setPTE(swap_PTE, swap_block_id << NORMAL_PAGE_SHIFT, _PAGE_SOFT | _PAGE_USER);
@@ -138,7 +138,7 @@ uintptr_t kmalloc() {
             if (page_general[i].valid == 0) {
                 page_general[i].valid = 1;
                 page_general[i].used++;
-                clear_pgdir(pgindex2kva(i));
+                cleanpage(pgindex2kva(i));
                 return pgindex2kva(i);
             }
         }
@@ -148,7 +148,7 @@ uintptr_t kmalloc() {
 
         page_general[index].valid = 1;
         page_general[index].used++;
-        clear_pgdir(pgindex2kva(index));
+        cleanpage(pgindex2kva(index));
         return pgindex2kva(index);
     }
 
@@ -162,7 +162,7 @@ uintptr_t kalloc() {
     uintptr_t kva = kmalloc();
     assert(kva);
 
-    //将pte表项写入倒排数组中，方便后续swap时直接进行修改；这里默认全部pin住
+    // 将pte表项写入倒排数组中，方便后续swap时直接进行修改；这里默认全部pin住
     uint32_t idx = kva2pgindex(kva);
     page_general[idx].pte = NULL;
     page_general[idx].pin = PINED;
@@ -190,12 +190,12 @@ uintptr_t palloc(PTE *pte, uint64_t perm) {
  * uvmalloc主要负责建立用户末级页的映射，同时对倒排数组进行注册
  */
 uintptr_t uvmalloc(uintptr_t va, PTE *pgdir, uint64_t perm) {
-    //分配并建立完所有映射
+    // 分配并建立完所有映射
     uintptr_t kva = kmalloc();
     assert(kva);
     PTE *pte = mappages(va, pgdir, kva2pa(kva), perm);
 
-    //将pte表项写入倒排数组中，方便后续swap时直接进行修改；这里默认全部pin住
+    // 将pte表项写入倒排数组中，方便后续swap时直接进行修改；这里默认全部pin住
     uint32_t idx = kva2pgindex(kva);
     page_general[idx].pte = pte;
     page_general[idx].pin = UNPINED;
@@ -208,11 +208,11 @@ uintptr_t uvmalloc(uintptr_t va, PTE *pgdir, uint64_t perm) {
  * mappages负责把给出的虚实地址映射全部建立好，并返回最后一级的pte表项地址
  */
 PTE *mappages(uintptr_t va, PTE *pgdir, uintptr_t pa, uint64_t perm) {
-    //首先中间页表建立好
+    // 首先中间页表建立好
     PTE *pte = (PTE *)walk(va, pgdir, ALLOC);
     assert(pte);
 
-    //设置pte表项
+    // 设置pte表项
     setPTE(pte, pa, perm);
 
     return pte;
@@ -249,7 +249,7 @@ void uvmfreeall(PTE *pgdir) {
     for (int i = 0; i < NUM_PTE_ENTRY; i++) {
         if (pgdir[i] & _PAGE_PRESENT) {
             pmd = (PTE *)pa2kva(get_pa(pgdir[i]));
-            //这里kernel页表不能进行处理的主要原因，是因为kernel映射拷贝时只拷贝了根目录页，后面的页表没有进行拷贝
+            // 这里kernel页表不能进行处理的主要原因，是因为kernel映射拷贝时只拷贝了根目录页，后面的页表没有进行拷贝
             if ((uint64_t)pmd < FREEMEM_KERNEL)
                 continue; // kernal no release
             for (int j = 0; j < NUM_PTE_ENTRY; j++) {
@@ -257,11 +257,11 @@ void uvmfreeall(PTE *pgdir) {
                     pmd2 = (PTE *)pa2kva(get_pa(pmd[j]));
                     for (int k = 0; k < NUM_PTE_ENTRY; k++) {
                         if (pmd2[k] & _PAGE_PRESENT) {
-                            //取消叶子节点的映射
+                            // 取消叶子节点的映射
                             freekva = pa2kva(get_pa(pmd2[k]));
                             kmfree(freekva);
 
-                            //取消映射
+                            // 取消映射
                             set_attribute(&pmd2[k], get_attribute(pmd2[k], PA_ATTRIBUTE_MASK) &
                                                         ~_PAGE_PRESENT);
                         }
@@ -276,14 +276,14 @@ void uvmfreeall(PTE *pgdir) {
  * 取消某个用户虚地址对应物理页的映射
  */
 uintptr_t uvmfree(PTE *pgdir, uintptr_t va) {
-    //先获得对应的pte表项
+    // 先获得对应的pte表项
     PTE *pte = (PTE *)walk(va, pgdir, VOID);
 
-    //取消叶子节点的映射
+    // 取消叶子节点的映射
     uintptr_t freekva = pa2kva(get_pa(*pte));
     kmfree(freekva);
 
-    //取消映射
+    // 取消映射
     set_attribute(pte, get_attribute(*pte, PA_ATTRIBUTE_MASK) & ~_PAGE_PRESENT);
     return freekva;
 }
@@ -299,7 +299,7 @@ void mapfree(PTE *pgdir) {
     for (int i = 0; i < NUM_PTE_ENTRY; i++) {
         if (pgdir[i] & _PAGE_PRESENT) {
             pmd = (PTE *)pa2kva(get_pa(pgdir[i]));
-            //这里kernel页表不能进行处理的主要原因，是因为kernel映射拷贝时只拷贝了根目录页，后面的页表没有进行拷贝
+            // 这里kernel页表不能进行处理的主要原因，是因为kernel映射拷贝时只拷贝了根目录页，后面的页表没有进行拷贝
             if ((uint64_t)pmd < FREEMEM_KERNEL)
                 continue; // kernal no release
             for (int j = 0; j < NUM_PTE_ENTRY; j++) {
@@ -339,12 +339,12 @@ void pgcopy(PTE *dest_pgdir, PTE *src_pgdir, uint8_t level) {
     PTE *dest_pgdir_t = dest_pgdir;
 
     for (unsigned vpn = 0; vpn < NUM_PTE_ENTRY; vpn++) {
-        //页表对应的p位是1,则需要进行拷贝
+        // 页表对应的p位是1,则需要进行拷贝
         if (src_pgdir_t[vpn] & _PAGE_PRESENT) {
             if (pa2kva(get_pa(src_pgdir_t[vpn])) < FREEMEM_KERNEL)
                 continue; // kernal no release
             if (level) {
-                //首先给目标项分配一页，然后继续进入进行pgcopy
+                // 首先给目标项分配一页，然后继续进入进行pgcopy
                 palloc(&dest_pgdir_t[vpn], _PAGE_PRESENT);
                 pgcopy((PTE *)pa2kva(get_pa(dest_pgdir_t[vpn])),
                        (PTE *)pa2kva(get_pa(src_pgdir_t[vpn])), level - 1);
@@ -371,13 +371,13 @@ void pgcopy(PTE *dest_pgdir, PTE *src_pgdir, uint8_t level) {
  * 根据发生异常地址对应的PTE表项，重新分配一页并进行用户页的复制(写时复制)
  */
 void uvmcopy(PTE *expte) {
-    //写时复制
+    // 写时复制
     uint64_t src_kva = pa2kva(get_pa(*expte)); //已经找到的表项，将其中的物理地址提取出来
     uint64_t dest_kva =
         palloc(expte, get_attribute(*expte, PA_ATTRIBUTE_MASK) | _PAGE_PRESENT | _PAGE_ACCESSED |
                           _PAGE_READ | _PAGE_DIRTY | _PAGE_WRITE); //分配出一块空间
     memcpy((uint8_t *)dest_kva, (uint8_t *)src_kva, PAGE_SIZE);
 
-    //将原页面free
+    // 将原页面free
     kmfree(src_kva);
 }

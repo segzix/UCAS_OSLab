@@ -28,16 +28,12 @@
 
 #include <type.h>
 #include <pgtable.h>
+#include <mminit.h>
 
-#define MAP_KERNEL 1
-#define MAP_USER 2
-#define MEM_SIZE 32
 #define PAGE_SIZE 4096 // 4K
-#define INIT_KERNEL_STACK 0xffffffc051050000
-#define FREEMEM_KERNEL INIT_KERNEL_STACK//由这里开始内核自由分配
-#define TEMP_PAGE_START 0x50000000
 #define PAGE_NUM 512
 #define SHARE_PAGE_NUM 16
+#define TEMP_PAGE_START 0x50000000
 #define SHM_PAGE_STARTVA 0x80000000
 #define HEAP_STARTVA 0x90000000
 

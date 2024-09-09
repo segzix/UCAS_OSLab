@@ -2,8 +2,6 @@
 #define __INCLUDE_TASK_H__
 
 #include <type.h>
-
-#define TASK_MEM_BASE    0xffffffc050900000//先暂存在这里
 #define TASK_MAXNUM      32
 
 

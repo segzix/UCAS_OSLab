@@ -5,9 +5,7 @@
 
 #include <asm.h>
 #include <csr.h>
-
-#define KERNEL_STACK 		0xffffffc050900000
-#define KERNEL_STACK1   0xffffffc0508ff000
+#include <mminit.h>
 
 .section ".entry_function","ax"
 ENTRY(_start)
@@ -27,19 +25,16 @@ head_loop:
   addi  t0,t0,1
   j     head_loop
 head_endloop:
-  
-  mv    t0,zero 
-  mv    t1,zero
 
   /* setup C environment */
   la    tp, pid0_pcb
-  li    sp,KERNEL_STACK
+  li    sp, PID0_STACK_KVA
 
   call  main
 
 secondary:
-  la tp, pid1_pcb
-  li sp, KERNEL_STACK1
+  la    tp, pid1_pcb
+  li    sp, PID1_STACK_KVA
 
   call  main
 
