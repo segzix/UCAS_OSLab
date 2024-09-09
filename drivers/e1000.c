@@ -142,8 +142,8 @@ static void e1000_configure_rx(void)
 
     /* TODO: [p5-task2] Program the Receive Control Register */
 
-    uint32_t RCTL_write = E1000_RCTL_EN    | 
-                          E1000_RCTL_BAM   ;
+    uint32_t RCTL_write = (E1000_RCTL_EN    | 
+                          E1000_RCTL_BAM   )& ~E1000_RCTL_BSEX;
 
     e1000_write_reg(e1000,E1000_RCTL,RCTL_write);
 

@@ -3,7 +3,7 @@
 # -----------------------------------------------------------------------
 
 
-PROJECT_IDX	= 3
+PROJECT_IDX	= 5
 
 
 # -----------------------------------------------------------------------
@@ -51,14 +51,24 @@ USER_CFLAGS     = $(CFLAGS) $(USER_INCLUDE)
 USER_LDFLAGS    = -L$(DIR_BUILD) -ltinyc
 
 QEMU_LOG_FILE   = $(DIR_OSLAB)/oslab-log.txt
+QEMU_LOG_FILE1   = $(DIR_OSLAB)/oslab-log1.txt
 QEMU_OPTS       = -nographic -machine virt -m 256M -kernel $(UBOOT) -bios none \
                      -drive if=none,format=raw,id=image,file=${ELF_IMAGE} \
                      -device virtio-blk-device,drive=image \
                      -monitor telnet::45454,server,nowait -serial mon:stdio \
                      -D $(QEMU_LOG_FILE) -d oslab
+
+QEMU_OPTS1      = -nographic -machine virt -m 256M -kernel $(UBOOT) -bios none \
+                     -drive if=none,format=raw,id=image,file=${ELF_IMAGE1} \
+                     -device virtio-blk-device,drive=image \
+                     -monitor telnet::45455,server,nowait -serial mon:stdio \
+                     -D $(QEMU_LOG_FILE1) -d oslab
+
 QEMU_DEBUG_OPT  = -s -S
 QEMU_SMP_OPT	= -smp 2
 QEMU_NET_OPT    = -netdev tap,id=mytap,ifname=tap0,script=${DIR_QEMU}/etc/qemu-ifup,downscript=${DIR_QEMU}/etc/qemu-ifdown \
+                    -device e1000,netdev=mytap
+QEMU_NET_OPT1   = -netdev tap,id=mytap,ifname=tap1,script=${DIR_QEMU}/etc/qemu-ifup,downscript=${DIR_QEMU}/etc/qemu-ifdown \
                     -device e1000,netdev=mytap
 
 # -----------------------------------------------------------------------
@@ -108,6 +118,7 @@ ELF_MAIN    = $(DIR_BUILD)/main
 ELF_DECOMPRESS    = $(DIR_BUILD)/decompress
 
 ELF_IMAGE   = $(DIR_BUILD)/image
+ELF_IMAGE1	= $(DIR_BUILD)/image1
 
 # -----------------------------------------------------------------------
 # UCAS-OS User Source Files
@@ -163,6 +174,15 @@ run-smp:
 run-net:
 	-@sudo kill `sudo lsof | grep tun | awk '{print $$2}'`
 	sudo $(QEMU) $(QEMU_OPTS) $(QEMU_NET_OPT) $(QEMU_SMP_OPT)
+
+run-netact0:
+	-@sudo kill `sudo lsof | grep tun | awk '{print $$2}'`
+	sudo $(QEMU) $(QEMU_OPTS) $(QEMU_NET_OPT) $(QEMU_SMP_OPT)
+
+run-netact1:
+# -@sudo kill `sudo lsof | grep tun | awk '{print $$2}'`
+	-@cp $(ELF_IMAGE) $(ELF_IMAGE1)
+	sudo $(QEMU) $(QEMU_OPTS1) $(QEMU_NET_OPT1) $(QEMU_SMP_OPT)
 
 debug:
 	$(QEMU) $(QEMU_OPTS) $(QEMU_DEBUG_OPT)

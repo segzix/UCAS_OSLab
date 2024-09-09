@@ -3,5 +3,7 @@
 
 //#define NET
 //#define SAFEALLOC
+//#define MLFQ
+//#define NEWCCORE
 
 #endif

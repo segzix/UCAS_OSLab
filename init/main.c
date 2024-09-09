@@ -50,8 +50,6 @@
 #include <sys/syscall.h>
 #include <type.h>
 
-#define USER_ADDR 0xffffffc052000000
-#define VERSION_BUF 50
 #define TASK_INFO_LOC 0xffffffc0502001f4 //记录taskinfo位置信息
 
 uint16_t task_num;
@@ -271,7 +269,9 @@ int main(void) {
 
         init_exception();
         printk("> [INIT] Interrupt processing initialization succeeded.\n");
-
+#ifdef MLFQ
+        init_queues();
+#endif
         init_screen();
 
         if (!check_fs())

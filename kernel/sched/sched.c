@@ -1,3 +1,4 @@
+#include "os/list.h"
 #include <hash.h>
 #include <os/kernel.h>
 #include <os/list.h>
@@ -23,6 +24,8 @@ pcb_t pid0_pcb = {.pid = 0,
                   .user_sp = (ptr_t)pid0_stack,
                   .hart_mask = 0x1,
                   .cpu = 0x1,
+                  .cputime = 0x1,
+                  .prior = 0,
                   .pcb_name = "pid0",
                   //每个核对应的都有可以跑的
 
@@ -36,6 +39,8 @@ pcb_t pid1_pcb = {.pid = 1,
                   .user_sp = (ptr_t)pid1_stack,
                   .hart_mask = 0x2,
                   .cpu = 0x2,
+                  .cputime = 0x1,
+                  .prior = 0,
                   .pcb_name = "pid1",
                   //每个核对应的都有可以跑的
 
@@ -44,14 +49,25 @@ pcb_t pid1_pcb = {.pid = 1,
                   .list = {NULL, NULL},
                   .status = TASK_RUNNING};
 //初始化内核进程pcb
-
+#ifdef MLFQ
+#define MLFQNUM 3
+#define PRIOR2TIME(prior) 2 * prior + 1
+#define MLFQDOWN(prior)                                                                            \
+    if (prior < MLFQNUM - 1)                                                                       \
+    prior++
+#define MLFQUP(prior)                                                                              \
+    if (prior > 0)                                                                                 \
+    prior--
+#define MLFQGAP 1
+static uint8_t MLFQuptime = 0;
+list_node_t ready_queues[MLFQNUM];
+#endif
 LIST_HEAD(ready_queue);
 LIST_HEAD(sleep_queue);
 spin_lock_t ready_spin_lock = {UNLOCKED};
 spin_lock_t sleep_spin_lock = {UNLOCKED};
 
 /* current running task PCB */
-// pcb_t **current_running;
 pcb_t *current_running_0;
 pcb_t *current_running_1;
 //在main.c中初始化为只想pid0_pcb的pcb指针！
@@ -85,9 +101,12 @@ void do_block(list_node_t *pcb_node, list_head *queue, spin_lock_t *lock) {
  */
 void do_unblock(list_node_t *pcb_node) {
     list_del(pcb_node);
-    spin_lock_acquire(&ready_spin_lock);
+#ifndef MLFQ
     list_add(pcb_node, &ready_queue);
-    spin_lock_release(&ready_spin_lock);
+#else
+    list_add(pcb_node, &ready_queues[0]);
+    (list_entry(pcb_node, pcb_t, list))->prior = 0;
+#endif
     (list_entry(pcb_node, pcb_t, list))->status = TASK_READY;
 }
 
@@ -120,3 +139,77 @@ int pid2id(int pid) {
             return id;
     return -1;
 }
+
+pcb_t *RRsched(int curcpu, pcb_t* currunning) {
+    // RUNNING->READY(BLOCKED不用改，已在队列中)
+    if (currunning->status == TASK_RUNNING) {
+        list_add(&(currunning->list), &ready_queue);
+        currunning->status = TASK_READY;
+    }
+
+    list_node_t *list_check = ready_queue.next;
+    pcb_t *nxtproc;
+    nxtproc = list_entry(list_check, pcb_t, list);
+    while ((curcpu & nxtproc->hart_mask) == 0) {
+        list_check = list_check->next;
+        nxtproc = list_entry(list_check, pcb_t, list);
+    }
+    set_pcb(nxtproc);
+    nxtproc->cpu = curcpu;
+    list_del(&(nxtproc->list));
+    nxtproc->status = TASK_RUNNING;
+
+    return nxtproc;
+}
+
+#ifdef MLFQ
+void init_queues() {
+    for (unsigned i = 0; i < MLFQNUM; i++) {
+        list_init(&ready_queues[i]);
+    }
+}
+
+pcb_t *MLFQsched(int curcpu, pcb_t *currunning) {
+    currunning->cputime--;
+    if (!currunning->cputime && currunning->pid != 1 && currunning->pid != 2) {
+        if (currunning->pid == 1 || currunning->pid == 2)
+            list_add(&currunning->list, &ready_queues[MLFQNUM - 1]);
+        else {
+            MLFQDOWN(currunning->prior);
+            list_add(&currunning->list, &ready_queues[currunning->prior]);
+        }
+
+        for (unsigned i = 0; i < MLFQNUM; i++) {
+            if (list_check(&ready_queues[i]))
+                continue;
+            list_node_t *list_check = ready_queues[i].next;
+            pcb_t *nxtproc;
+            while (list_check != &ready_queues[i]) {
+                nxtproc = list_entry(list_check, pcb_t, list);
+                if (curcpu & nxtproc->hart_mask) {
+                    set_pcb(nxtproc);
+                    list_del(&(nxtproc->list));
+
+                    nxtproc->cpu = curcpu;
+                    nxtproc->status = TASK_RUNNING;
+                    nxtproc->cputime = PRIOR2TIME(currunning->prior);
+                    return nxtproc;
+                }
+                list_check = list_check->next;
+            }
+        }
+        return NULL;
+    } else {
+        return currunning;
+    }
+}
+
+void MLFQupprior() {
+    if (get_timer() >= MLFQuptime) {
+        for (int i = 0; i < NUM_MAX_TASK; i++)
+            if (pcb[i].status != TASK_EXITED)
+                pcb[i].prior = 0 ;
+        MLFQuptime += PERF_GAP;
+    }
+}
+#endif

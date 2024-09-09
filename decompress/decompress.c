@@ -1,5 +1,5 @@
 #define KERNEL_compressed 0x54000000
-#define KERNEL            0x50202000
+#define KERNEL            0x50201000
 #define KERNEL_INFO_LOC   0x502001ec
 #define SECTOR_SIZE       512
 

@@ -31,7 +31,7 @@ void init_pcb_mm(int id, int taskid, enum FORK fork) {
      * notfork: 建立页表映射到父进程的物理页，其他工作由写时复制保证
      */
     if (fork == NOTFORK) {
-        load_task_img(taskid, (uintptr_t)pcb[id].pgdir);
+        load_task_img(taskid, pcb[id].pgdir);
         kva_user_stack =
             uvmalloc(pcb[id].user_sp - PAGE_SIZE, pcb[id].pgdir,
                      _PAGE_PRESENT | _PAGE_READ | _PAGE_WRITE | _PAGE_EXEC | _PAGE_USER) +

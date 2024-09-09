@@ -77,6 +77,20 @@ static inline void list_add(list_node_t *node, list_node_t *head)
     node->next = head;
 }
 
+static inline void list_init(list_node_t *head)
+{
+    head->prev = head;
+    head->next = head;
+}
+
+static inline int list_check(list_node_t *head)
+{
+    if(head->next == head)
+        return 1;
+    else
+        return 0;
+}
+
 /* TODO: [p2-task1] implement your own list API */
 
 #endif

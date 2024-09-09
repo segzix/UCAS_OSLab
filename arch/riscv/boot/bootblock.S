@@ -8,7 +8,7 @@
 
 // deflate&&kernel function entry 
 .equ deflate, 0x53000000
-.equ kernel, 0x50202000
+.equ kernel, 0x50201000
 
 .text
 .global main
@@ -18,6 +18,11 @@ main:
 	fence
 	// a0 is mhartid
 	bnez a0, secondary
+
+	// call BIOS to print message
+	li   	a7,BIOS_PUTSTR
+	la 		a0,msg
+	jal  	bios_func_entry 
 
 	// call BIOS to load deflate
 	li   	a7,BIOS_SDREAD

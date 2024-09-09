@@ -107,8 +107,10 @@ typedef struct pcb
      * 0x02 core 1
      * 0x03 core 0/1
      */
-    int hart_mask;
-    int cpu;
+    uint8_t hart_mask;
+    uint8_t cpu;
+    uint8_t cputime;
+    uint8_t prior;
 
     /* pgdir */
     PTE* pgdir;
@@ -138,6 +140,8 @@ void init_tcb_stack(
 /* ready queue to run */
 extern list_head ready_queue;
 extern spin_lock_t ready_spin_lock;
+
+extern list_node_t ready_queues[];
 
 /* sleep queue to be blocked in */
 extern list_head sleep_queue;
@@ -187,6 +191,10 @@ int do_task_set(int mask,char *name, int argc, char *argv[]);
 void do_thread_create(pid_t *thread, void *thread_entrypoint, void *arg);
 void init_shell(void);
 void srcrel(int id);
+pcb_t* RRsched(int curcpu, pcb_t* currunning);
+pcb_t* MLFQsched(int curcpu, pcb_t* currunning);
+void MLFQupprior();
+void init_queues();
 /************************************************************/
 
 enum FORK{

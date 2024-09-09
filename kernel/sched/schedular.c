@@ -1,4 +1,3 @@
-#include "assert.h"
 #include "os/lock.h"
 #include "os/mm.h"
 #include "os/sched.h"
@@ -15,8 +14,7 @@
  */
 void do_scheduler(void) {
     spin_lock_acquire(&ready_spin_lock);
-    list_node_t *list_check;
-    pcb_t* current_running = get_pcb();
+    pcb_t *current_running = get_pcb();
     int curcpu = get_current_cpu_id() ? 0x2 : 0x1;
 
     /*检查睡眠队列，网络重传检测，回收物理页*/
@@ -37,23 +35,14 @@ void do_scheduler(void) {
 
     pcb_t *prev_running = current_running;
 
-    // RUNNING->READY(BLOCKED不用改，已在队列中)
-    if (current_running->status == TASK_RUNNING) {
-        list_add(&(current_running->list), &ready_queue);
-        current_running->status = TASK_READY;
-    }
-
-    // READY->RUNNING(简易调度算法，考虑mask是否允许在该核上运行)
-    list_check = ready_queue.next;
-    current_running = list_entry(ready_queue.next, pcb_t, list);
-    while ((curcpu & current_running->hart_mask) == 0) {
-        list_check = list_check->next;
-        current_running = list_entry(list_check, pcb_t, list);
-    }
-    set_pcb(current_running);
-    current_running->cpu = curcpu;
-    list_del(&(current_running->list));
-    current_running->status = TASK_RUNNING;
+// READY->RUNNING(简易调度算法，考虑mask是否允许在该核上运行)
+#ifndef MLFQ
+    current_running = RRsched(curcpu, current_running);
+#else
+    MLFQupprior();
+    current_running = MLFQsched(curcpu, current_running);
+    assert(current_running != NULL);
+#endif
 
     //设置根目录页，刷tlb，icache
     set_satp(SATP_MODE_SV39, current_running->pid,

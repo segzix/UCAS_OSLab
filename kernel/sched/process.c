@@ -1,3 +1,4 @@
+#include "cpparg.h"
 #include "os/sched.h"
 #include "printk.h"
 #include <csr.h>
@@ -39,7 +40,12 @@ void init_shell(void) {
         pcb[0].mutex_lock_key[k] = 0;
     }
 
+#ifndef MLFQ
     list_add(&pcb[0].list, &ready_queue);
+#else
+    list_add(&pcb[0].list, &ready_queues[0]);
+    pcb[0].prior = 0;
+#endif
     pcb[0].status = TASK_READY;
     /* TODO: [p2-task1] remember to initialize 'current_running' */
 }
@@ -51,7 +57,7 @@ pid_t do_exec(char *name, int argc, char *argv[]) {
     int taskid = -1;
     int id = -1;
 
-    pcb_t* current_running = get_pcb();
+    pcb_t *current_running = get_pcb();
     /* TODO [P3-TASK1] exec exit kill waitpid ps*/
 
     /*将用户的arg参数先拷贝到内核中，以免换页换出*/
@@ -102,9 +108,14 @@ pid_t do_exec(char *name, int argc, char *argv[]) {
     for (int k = 0; k < TASK_LOCK_MAX; k++) {
         pcb[id].mutex_lock_key[k] = 0;
     }
-    // printl("%d\n",pcb[id].user_sp);
 
-    list_add(&(pcb[id].list), &ready_queue);
+#ifndef MLFQ
+    list_add(&pcb[id].list, &ready_queue);
+#else
+    list_add(&pcb[id].list, &ready_queues[0]);
+    pcb[id].prior = 0;
+#endif
+
     pcb[id].status = TASK_READY;
     return pcb[id].pid;
 }
@@ -113,7 +124,7 @@ pid_t do_exec(char *name, int argc, char *argv[]) {
  * 创建线程
  */
 void do_thread_create(pid_t *thread, void *thread_entrypoint, void *arg) {
-    pcb_t* current_running = get_pcb();
+    pcb_t *current_running = get_pcb();
     int id = -1;
 
     /*找寻pcbid*/
@@ -149,9 +160,14 @@ void do_thread_create(pid_t *thread, void *thread_entrypoint, void *arg) {
         pcb[id].mutex_lock_key[k] = 0;
     }
 
-    list_add(&(pcb[id].list), &ready_queue);
-    *thread = pcb[id].pid;
+#ifndef MLFQ
+    list_add(&pcb[id].list, &ready_queue);
+#else
+    list_add(&pcb[id].list, &ready_queues[0]);
+    pcb[id].prior = 0;
+#endif
 
+    *thread = pcb[id].pid;
     pcb[id].status = TASK_READY;
     return;
 }
@@ -161,7 +177,7 @@ void do_thread_create(pid_t *thread, void *thread_entrypoint, void *arg) {
  */
 pid_t do_fork() {
     int id = -1;
-    pcb_t* current_running = get_pcb();
+    pcb_t *current_running = get_pcb();
 
     /*找寻pcbid*/
     for (int i = hash(genpid, NUM_MAX_TASK), j = 0; j < NUM_MAX_TASK;
@@ -195,16 +211,22 @@ pid_t do_fork() {
         pcb[id].mutex_lock_key[k] = 0;
     }
 
-    list_add(&(pcb[id].list), &ready_queue);
+#ifndef MLFQ
+    list_add(&pcb[id].list, &ready_queue);
+#else
+    list_add(&pcb[id].list, &ready_queues[0]);
+    pcb[id].prior = 0;
+#endif
+
     pcb[id].status = TASK_READY;
 
     return pcb[id].pid;
 }
 
 /************************************************************/
-void do_task_set_p(pid_t pid, int mask, char* buf) {
+void do_task_set_p(pid_t pid, int mask, char *buf) {
     int id = pid2id(pid);
-    if (id==-1){
+    if (id == -1) {
         sprintk(buf, "> [Taskset] PID number not in use. \n");
         return;
     }
@@ -212,7 +234,7 @@ void do_task_set_p(pid_t pid, int mask, char* buf) {
         sprintk(buf, "> [Taskset] Core number not in use. \n");
         return;
     }
-    if (pcb[id].status == TASK_EXITED){
+    if (pcb[id].status == TASK_EXITED) {
         sprintk(buf, "> [Taskset] Process has exited. \n");
         return;
     }
@@ -221,7 +243,7 @@ void do_task_set_p(pid_t pid, int mask, char* buf) {
 
 int do_task_set(int mask, char *name, int argc, char *argv[]) {
     int pid = do_exec(name, argc, argv);
-    if(pid < 0)
+    if (pid < 0)
         return pid;
     do_task_set_p(pid, mask, NULL);
     return pid;
@@ -231,7 +253,7 @@ pid_t do_getpid() {
     return get_pcb()->pid;
 }
 
-int do_process_show(char* buf) {
+int do_process_show(char *buf) {
     int i = 0;
     int add_lines = 1;
     sprintk(buf, "[Process Table]: \n");
@@ -239,19 +261,19 @@ int do_process_show(char* buf) {
         switch (pcb[i].status) {
         case TASK_RUNNING:
             sprintk(buf, "[%d] NAME: %s PID: %d TID: %d STATUS: RUNNING ", i, pcb[i].pcb_name,
-                   pcb[i].pid, pcb[i].tid);
+                    pcb[i].pid, pcb[i].tid);
             if (pcb[i].cpu == 0x1)
                 sprintk(buf, "Running on core 0\n");
             else if (pcb[i].cpu == 0x2)
                 sprintk(buf, "Running on core 1\n");
             break;
         case TASK_READY:
-            sprintk(buf, "[%d] NAME: %s PID: %d TID: %d STATUS: READY\n", i, pcb[i].pcb_name, pcb[i].pid,
-                   pcb[i].tid);
+            sprintk(buf, "[%d] NAME: %s PID: %d TID: %d STATUS: READY\n", i, pcb[i].pcb_name,
+                    pcb[i].pid, pcb[i].tid);
             break;
         case TASK_BLOCKED:
             sprintk(buf, "[%d] NAME: %s PID: %d TID: %d STATUS: BLOCKED\n", i, pcb[i].pcb_name,
-                   pcb[i].pid, pcb[i].tid);
+                    pcb[i].pid, pcb[i].tid);
             break;
         default:
             break;
