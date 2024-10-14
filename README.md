@@ -95,6 +95,10 @@ P3同步操作的debug部分并不算很复杂，其中较为复杂的在于启�
 6. 这里可能会涉及到上板不过的问题，原因是因为没有刷icache，导致取指令出错(qemu上无法模拟icache)。因此建议在shedular函数的末尾补上一句local_flush_icache()
 7. 关于mailbox，听说运行很长时间后就会卡住。并且mailbox在创建线程之后，建议在测试程序的每个线程函数的末尾加上一句sys_exit()来进行线程的退出
 
+
+#### 2024.10.14更新
+暑假尝试对swap进行压力测试，即缩减可用物理页数量，并且在跑普通程序时也可以进行swap并避免卡死，但失败了(´-｀)(太懒不想再继续debug了)
+
 # Project5 - DeviceDriver
 
 ## Test Sets

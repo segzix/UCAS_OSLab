@@ -79,7 +79,6 @@ unsigned swap_out() {
 
     PTE *swap_PTE;
     uint8_t judge_pg;
-    static int k=0;
 
     /**
      * 先看既没读过也没写过的页，再看只读过没写过的页，然后看读过写过的页
@@ -102,9 +101,6 @@ unsigned swap_out() {
                                   swap_block_id); //将物理地址和所写的扇区号传入
                     printl("\npage[%d](kva : 0x%x) has been swapped to block id[%d]\n",
                            swap_page_id, kva, swap_block_id);
-                    k++;
-                    if(k==234)
-                        k++;
 
                     // block与page编号增加
                     swap_block_id += 8; //扇区号加8
@@ -297,7 +293,7 @@ void mapfree(PTE *pgdir) {
     for (int i = 0; i < NUM_PTE_ENTRY; i++) {
         if (pgdir[i] & _PAGE_PRESENT) {
             pmd = (PTE *)pa2kva(get_pa(pgdir[i]));
-            // 这里kernel页表不能进行处理的主要原因，是因为kernel映射拷贝时只拷贝了根目录页，后面的页表没有进行拷贝
+            // 这里kernel页表不能进行处理的主要原因，是因为kernel到用户进程页表映射拷贝时只拷贝了根目录页，后面的页表没有进行拷贝
             if ((uint64_t)pmd < FREEMEM_KERNEL)
                 continue; // kernal no release
             for (int j = 0; j < NUM_PTE_ENTRY; j++) {

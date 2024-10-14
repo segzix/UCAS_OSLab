@@ -38,8 +38,9 @@ spin_lock_t sleep_spin_lock = {UNLOCKED};
 /** current running task PCB */
 pcb_t *current_running_0;
 pcb_t *current_running_1;
-//在main.c中初始化为只想pid0_pcb的pcb指针！
+//在main.c中初始化为指向pid0_pcb的pcb指针！
 
+//每个核都一定有对应的进程，避免空转
 pcb_t pid0_pcb = {.pid = 0,
                   .tid = 0,
                   .kernel_sp = (ptr_t)PID0_STACK_KVA,
@@ -49,7 +50,6 @@ pcb_t pid0_pcb = {.pid = 0,
                   .cputime = 0x1,
                   .prior = 0,
                   .pcb_name = "pid0",
-                  //每个核对应的都有可以跑的
 
                   .pgdir = (PTE *)(PGDIR_PA + KVA_OFFSET),
                   .recycle = 0,
@@ -64,7 +64,6 @@ pcb_t pid1_pcb = {.pid = 1,
                   .cputime = 0x1,
                   .prior = 0,
                   .pcb_name = "pid1",
-                  //每个核对应的都有可以跑的
 
                   .pgdir = (PTE *)(PGDIR_PA + KVA_OFFSET),
                   .recycle = 0,
@@ -75,7 +74,7 @@ void clean_temp_page(uint64_t pgdir_addr) {
     PTE *pgdir = (PTE *)pgdir_addr;
     for (uint64_t va = 0x50000000lu; va < 0x51000000lu; va += 0x200000lu) {
         va &= VA_MASK;
-        uint64_t vpn2 = va >> (NORMAL_PAGE_SHIFT + PPN_BITS + PPN_BITS); //根目录页中的临时映射清空
+        uint64_t vpn2 = va >> (NORMAL_PAGE_SHIFT + PPN_BITS + PPN_BITS); //清空 根目录页中的临时映射
         pgdir[vpn2] = 0;
     }
 }
@@ -91,7 +90,7 @@ void do_block(list_node_t *pcb_node, list_head *queue, spin_lock_t *lock) {
     spin_lock_release(lock);
     do_scheduler();
 
-    //在之前全部执行完毕之后，再次切到自己时，再acquire自旋锁
+    //在全部执行完毕，再次切到自己时，acquire自旋锁
     spin_lock_acquire(lock);
 }
 

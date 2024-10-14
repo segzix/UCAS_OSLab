@@ -10,7 +10,7 @@
  * 而要变化就一定得知道这两个的地址
  * 因此需要通过curRun根据当前所处的核来指向curRun1或curRun2，然后进行修改
  * 如果直接调用get_pcb()，将直接获得当前curRun1(或curRun2)的值，
- * 后续根据switchto进行对curRun1(或curRun2)修改时将无法做到
+ * 后续根据switchto对curRun1(或curRun2)修改时将无法做到
  */
 void do_scheduler(void) {
     spin_lock_acquire(&ready_spin_lock);
@@ -65,7 +65,7 @@ void do_exit(void) {
 }
 
 /**
- * ???
+ * ???(这里不会kill掉阻塞的进程，因为只会标记上kill方便每次在退出系统调用时检查然后选择是否kill。这种做法是否正确有待商榷)
  */
 int do_kill(pid_t pid) {
     int id = pid2id(pid);
