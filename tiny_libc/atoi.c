@@ -1,7 +1,7 @@
 #include <ctype.h>
 #include <stddef.h>
 
-/**
+/***
  * Convert a string into a decimal long
  */
 long atol(const char *str)
@@ -64,7 +64,7 @@ long atol(const char *str)
     return negative ? -ret : ret;
 }
 
-/**
+/***
  * Convert a string into a decimal int
  */
 int atoi(const char *str)

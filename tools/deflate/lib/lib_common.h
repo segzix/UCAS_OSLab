@@ -1,4 +1,4 @@
-/*
+/**
  * lib_common.h - internal header included by all library code
  */
 
@@ -6,7 +6,7 @@
 #define LIB_LIB_COMMON_H
 
 #ifdef LIBDEFLATE_H
- /*
+ /**
   * When building the library, LIBDEFLATEAPI needs to be defined properly before
   * including libdeflate.h.
   */
@@ -21,7 +21,7 @@
 #  define LIBDEFLATE_EXPORT_SYM
 #endif
 
-/*
+/**
  * On i386, gcc assumes that the stack is 16-byte aligned at function entry.
  * However, some compilers (e.g. MSVC) and programming languages (e.g. Delphi)
  * only guarantee 4-byte alignment when calling functions.  This is mainly an
@@ -50,7 +50,7 @@ void *libdeflate_aligned_malloc(malloc_func_t malloc_func,
 void libdeflate_aligned_free(free_func_t free_func, void *ptr);
 
 #ifdef FREESTANDING
-/*
+/**
  * With -ffreestanding, <string.h> may be missing, and we must provide
  * implementations of memset(), memcpy(), memmove(), and memcmp().
  * See https://gcc.gnu.org/onlinedocs/gcc/Standards.html
@@ -79,7 +79,7 @@ int memcmp(const void *s1, const void *s2, size_t n);
 #include <string.h>
 #endif
 
-/*
+/**
  * Runtime assertion support.  Don't enable this in production builds; it may
  * hurt performance significantly.
  */
@@ -95,4 +95,4 @@ void libdeflate_assertion_failed(const char *expr, const char *file, int line);
 #define CONCAT(a, b)		CONCAT_IMPL(a, b)
 #define ADD_SUFFIX(name)	CONCAT(name, SUFFIX)
 
-#endif /* LIB_LIB_COMMON_H */
+#endif /** LIB_LIB_COMMON_H */

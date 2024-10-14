@@ -23,9 +23,9 @@ ptr_t allocLargePage(int numPage) {
 }
 #endif
 
-/********** basic mm function ***********/
+/*********** basic mm function ***********/
 
-/*
+/**
  * 设置页表项
  */
 void setPTE(PTE *pte, uintptr_t pa, uint64_t perm) {
@@ -34,7 +34,7 @@ void setPTE(PTE *pte, uintptr_t pa, uint64_t perm) {
     set_attribute(pte, perm);
 }
 
-/*
+/**
  * walk根据根目录页基址与用户虚拟地址进行页表项的映射与分配(不分配真正物理页，只返回末级页表的PTE表项)
  * ALLOC:中间如果有映射不成立，分配后继续walk
  * VOID:中间如果有映射不成立，walk失败，返回0
@@ -62,7 +62,7 @@ uintptr_t walk(uintptr_t va, PTE *pgdir, enum WALK walk) {
         }
     }
 
-    /*
+    /**
      * ALLOC与VOID的情况，返回对应的PTE表项即可(因为可能还没有对应的页表，需要外部进行set)
      */
     if (walk == ALLOC || walk == VOID)
@@ -71,7 +71,7 @@ uintptr_t walk(uintptr_t va, PTE *pgdir, enum WALK walk) {
     return 0;
 }
 
-/*
+/**
  * swapout函数负责选中一页然后换出，返回这页对应的index，有kmalloc函数将这页重新分配出去
  * swapout采用clock算法，根据fqy来进行判断
  */
@@ -81,7 +81,7 @@ unsigned swap_out() {
     uint8_t judge_pg;
     static int k=0;
 
-    /*
+    /**
      * 先看既没读过也没写过的页，再看只读过没写过的页，然后看读过写过的页
      */
     for (;;) {
@@ -123,9 +123,9 @@ unsigned swap_out() {
     return -1;
 }
 
-/**********alloc***********/
+/***********alloc***********/
 
-/*
+/**
  * kmalloc()负责分配出一个物理页并返回内核虚地址，在分配的过程中可能会涉及到页的换入换出
  */
 uintptr_t kmalloc() {
@@ -153,7 +153,7 @@ uintptr_t kmalloc() {
     return 0;
 }
 
-/*
+/**
  * kalloc()负责根目录页的分配以及内核栈的分配；即所有只局限于内核中的，不涉及到用户页表的分配
  */
 uintptr_t kalloc() {
@@ -167,7 +167,7 @@ uintptr_t kalloc() {
     return kva;
 }
 
-/*
+/**
  * palloc()负责已知PTE地址的条件下，分配一页对PTE进行置位(不用项uvmalloc从根目录页alloc一遍)
  */
 uintptr_t palloc(PTE *pte, uint64_t perm) {
@@ -184,7 +184,7 @@ uintptr_t palloc(PTE *pte, uint64_t perm) {
     return kva;
 }
 
-/*
+/**
  * uvmalloc主要负责建立用户末级页的映射，同时对倒排数组进行注册
  */
 uintptr_t uvmalloc(uintptr_t va, PTE *pgdir, uint64_t perm) {
@@ -201,7 +201,7 @@ uintptr_t uvmalloc(uintptr_t va, PTE *pgdir, uint64_t perm) {
     return kva;
 }
 
-/*
+/**
  * va是要映射的虚地址(必然是用户的虚地址)，pgdir是用jj户的根目录页，pa是实地址，perm是对应的权限项
  * mappages负责把给出的虚实地址映射全部建立好，并返回最后一级的pte表项地址
  */
@@ -216,9 +216,9 @@ PTE *mappages(uintptr_t va, PTE *pgdir, uintptr_t pa, uint64_t perm) {
     return pte;
 }
 
-/**********free***********/
+/***********free***********/
 
-/*
+/**
  * 取消某个物理页的映射，used--
  */
 void kmfree(uintptr_t kva) {
@@ -237,7 +237,7 @@ void kmfree(uintptr_t kva) {
     }
 }
 
-/*
+/**
  * 取消所有的用户页表映射
  */
 void uvmfreeall(PTE *pgdir) {
@@ -270,7 +270,7 @@ void uvmfreeall(PTE *pgdir) {
     }
 }
 
-/*
+/**
  * 取消某个用户虚地址对应物理页的映射
  */
 uintptr_t uvmfree(PTE *pgdir, uintptr_t va) {
@@ -286,7 +286,7 @@ uintptr_t uvmfree(PTE *pgdir, uintptr_t va) {
     return freekva;
 }
 
-/*
+/**
  * 取消所有页表并进行回收
  */
 void mapfree(PTE *pgdir) {
@@ -312,9 +312,9 @@ void mapfree(PTE *pgdir) {
     kmfree((uintptr_t)pgdir_t);
 }
 
-/**********share && copy***********/
+/***********share && copy***********/
 
-/*
+/**
  * 将内核进程的根目录页拷贝给页表(注意并没有拷贝一级二级页表，仍然复用内核的页表)
  */
 void share_pgtable(PTE *dest_pgdir, PTE *src_pgdir) {
@@ -329,7 +329,7 @@ void share_pgtable(PTE *dest_pgdir, PTE *src_pgdir) {
     }
 }
 
-/*
+/**
  * 拷贝所有的页表，末级映射指向同一个物理页，取消写资格
  */
 void pgcopy(PTE *dest_pgdir, PTE *src_pgdir, uint8_t level) {
@@ -347,7 +347,7 @@ void pgcopy(PTE *dest_pgdir, PTE *src_pgdir, uint8_t level) {
                 pgcopy((PTE *)pa2kva(get_pa(dest_pgdir_t[vpn])),
                        (PTE *)pa2kva(get_pa(src_pgdir_t[vpn])), level - 1);
             } else {
-                /*
+                /**
                  * 写父进程表项，同时将父子进程的写权限全部剥夺
                  */
                 setPTE(&dest_pgdir_t[vpn], get_pa(src_pgdir_t[vpn]),
@@ -365,7 +365,7 @@ void pgcopy(PTE *dest_pgdir, PTE *src_pgdir, uint8_t level) {
     return;
 }
 
-/*
+/**
  * 根据发生异常地址对应的PTE表项，重新分配一页并进行用户页的复制(写时复制)
  */
 void uvmcopy(PTE *expte) {

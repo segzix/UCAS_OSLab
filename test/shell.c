@@ -1,4 +1,4 @@
-/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *  * * * * * * * * * * *
+/** * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *  * * * * * * * * * * *
  *            Copyright (C) 2018 Institute of Computing Technology, CAS
  *               Author : Han Shukai (email : hanshukai@ict.ac.cn)
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *  * * * * * * * * * * *
@@ -225,7 +225,7 @@ void parse_command() {
         print_location_y++;
         break;
     case TASKSET_COMMAND:
-        /*task_set or task_set_p*/
+        /**task_set or task_set_p*/
         if (!strcmp(argv[0], "-p")) {
             mask = atoi(argv[1]);
             pid = atoi(argv[2]);

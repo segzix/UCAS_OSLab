@@ -1,4 +1,4 @@
-/*
+/**
  * matchfinder_common.h - common code for Lempel-Ziv matchfinding
  */
 
@@ -11,7 +11,7 @@
 #  error "MATCHFINDER_WINDOW_ORDER must be defined!"
 #endif
 
-/*
+/**
  * Given a 32-bit value that was loaded with the platform's native endianness,
  * return a 32-bit value whose high-order 8 bits are 0 and whose low-order 24
  * bits contain the first 3 bytes, arranged in octets in a platform-dependent
@@ -26,7 +26,7 @@ loaded_u32_to_u24(u32 v)
 		return v >> 8;
 }
 
-/*
+/**
  * Load the next 3 bytes from @p into the 24 low-order bits of a 32-bit value.
  * The order in which the 3 bytes will be arranged as octets in the 24 bits is
  * platform-dependent.  At least 4 bytes (not 3) must be available at @p.
@@ -50,7 +50,7 @@ typedef s16 mf_pos_t;
 
 #define MATCHFINDER_INITVAL ((mf_pos_t)-MATCHFINDER_WINDOW_SIZE)
 
-/*
+/**
  * Required alignment of the matchfinder buffer pointer and size.  The values
  * here come from the AVX-2 implementation, which is the worst case.
  */
@@ -70,7 +70,7 @@ typedef s16 mf_pos_t;
 #  define MATCHFINDER_ALIGNED
 #endif
 
-/*
+/**
  * Initialize the hash table portion of the matchfinder.
  *
  * Essentially, this is an optimized memset().
@@ -90,7 +90,7 @@ matchfinder_init(mf_pos_t *data, size_t size)
 }
 #endif
 
-/*
+/**
  * Slide the matchfinder by MATCHFINDER_WINDOW_SIZE bytes.
  *
  * This must be called just after each MATCHFINDER_WINDOW_SIZE bytes have been
@@ -115,7 +115,7 @@ matchfinder_rebase(mf_pos_t *data, size_t size)
 	size_t i;
 
 	if (MATCHFINDER_WINDOW_SIZE == 32768) {
-		/*
+		/**
 		 * Branchless version for 32768-byte windows.  Clear all bits if
 		 * the value was already negative, then set the sign bit.  This
 		 * is equivalent to subtracting 32768 with signed saturation.
@@ -133,7 +133,7 @@ matchfinder_rebase(mf_pos_t *data, size_t size)
 }
 #endif
 
-/*
+/**
  * The hash function: given a sequence prefix held in the low-order bits of a
  * 32-bit value, multiply by a carefully-chosen large constant.  Discard any
  * bits of the product that don't fit in a 32-bit value, but take the
@@ -146,7 +146,7 @@ lz_hash(u32 seq, unsigned num_bits)
 	return (u32)(seq * 0x1E35A7BD) >> (32 - num_bits);
 }
 
-/*
+/**
  * Return the number of bytes at @matchptr that match the bytes at @strptr, up
  * to a maximum of @max_len.  Initially, @start_len bytes are matched.
  */
@@ -196,4 +196,4 @@ word_differs:
 	return len;
 }
 
-#endif /* LIB_MATCHFINDER_COMMON_H */
+#endif /** LIB_MATCHFINDER_COMMON_H */

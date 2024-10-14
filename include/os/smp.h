@@ -19,4 +19,4 @@ static inline void set_pcb(pcb_t *pcb) {
         current_running_1 = pcb;
 }
 
-#endif /* SMP_H */
+#endif /** SMP_H */

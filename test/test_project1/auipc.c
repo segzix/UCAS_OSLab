@@ -8,7 +8,7 @@ unsigned int simple_itoa(
     int negative  = 0;
     unsigned int i, len;
 
-    /* No support for unusual radixes. */
+    /** No support for unusual radixes. */
     if (radix > 16) return 0;
 
     if (value < 0 && !unsig) {
@@ -16,7 +16,7 @@ unsigned int simple_itoa(
         value    = -value;
     }
 
-    /* This builds the string back to front ... */
+    /** This builds the string back to front ... */
     do {
         int digit = value % radix;
         *(pbuffer++) =
@@ -32,7 +32,7 @@ unsigned int simple_itoa(
 
     *(pbuffer) = '\0';
 
-    /* ... now we reverse it (could do it recursively but will
+    /** ... now we reverse it (could do it recursively but will
      * conserve the stack space) */
     len = (pbuffer - buffer);
     for (i = 0; i < len / 2; i++) {

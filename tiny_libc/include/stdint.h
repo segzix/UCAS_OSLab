@@ -1,4 +1,4 @@
-/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *  * * * * * * * * * * *
+/** * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *  * * * * * * * * * * *
  *            Copyright (C) 2018 Institute of Computing Technology, CAS
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *  * * * * * * * * * * * *
  *
@@ -66,86 +66,86 @@ typedef uint64_t size_t;
 #define __INT64_C(c)  c ## L
 #define __UINT64_C(c) c ## UL
 
-/* Limits of integral types.  */
+/** Limits of integral types.  */
 
-/* Minimum of signed integral types.  */
+/** Minimum of signed integral types.  */
 #define INT8_MIN               (-128)
 #define INT16_MIN              (-32767-1)
 #define INT32_MIN              (-2147483647-1)
 #define INT64_MIN              (-__INT64_C(9223372036854775807)-1)
-/* Maximum of signed integral types.  */
+/** Maximum of signed integral types.  */
 #define INT8_MAX               (127)
 #define INT16_MAX              (32767)
 #define INT32_MAX              (2147483647)
 #define INT64_MAX              (__INT64_C(9223372036854775807))
 
-/* Maximum of unsigned integral types.  */
+/** Maximum of unsigned integral types.  */
 #define UINT8_MAX              (255)
 #define UINT16_MAX             (65535)
 #define UINT32_MAX             (4294967295U)
 #define UINT64_MAX             (__UINT64_C(18446744073709551615))
 
-/* Minimum of signed integral types having a minimum size.  */
+/** Minimum of signed integral types having a minimum size.  */
 #define INT_LEAST8_MIN         (-128)
 #define INT_LEAST16_MIN        (-32767-1)
 #define INT_LEAST32_MIN        (-2147483647-1)
 #define INT_LEAST64_MIN        (-__INT64_C(9223372036854775807)-1)
-/* Maximum of signed integral types having a minimum size.  */
+/** Maximum of signed integral types having a minimum size.  */
 #define INT_LEAST8_MAX         (127)
 #define INT_LEAST16_MAX        (32767)
 #define INT_LEAST32_MAX        (2147483647)
 #define INT_LEAST64_MAX        (__INT64_C(9223372036854775807))
 
-/* Maximum of unsigned integral types having a minimum size.  */
+/** Maximum of unsigned integral types having a minimum size.  */
 #define UINT_LEAST8_MAX        (255)
 #define UINT_LEAST16_MAX       (65535)
 #define UINT_LEAST32_MAX       (4294967295U)
 #define UINT_LEAST64_MAX       (__UINT64_C(18446744073709551615))
 
-/* Minimum of fast signed integral types having a minimum size.  */
+/** Minimum of fast signed integral types having a minimum size.  */
 #define INT_FAST8_MIN          (-128)
 #define INT_FAST16_MIN         (-9223372036854775807L-1)
 #define INT_FAST32_MIN         (-9223372036854775807L-1)
 #define INT_FAST64_MIN         (-__INT64_C(9223372036854775807)-1)
-/* Maximum of fast signed integral types having a minimum size.  */
+/** Maximum of fast signed integral types having a minimum size.  */
 #define INT_FAST8_MAX          (127)
 #define INT_FAST16_MAX         (9223372036854775807L)
 #define INT_FAST32_MAX         (9223372036854775807L)
 #define INT_FAST64_MAX         (__INT64_C(9223372036854775807))
 
-/* Maximum of fast unsigned integral types having a minimum size.  */
+/** Maximum of fast unsigned integral types having a minimum size.  */
 #define UINT_FAST8_MAX         (255)
 #define UINT_FAST16_MAX        (18446744073709551615UL)
 #define UINT_FAST32_MAX        (18446744073709551615UL)
 #define UINT_FAST64_MAX        (__UINT64_C(18446744073709551615))
 
 
-/* Values to test for integral types holding `void *' pointer.  */
+/** Values to test for integral types holding `void *' pointer.  */
 #define INTPTR_MIN             (-9223372036854775807L-1)
 #define INTPTR_MAX             (9223372036854775807L)
 #define UINTPTR_MAX            (18446744073709551615UL)
 
-/* Minimum for largest signed integral type.  */
+/** Minimum for largest signed integral type.  */
 #define INTMAX_MIN             (-__INT64_C(9223372036854775807)-1)
-/* Maximum for largest signed integral type.  */
+/** Maximum for largest signed integral type.  */
 #define INTMAX_MAX             (__INT64_C(9223372036854775807))
 
-/* Maximum for largest unsigned integral type.  */
+/** Maximum for largest unsigned integral type.  */
 #define UINTMAX_MAX            (__UINT64_C(18446744073709551615))
 
-/* Signed.  */
+/** Signed.  */
 #define INT8_C(c)      c
 #define INT16_C(c)     c
 #define INT32_C(c)     c
 #define INT64_C(c)    c ## L
 
-/* Unsigned.  */
+/** Unsigned.  */
 #define UINT8_C(c)     c
 #define UINT16_C(c)    c
 #define UINT32_C(c)    c ## U
 #define UINT64_C(c)   c ## UL
 
-/* Maximal type.  */
+/** Maximal type.  */
 #define INTMAX_C(c)   c ## L
 #define UINTMAX_C(c)  c ## UL
 

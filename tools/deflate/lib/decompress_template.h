@@ -1,4 +1,4 @@
-/*
+/**
  * decompress_template.h
  *
  * Copyright 2016 Eric Biggers
@@ -25,7 +25,7 @@
  * OTHER DEALINGS IN THE SOFTWARE.
  */
 
-/*
+/**
  * This is the actual DEFLATE decompression routine, lifted out of
  * deflate_decompress.c so that it can be compiled multiple times with different
  * target instruction sets.
@@ -52,7 +52,7 @@ FUNCNAME(struct libdeflate_decompressor * restrict d,
 	u8 * const out_fastloop_end =
 		out_end - MIN(out_nbytes_avail, FASTLOOP_MAX_BYTES_WRITTEN);
 
-	/* Input bitstream state; see deflate_decompress.c for documentation */
+	/** Input bitstream state; see deflate_decompress.c for documentation */
 	const u8 *in_next = in;
 	const u8 * const in_end = in_next + in_nbytes;
 	const u8 * const in_fastloop_end =
@@ -70,23 +70,23 @@ FUNCNAME(struct libdeflate_decompressor * restrict d,
 	u32 entry;
 
 next_block:
-	/* Starting to read the next block */
+	/** Starting to read the next block */
 	;
 
 	STATIC_ASSERT(CAN_CONSUME(1 + 2 + 5 + 5 + 4 + 3));
 	REFILL_BITS();
 
-	/* BFINAL: 1 bit */
+	/** BFINAL: 1 bit */
 	is_final_block = bitbuf & BITMASK(1);
 
-	/* BTYPE: 2 bits */
+	/** BTYPE: 2 bits */
 	block_type = (bitbuf >> 1) & BITMASK(2);
 
 	if (block_type == DEFLATE_BLOCKTYPE_DYNAMIC_HUFFMAN) {
 
-		/* Dynamic Huffman block */
+		/** Dynamic Huffman block */
 
-		/* The order in which precode lengths are stored */
+		/** The order in which precode lengths are stored */
 		static const u8 deflate_precode_lens_permutation[DEFLATE_NUM_PRECODE_SYMS] = {
 			16, 17, 18, 0, 8, 7, 9, 6, 10, 5, 11, 4, 12, 3, 13, 2, 14, 1, 15
 		};
@@ -94,7 +94,7 @@ next_block:
 		unsigned num_explicit_precode_lens;
 		unsigned i;
 
-		/* Read the codeword length counts. */
+		/** Read the codeword length counts. */
 
 		STATIC_ASSERT(DEFLATE_NUM_LITLEN_SYMS == 257 + BITMASK(5));
 		num_litlen_syms = 257 + ((bitbuf >> 3) & BITMASK(5));
@@ -107,7 +107,7 @@ next_block:
 
 		d->static_codes_loaded = false;
 
-		/*
+		/**
 		 * Read the precode codeword lengths.
 		 *
 		 * A 64-bit bitbuffer is just one bit too small to hold the
@@ -144,10 +144,10 @@ next_block:
 		for (; i < DEFLATE_NUM_PRECODE_SYMS; i++)
 			d->u.precode_lens[deflate_precode_lens_permutation[i]] = 0;
 
-		/* Build the decode table for the precode. */
+		/** Build the decode table for the precode. */
 		SAFETY_CHECK(build_precode_decode_table(d));
 
-		/* Decode the litlen and offset codeword lengths. */
+		/** Decode the litlen and offset codeword lengths. */
 		i = 0;
 		do {
 			unsigned presym;
@@ -157,28 +157,28 @@ next_block:
 			if ((u8)bitsleft < DEFLATE_MAX_PRE_CODEWORD_LEN + 7)
 				REFILL_BITS();
 
-			/*
+			/**
 			 * The code below assumes that the precode decode table
 			 * doesn't have any subtables.
 			 */
 			STATIC_ASSERT(PRECODE_TABLEBITS == DEFLATE_MAX_PRE_CODEWORD_LEN);
 
-			/* Decode the next precode symbol. */
+			/** Decode the next precode symbol. */
 			entry = d->u.l.precode_decode_table[
 				bitbuf & BITMASK(DEFLATE_MAX_PRE_CODEWORD_LEN)];
 			bitbuf >>= (u8)entry;
-			bitsleft -= entry; /* optimization: subtract full entry */
+			bitsleft -= entry; /** optimization: subtract full entry */
 			presym = entry >> 16;
 
 			if (presym < 16) {
-				/* Explicit codeword length */
+				/** Explicit codeword length */
 				d->u.l.lens[i++] = presym;
 				continue;
 			}
 
-			/* Run-length encoded codeword lengths */
+			/** Run-length encoded codeword lengths */
 
-			/*
+			/**
 			 * Note: we don't need to immediately verify that the
 			 * repeat count doesn't overflow the number of elements,
 			 * since we've sized the lens array to have enough extra
@@ -198,7 +198,7 @@ next_block:
 			STATIC_ASSERT(DEFLATE_MAX_LENS_OVERRUN == 138 - 1);
 
 			if (presym == 16) {
-				/* Repeat the previous length 3 - 6 times. */
+				/** Repeat the previous length 3 - 6 times. */
 				SAFETY_CHECK(i != 0);
 				rep_val = d->u.l.lens[i - 1];
 				STATIC_ASSERT(3 + BITMASK(2) == 6);
@@ -213,7 +213,7 @@ next_block:
 				d->u.l.lens[i + 5] = rep_val;
 				i += rep_count;
 			} else if (presym == 17) {
-				/* Repeat zero 3 - 10 times. */
+				/** Repeat zero 3 - 10 times. */
 				STATIC_ASSERT(3 + BITMASK(3) == 10);
 				rep_count = 3 + (bitbuf & BITMASK(3));
 				bitbuf >>= 3;
@@ -230,7 +230,7 @@ next_block:
 				d->u.l.lens[i + 9] = 0;
 				i += rep_count;
 			} else {
-				/* Repeat zero 11 - 138 times. */
+				/** Repeat zero 11 - 138 times. */
 				STATIC_ASSERT(11 + BITMASK(7) == 138);
 				rep_count = 11 + (bitbuf & BITMASK(7));
 				bitbuf >>= 7;
@@ -241,20 +241,20 @@ next_block:
 			}
 		} while (i < num_litlen_syms + num_offset_syms);
 
-		/* Unnecessary, but check this for consistency with zlib. */
+		/** Unnecessary, but check this for consistency with zlib. */
 		SAFETY_CHECK(i == num_litlen_syms + num_offset_syms);
 
 	} else if (block_type == DEFLATE_BLOCKTYPE_UNCOMPRESSED) {
 		u16 len, nlen;
 
-		/*
+		/**
 		 * Uncompressed block: copy 'len' bytes literally from the input
 		 * buffer to the output buffer.
 		 */
 
-		bitsleft -= 3; /* for BTYPE and BFINAL */
+		bitsleft -= 3; /** for BTYPE and BFINAL */
 
-		/*
+		/**
 		 * Align the bitstream to the next byte boundary.  This means
 		 * the next byte boundary as if we were reading a byte at a
 		 * time.  Therefore, we have to rewind 'in_next' by any bytes
@@ -289,7 +289,7 @@ next_block:
 
 		SAFETY_CHECK(block_type == DEFLATE_BLOCKTYPE_STATIC_HUFFMAN);
 
-		/*
+		/**
 		 * Static Huffman block: build the decode tables for the static
 		 * codes.  Skip doing so if the tables are already set up from
 		 * an earlier static block; this speeds up decompression of
@@ -299,7 +299,7 @@ next_block:
 		 * dynamic Huffman block.
 		 */
 
-		bitbuf >>= 3; /* for BTYPE and BFINAL */
+		bitbuf >>= 3; /** for BTYPE and BFINAL */
 		bitsleft -= 3;
 
 		if (d->static_codes_loaded)
@@ -326,14 +326,14 @@ next_block:
 		num_offset_syms = 32;
 	}
 
-	/* Decompressing a Huffman block (either dynamic or static) */
+	/** Decompressing a Huffman block (either dynamic or static) */
 
 	SAFETY_CHECK(build_offset_decode_table(d, num_litlen_syms, num_offset_syms));
 	SAFETY_CHECK(build_litlen_decode_table(d, num_litlen_syms, num_offset_syms));
 have_decode_tables:
 	litlen_tablemask = BITMASK(d->litlen_tablebits);
 
-	/*
+	/**
 	 * This is the "fastloop" for decoding literals and matches.  It does
 	 * bounds checks on in_next and out_next in the loop conditions so that
 	 * additional bounds checks aren't needed inside the loop body.
@@ -350,21 +350,21 @@ have_decode_tables:
 		const u8 *src;
 		u8 *dst;
 
-		/*
+		/**
 		 * Consume the bits for the litlen decode table entry.  Save the
 		 * original bitbuf for later, in case the extra match length
 		 * bits need to be extracted from it.
 		 */
 		saved_bitbuf = bitbuf;
 		bitbuf >>= (u8)entry;
-		bitsleft -= entry; /* optimization: subtract full entry */
+		bitsleft -= entry; /** optimization: subtract full entry */
 
-		/*
+		/**
 		 * Begin by checking for a "fast" literal, i.e. a literal that
 		 * doesn't need a subtable.
 		 */
 		if (entry & HUFFDEC_LITERAL) {
-			/*
+			/**
 			 * On 64-bit platforms, we decode up to 2 extra fast
 			 * literals in addition to the primary item, as this
 			 * increases performance and still leaves enough bits
@@ -378,15 +378,15 @@ have_decode_tables:
 			 * and FASTLOOP_MAX_BYTES_READ need to be updated if the
 			 * number of extra literals decoded here is changed.
 			 */
-			if (/* enough bits for 2 fast literals + length + offset preload? */
+			if (/** enough bits for 2 fast literals + length + offset preload? */
 			    CAN_CONSUME_AND_THEN_PRELOAD(2 * LITLEN_TABLEBITS +
 							 LENGTH_MAXBITS,
 							 OFFSET_TABLEBITS) &&
-			    /* enough bits for 2 fast literals + slow literal + litlen preload? */
+			    /** enough bits for 2 fast literals + slow literal + litlen preload? */
 			    CAN_CONSUME_AND_THEN_PRELOAD(2 * LITLEN_TABLEBITS +
 							 DEFLATE_MAX_LITLEN_CODEWORD_LEN,
 							 LITLEN_TABLEBITS)) {
-				/* 1st extra fast literal */
+				/** 1st extra fast literal */
 				lit = entry >> 16;
 				entry = d->u.litlen_decode_table[bitbuf & litlen_tablemask];
 				saved_bitbuf = bitbuf;
@@ -394,7 +394,7 @@ have_decode_tables:
 				bitsleft -= entry;
 				*out_next++ = lit;
 				if (entry & HUFFDEC_LITERAL) {
-					/* 2nd extra fast literal */
+					/** 2nd extra fast literal */
 					lit = entry >> 16;
 					entry = d->u.litlen_decode_table[bitbuf & litlen_tablemask];
 					saved_bitbuf = bitbuf;
@@ -402,7 +402,7 @@ have_decode_tables:
 					bitsleft -= entry;
 					*out_next++ = lit;
 					if (entry & HUFFDEC_LITERAL) {
-						/*
+						/**
 						 * Another fast literal, but
 						 * this one is in lieu of the
 						 * primary item, so it doesn't
@@ -416,7 +416,7 @@ have_decode_tables:
 					}
 				}
 			} else {
-				/*
+				/**
 				 * Decode a literal.  While doing so, preload
 				 * the next litlen decode table entry and refill
 				 * the bitbuffer.  To reduce latency, we've
@@ -434,18 +434,18 @@ have_decode_tables:
 			}
 		}
 
-		/*
+		/**
 		 * It's not a literal entry, so it can be a length entry, a
 		 * subtable pointer entry, or an end-of-block entry.  Detect the
 		 * two unlikely cases by testing the HUFFDEC_EXCEPTIONAL flag.
 		 */
 		if (unlikely(entry & HUFFDEC_EXCEPTIONAL)) {
-			/* Subtable pointer or end-of-block entry */
+			/** Subtable pointer or end-of-block entry */
 
 			if (unlikely(entry & HUFFDEC_END_OF_BLOCK))
 				goto block_done;
 
-			/*
+			/**
 			 * A subtable is required.  Load and consume the
 			 * subtable entry.  The subtable entry can be of any
 			 * type: literal, length, or end-of-block.
@@ -456,7 +456,7 @@ have_decode_tables:
 			bitbuf >>= (u8)entry;
 			bitsleft -= entry;
 
-			/*
+			/**
 			 * 32-bit platforms that use the byte-at-a-time refill
 			 * method have to do a refill here for there to always
 			 * be enough bits to decode a literal that requires a
@@ -470,7 +470,7 @@ have_decode_tables:
 							  OFFSET_TABLEBITS))
 				REFILL_BITS_IN_FASTLOOP();
 			if (entry & HUFFDEC_LITERAL) {
-				/* Decode a literal that required a subtable. */
+				/** Decode a literal that required a subtable. */
 				lit = entry >> 16;
 				entry = d->u.litlen_decode_table[bitbuf & litlen_tablemask];
 				REFILL_BITS_IN_FASTLOOP();
@@ -479,10 +479,10 @@ have_decode_tables:
 			}
 			if (unlikely(entry & HUFFDEC_END_OF_BLOCK))
 				goto block_done;
-			/* Else, it's a length that required a subtable. */
+			/** Else, it's a length that required a subtable. */
 		}
 
-		/*
+		/**
 		 * Decode the match length: the length base value associated
 		 * with the litlen symbol (which we extract from the decode
 		 * table entry), plus the extra length bits.  We don't need to
@@ -495,7 +495,7 @@ have_decode_tables:
 		length = entry >> 16;
 		length += EXTRACT_VARBITS8(saved_bitbuf, entry) >> (u8)(entry >> 8);
 
-		/*
+		/**
 		 * Decode the match offset.  There are enough "preloadable" bits
 		 * remaining to preload the offset decode table entry, but a
 		 * refill might be needed before consuming it.
@@ -505,13 +505,13 @@ have_decode_tables:
 		entry = d->offset_decode_table[bitbuf & BITMASK(OFFSET_TABLEBITS)];
 		if (CAN_CONSUME_AND_THEN_PRELOAD(OFFSET_MAXBITS,
 						 LITLEN_TABLEBITS)) {
-			/*
+			/**
 			 * Decoding a match offset on a 64-bit platform.  We may
 			 * need to refill once, but then we can decode the whole
 			 * offset and preload the next litlen table entry.
 			 */
 			if (unlikely(entry & HUFFDEC_EXCEPTIONAL)) {
-				/* Offset codeword requires a subtable */
+				/** Offset codeword requires a subtable */
 				if (unlikely((u8)bitsleft < OFFSET_MAXBITS +
 					     LITLEN_TABLEBITS - PRELOAD_SLACK))
 					REFILL_BITS_IN_FASTLOOP();
@@ -523,36 +523,36 @@ have_decode_tables:
 					    LITLEN_TABLEBITS - PRELOAD_SLACK))
 				REFILL_BITS_IN_FASTLOOP();
 		} else {
-			/* Decoding a match offset on a 32-bit platform */
+			/** Decoding a match offset on a 32-bit platform */
 			REFILL_BITS_IN_FASTLOOP();
 			if (unlikely(entry & HUFFDEC_EXCEPTIONAL)) {
-				/* Offset codeword requires a subtable */
+				/** Offset codeword requires a subtable */
 				bitbuf >>= OFFSET_TABLEBITS;
 				bitsleft -= OFFSET_TABLEBITS;
 				entry = d->offset_decode_table[(entry >> 16) +
 					EXTRACT_VARBITS(bitbuf, (entry >> 8) & 0x3F)];
 				REFILL_BITS_IN_FASTLOOP();
-				/* No further refill needed before extra bits */
+				/** No further refill needed before extra bits */
 				STATIC_ASSERT(CAN_CONSUME(
 					OFFSET_MAXBITS - OFFSET_TABLEBITS));
 			} else {
-				/* No refill needed before extra bits */
+				/** No refill needed before extra bits */
 				STATIC_ASSERT(CAN_CONSUME(OFFSET_MAXFASTBITS));
 			}
 		}
 		saved_bitbuf = bitbuf;
 		bitbuf >>= (u8)entry;
-		bitsleft -= entry; /* optimization: subtract full entry */
+		bitsleft -= entry; /** optimization: subtract full entry */
 		offset = entry >> 16;
 		offset += EXTRACT_VARBITS8(saved_bitbuf, entry) >> (u8)(entry >> 8);
 
-		/* Validate the match offset; needed even in the fastloop. */
+		/** Validate the match offset; needed even in the fastloop. */
 		SAFETY_CHECK(offset <= out_next - (const u8 *)out);
 		src = out_next - offset;
 		dst = out_next;
 		out_next += length;
 
-		/*
+		/**
 		 * Before starting to issue the instructions to copy the match,
 		 * refill the bitbuffer and preload the litlen decode table
 		 * entry for the next loop iteration.  This can increase
@@ -571,7 +571,7 @@ have_decode_tables:
 		entry = d->u.litlen_decode_table[bitbuf & litlen_tablemask];
 		REFILL_BITS_IN_FASTLOOP();
 
-		/*
+		/**
 		 * Copy the match.  On most CPUs the fastest method is a
 		 * word-at-a-time copy, unconditionally copying about 5 words
 		 * since this is enough for most matches without being too much.
@@ -623,7 +623,7 @@ have_decode_tables:
 		} else if (UNALIGNED_ACCESS_IS_FAST && offset == 1) {
 			machine_word_t v;
 
-			/*
+			/**
 			 * This part tends to get auto-vectorized, so keep it
 			 * copying a multiple of 16 bytes at a time.
 			 */
@@ -670,7 +670,7 @@ have_decode_tables:
 		}
 	} while (in_next < in_fastloop_end && out_next < out_fastloop_end);
 
-	/*
+	/**
 	 * This is the generic loop for decoding literals and matches.  This
 	 * handles cases where in_next and out_next are close to the end of
 	 * their respective buffers.  Usually this loop isn't performance-
@@ -738,30 +738,30 @@ generic_loop:
 	}
 
 block_done:
-	/* Finished decoding a block */
+	/** Finished decoding a block */
 
 	if (!is_final_block)
 		goto next_block;
 
-	/* That was the last block. */
+	/** That was the last block. */
 
 	bitsleft = (u8)bitsleft;
 
-	/*
+	/**
 	 * If any of the implicit appended zero bytes were consumed (not just
 	 * refilled) before hitting end of stream, then the data is bad.
 	 */
 	SAFETY_CHECK(overread_count <= (bitsleft >> 3));
 
-	/* Optionally return the actual number of bytes consumed. */
+	/** Optionally return the actual number of bytes consumed. */
 	if (actual_in_nbytes_ret) {
-		/* Don't count bytes that were refilled but not consumed. */
+		/** Don't count bytes that were refilled but not consumed. */
 		in_next -= (bitsleft >> 3) - overread_count;
 
 		*actual_in_nbytes_ret = in_next - (u8 *)in;
 	}
 
-	/* Optionally return the actual number of bytes written. */
+	/** Optionally return the actual number of bytes written. */
 	if (actual_out_nbytes_ret) {
 		*actual_out_nbytes_ret = out_next - (u8 *)out;
 	} else {

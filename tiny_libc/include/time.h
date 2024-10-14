@@ -9,4 +9,4 @@ typedef uint64_t clock_t;
 
 clock_t clock();
 
-#endif /* TIME_H */
+#endif /** TIME_H */

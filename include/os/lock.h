@@ -1,4 +1,4 @@
-/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *  * * * * * * * * * * *
+/** * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *  * * * * * * * * * * *
  *            Copyright (C) 2018 Institute of Computing Technology, CAS
  *               Author : Han Shukai (email : hanshukai@ict.ac.cn)
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *  * * * * * * * * * * *
@@ -62,7 +62,7 @@ int do_mutex_lock_init(int key);
 void do_mutex_lock_acquire(int mlock_idx);
 void do_mutex_lock_release(int mlock_idx);
 
-/************************************************************/
+/*************************************************************/
 typedef struct barrier
 {
     // TODO [P3-TASK2 barrier]
@@ -139,6 +139,6 @@ void do_mbox_close(int mbox_idx);
 int do_mbox_send(int mbox_idx, void * msg, int msg_length);
 int do_mbox_recv(int mbox_idx, void * msg, int msg_length);
 
-/************************************************************/
+/*************************************************************/
 
 #endif

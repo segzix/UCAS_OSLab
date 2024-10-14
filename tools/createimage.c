@@ -20,7 +20,7 @@
 
 #define NBYTES2SEC(nbytes) (((nbytes) / SECTOR_SIZE) + ((nbytes) % SECTOR_SIZE != 0))
 
-/* TODO: [p1-task4] design your own task_info_t */
+/** TODO: [p1-task4] design your own task_info_t */
 typedef struct {
     char task_name[32];
     uint32_t task_block_phyaddr;
@@ -31,7 +31,7 @@ typedef struct {
 #define TASK_MAXNUM 16
 static task_info_t taskinfo[TASK_MAXNUM];
 
-/* structure to store command line options */
+/** structure to store command line options */
 static struct {
     int vm;
     int extended;
@@ -40,7 +40,7 @@ static struct {
 char kernel_data_buf[0x10000];
 char kernel_compress_buf[0x10000];
 
-/* prototypes of local functions */
+/** prototypes of local functions */
 static void create_image(int nfiles, char *files[]);
 static void error(char *fmt, ...);
 static void read_ehdr(Elf64_Ehdr *ehdr, FILE *fp);
@@ -56,7 +56,7 @@ static void write_img_info(int nbytes_decompress, task_info_t *taskinfo, short t
 int main(int argc, char **argv) {
     char *progname = argv[0];
 
-    /* process command line options */
+    /** process command line options */
     options.vm = 0;
     options.extended = 0;
     while ((argc > 1) && (argv[1][0] == '-') && (argv[1][1] == '-')) {
@@ -76,14 +76,14 @@ int main(int argc, char **argv) {
         error("%s: option --vm not implemented\n", progname);
     }
     if (argc < 3) {
-        /* at least 3 args (createimage bootblock main) */
+        /** at least 3 args (createimage bootblock main) */
         error("usage: %s %s\n", progname, ARGS);
     }
     create_image(argc - 1, argv + 1);
     return 0;
 }
 
-/* TODO: [p1-task4] assign your task_info_t somewhere in 'create_image' */
+/** TODO: [p1-task4] assign your task_info_t somewhere in 'create_image' */
 static void create_image(int nfiles, char *files[]) {
     int tasknum = nfiles - 3;
     int data_size = 0;
@@ -99,34 +99,34 @@ static void create_image(int nfiles, char *files[]) {
     int kernel_compressed_size;
     char *kernel_data_buf_temp = kernel_data_buf;
 
-    /* open the image file */
+    /** open the image file */
     img = fopen(IMAGE_FILE, "w");
     assert(img != NULL);
 
-    /* for each input file */
+    /** for each input file */
     for (int fidx = 0; fidx < nfiles; ++fidx) {
 
         int taskidx = fidx - 3;
 
-        /* open input file */
+        /** open input file */
         fp = fopen(*files, "r");
         assert(fp != NULL);
 
-        /* read ELF header */
+        /** read ELF header */
         read_ehdr(&ehdr, fp);
         printf("0x%04lx: %s\n", ehdr.e_entry, *files);
 
-        /* for each program header */
+        /** for each program header */
         for (int ph = 0; ph < ehdr.e_phnum; ph++) {
 
-            /* read program header */
+            /** read program header */
             read_phdr(&phdr, fp, ph, ehdr);
 
             if (phdr.p_type != PT_LOAD)
                 continue;
 
-            /* write segment to the image */
-            /*
+            /** write segment to the image */
+            /**
              * 1.如果是内核，先将其读入到数组中，在读文件结束并压缩后写到image中
              * 2.如果是压缩函数，注意统计字节数信息
              * 3.如果是测试程序，直接向image中写入段即可
@@ -144,10 +144,10 @@ static void create_image(int nfiles, char *files[]) {
                     nbytes_decompress += get_filesz(phdr);
                 write_segment(phdr, fp, img, &phyaddr);
             }
-            /* update nbytes_decompress */
+            /** update nbytes_decompress */
         }
 
-        /*
+        /**
          * 1.如果是内核，压缩后写到image中
          * 2.如果是压缩函数，不用再进行处理
          * 3.如果是测试程序，注意统计taskinfo信息
@@ -227,8 +227,8 @@ static uint32_t get_memsz(Elf64_Phdr phdr) {
 
 static void write_segment(Elf64_Phdr phdr, FILE *fp, FILE *img, int *phyaddr) {
     if (get_memsz(phdr) != 0 && phdr.p_type == PT_LOAD) {
-        /* write the segment itself */
-        /* NOTE: expansion of .bss should be done by kernel or runtime env! */
+        /** write the segment itself */
+        /** NOTE: expansion of .bss should be done by kernel or runtime env! */
         if (options.extended == 1) {
             printf("\t\twriting 0x%04lx bytes\n", phdr.p_filesz);
         }
@@ -292,7 +292,7 @@ static void write_img_info(int nbytes_decompress, task_info_t *taskinfo, short t
     printf("phyaddr: %d size: %d\n\n", kernel_compressed_phyaddr, kernel_compressed_size);
 }
 
-/* print an error message and exit */
+/** print an error message and exit */
 static void error(char *fmt, ...) {
     va_list args;
 

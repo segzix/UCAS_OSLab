@@ -1,7 +1,7 @@
 #include <stdio.h>
 #include <unistd.h>
 
-/**
+/***
  * The ascii airplane is designed by Joan Stark
  * from: https://www.asciiart.eu/vehicles/airplanes
  */
@@ -23,7 +23,7 @@ int main(void)
     {
         for (int i = 0; i < 50; i++)
         {
-            /* move */
+            /** move */
             sys_move_cursor(i, j + 0);
             printf("%s", plane1);
 

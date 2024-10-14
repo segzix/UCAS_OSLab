@@ -1,4 +1,4 @@
-/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+/** * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
  * * * * * * * * * * * * Copyright (C) 2018 Institute of Computing
  * Technology, CAS Author : Han Shukai (email :
  * hanshukai@ict.ac.cn)
@@ -91,6 +91,6 @@ static inline int list_check(list_node_t *head)
         return 0;
 }
 
-/* TODO: [p2-task1] implement your own list API */
+/** TODO: [p2-task1] implement your own list API */
 
 #endif

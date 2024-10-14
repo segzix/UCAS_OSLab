@@ -44,7 +44,7 @@
   sd t5, OFFSET_REG_T5(sp)
   sd t6, OFFSET_REG_T6(sp)
 
-  /*
+  /**
    * Disable user-mode memory access as it should only be set in the
    * actual user copy routines.
    *
@@ -107,7 +107,7 @@
   ld t0, OFFSET_REG_SCAUSE(sp)
   csrw CSR_SCAUSE, t0
 
-  /*
+  /**
    * 1.t0协助处理，CSR_SSCRATCH暂存user sp
    * 2.存进kernel sp
    * 3.恢复user sp
@@ -206,7 +206,7 @@ ENTRY(exception_handler_entry)
   //以后返回时，直接返回到ret_from_exception(trick)
   la ra, ret_from_exception
 
-  /* 
+  /** 
    * sp此时对应的时内核栈的sp(经过了保存trapframe)
    * a1,a2传参，进入interrupt_helper处理
    */

@@ -11,9 +11,9 @@
 // NOTE: A/C-core
 extern void ret_from_exception();
 
-/**********syscall**********/
+/***********syscall**********/
 
-/*
+/**
  * 根据key值建立共享页(默认共享页用户虚地址从0x80000000开始)
  */
 uintptr_t shm_page_get(int key) {
@@ -66,7 +66,7 @@ startshm:
     return va;
 }
 
-/*
+/**
  * 根据用户虚地址取消共享页
  */
 void shm_page_dt(uintptr_t va) {
@@ -87,7 +87,7 @@ void shm_page_dt(uintptr_t va) {
     local_flush_tlb_all();
 }
 
-/*
+/**
  * 用户内存分配
  */
 uintptr_t mmalloc(uint32_t size) {

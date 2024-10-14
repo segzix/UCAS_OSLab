@@ -10,14 +10,14 @@
 
 extern void ret_from_exception();
 
-/************************************************************/
-/*
+/*************************************************************/
+/**
  * 进程内存空间分配
  */
 void init_pcb_mm(int id, int taskid, enum FORK fork) {
     uintptr_t kva_user_stack;
 
-    /*指定根目录页地址，堆地址，内核栈地址(直接分配完毕)，用户栈地址*/
+    /**指定根目录页地址，堆地址，内核栈地址(直接分配完毕)，用户栈地址*/
     pcb[id].pgdir = (PTE *)kalloc();
     pcb[id].heap = HEAP_STARTVA;
     pcb[id].kernel_sp = kalloc() + 1 * PAGE_SIZE;
@@ -26,7 +26,7 @@ void init_pcb_mm(int id, int taskid, enum FORK fork) {
     //内核地址映射拷贝
     share_pgtable(pcb[id].pgdir, (PTE *)pa2kva(PGDIR_PA));
 
-    /*
+    /**
      * fork: 加载程序，分配用户栈，初始化用户栈
      * notfork: 建立页表映射到父进程的物理页，其他工作由写时复制保证
      */
@@ -59,28 +59,28 @@ void init_pcb_mm(int id, int taskid, enum FORK fork) {
     }
 }
 
-/*
+/**
  * 线程内存空间分配
  */
 void init_tcb_mm(int id, void *thread_entrypoint, void *arg) {
 
-    /*指定根目录页地址，堆地址，内核栈地址(直接分配完毕)，用户栈地址(一个线程分配一页)*/
+    /**指定根目录页地址，堆地址，内核栈地址(直接分配完毕)，用户栈地址(一个线程分配一页)*/
     pcb[id].pgdir = get_pcb()->pgdir;
     pcb[id].heap = HEAP_STARTVA;
     pcb[id].kernel_sp = kalloc() + 1 * PAGE_SIZE;
     pcb[id].user_sp = USER_STACK_ADDR + PAGE_SIZE * pcb[id].tid;
 
-    /*分配用户栈空间*/
+    /**分配用户栈空间*/
     uvmalloc(pcb[id].user_sp - PAGE_SIZE, pcb[id].pgdir,
              _PAGE_PRESENT | _PAGE_READ | _PAGE_WRITE | _PAGE_EXEC | _PAGE_USER);
 
-    /*初始化用户栈*/
+    /**初始化用户栈*/
     init_tcb_stack(pcb[id].kernel_sp, pcb[id].user_sp, (uintptr_t)thread_entrypoint, &pcb[id],
                    arg); //这里直接传用户的虚地址即可
 }
 
-/************************************************************/
-/*
+/*************************************************************/
+/**
  * 进程内核用户栈初始化
  */
 void init_pcb_stack(ptr_t kernel_stack, ptr_t kva_user_stack, ptr_t entry_point, pcb_t *pcb,
@@ -89,7 +89,7 @@ void init_pcb_stack(ptr_t kernel_stack, ptr_t kva_user_stack, ptr_t entry_point,
     switchto_context_t *pt_switchto =
         (switchto_context_t *)((ptr_t)pt_regs - sizeof(switchto_context_t));
 
-    /*
+    /**
      * !!!
      * kva_user_stack与user_sp对应的是同一个物理页面的内核与用户虚地址，要区别对待，同时做减法
      * 同时注意传递的一定是用户虚地址
@@ -97,19 +97,19 @@ void init_pcb_stack(ptr_t kernel_stack, ptr_t kva_user_stack, ptr_t entry_point,
     uintptr_t argv_base = kva_user_stack - sizeof(uintptr_t) * (argc + 1);
     pcb->user_sp = pcb->user_sp - sizeof(uintptr_t) * (argc + 1);
 
-    /*初始化ra,tp,a0,a1寄存器，传递命令行参数长度和地址*/
+    /**初始化ra,tp,a0,a1寄存器，传递命令行参数长度和地址*/
     pt_regs->regs[1] = (reg_t)entry_point;
     pt_regs->regs[4] = (reg_t)pcb;
     pt_regs->regs[10] = (reg_t)argc;
     pt_regs->regs[11] = pcb->user_sp;
 
-    /*初始化sepc,sstatus,sbadaddr,scause寄存器*/
+    /**初始化sepc,sstatus,sbadaddr,scause寄存器*/
     pt_regs->sepc = (reg_t)entry_point;
     pt_regs->sstatus = (reg_t)((SR_SPIE & ~SR_SPP) | SR_SUM);
     pt_regs->sbadaddr = 0;
     pt_regs->scause = 0;
 
-    /*初始化上下文中的ra寄存器,sp指针*/
+    /**初始化上下文中的ra寄存器,sp指针*/
     pt_switchto->regs[0] = (reg_t)ret_from_exception;
     pt_switchto->regs[1] = (reg_t)(pt_regs);
 
@@ -130,12 +130,12 @@ void init_pcb_stack(ptr_t kernel_stack, ptr_t kva_user_stack, ptr_t entry_point,
     (*argv_ptr) = 0;
     pcb->user_sp &= (~0xf);
 
-    /*初始化trapframe中用户sp指针，进程控制块中的内核sp指针*/
+    /**初始化trapframe中用户sp指针，进程控制块中的内核sp指针*/
     pt_regs->regs[2] = (reg_t)pcb->user_sp; // sp
     pcb->kernel_sp = (reg_t)pt_switchto;
 }
 
-/*
+/**
  * 线程内核用户栈初始化
  */
 void init_tcb_stack(ptr_t kernel_stack, ptr_t kva_user_stack, ptr_t entry_point, tcb_t *tcb,
@@ -144,22 +144,22 @@ void init_tcb_stack(ptr_t kernel_stack, ptr_t kva_user_stack, ptr_t entry_point,
     switchto_context_t *pt_switchto =
         (switchto_context_t *)((ptr_t)pt_regs - sizeof(switchto_context_t));
 
-    /*初始化trapframe中的ra,sp,tp,a0,寄存器，传递arg指针参数*/
+    /**初始化trapframe中的ra,sp,tp,a0,寄存器，传递arg指针参数*/
     pt_regs->regs[1] = (reg_t)entry_point;
     pt_regs->regs[2] = (reg_t)kva_user_stack;
     pt_regs->regs[4] = (reg_t)tcb;
     pt_regs->regs[10] = (reg_t)arg;
 
-    /*初始化sepc,sstatus,sbadaddr,scause寄存器*/
+    /**初始化sepc,sstatus,sbadaddr,scause寄存器*/
     pt_regs->sepc = (reg_t)entry_point;
     pt_regs->sstatus = (reg_t)((SR_SPIE & ~SR_SPP) | SR_SUM);
     pt_regs->sbadaddr = 0;
     pt_regs->scause = 0;
 
-    /*初始化上下文中的spra寄存器,sp指针*/
+    /**初始化上下文中的spra寄存器,sp指针*/
     pt_switchto->regs[0] = (reg_t)ret_from_exception;
     pt_switchto->regs[1] = (reg_t)(pt_regs);
 
-    /*初始化进程控制块中的内核sp指针*/
+    /**初始化进程控制块中的内核sp指针*/
     tcb->kernel_sp = (uint64_t)pt_switchto;
 }

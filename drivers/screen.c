@@ -11,32 +11,32 @@
 #define SCREEN_HEIGHT_START 21
 #define SCREEN_LOC(x, y) ((y) * SCREEN_WIDTH + (x))
 
-/* screen buffer */
+/** screen buffer */
 char new_screen[SCREEN_HEIGHT * SCREEN_WIDTH] = {0};
 char old_screen[SCREEN_HEIGHT * SCREEN_WIDTH] = {0};
 
-/* cursor position */
+/** cursor position */
 static void vt100_move_cursor(int x, int y)
 {
     // \033[y;xH
     printv("%c[%d;%dH", 27, y, x);
 }
 
-/* clear screen */
+/** clear screen */
 static void vt100_clear()
 {
     // \033[2J
     printv("%c[2J", 27);
 }
 
-/* hidden cursor */
+/** hidden cursor */
 static void vt100_hidden_cursor()
 {
     // \033[?25l
     printv("%c[?25l", 27);
 }
 
-/* write a char */
+/** write a char */
 static void screen_write_ch(char ch)
 {
     pcb_t* current_running = get_pcb();
@@ -94,7 +94,7 @@ void screen_write(char *buff)
     }
 }
 
-/*
+/**
  * This function is used to print the serial port when the clock
  * interrupt is triggered. However, we need to pay attention to
  * the fact that in order to speed up printing, we only refresh
@@ -105,12 +105,12 @@ void screen_reflush(void)
     pcb_t* current_running = get_pcb();
     int i, j;
 
-    /* here to reflush screen buffer to serial port */
+    /** here to reflush screen buffer to serial port */
     for (i = 0; i < SCREEN_HEIGHT; i++)
     {
         for (j = 0; j < SCREEN_WIDTH; j++)
         {
-            /* We only print the data of the modified location. */
+            /** We only print the data of the modified location. */
             if (new_screen[SCREEN_LOC(j, i)] != old_screen[SCREEN_LOC(j, i)])
             {
                 vt100_move_cursor(j + 1, i + 1);
@@ -120,6 +120,6 @@ void screen_reflush(void)
         }
     }
 
-    /* recover cursor position */
+    /** recover cursor position */
     vt100_move_cursor(current_running->cursor_x, current_running->cursor_y);
 }

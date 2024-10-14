@@ -1,4 +1,4 @@
-/*
+/**
  * libdeflate.h - public header for libdeflate
  */
 
@@ -11,7 +11,7 @@ extern "C" {
 
 struct libdeflate_compressor;
 
-/*
+/**
  * libdeflate_alloc_compressor() allocates a new compressor that supports
  * DEFLATE, zlib, and gzip compression.  'compression_level' is the compression
  * level on a zlib-like scale but with a higher maximum value (1 = fastest, 6 =
@@ -32,7 +32,7 @@ struct libdeflate_compressor;
 struct libdeflate_compressor *
 deflate_alloc_compressor(int compression_level);
 
-/*
+/**
  * libdeflate_deflate_compress() performs raw DEFLATE compression on a buffer of
  * data.  It attempts to compress 'in_nbytes' bytes of data located at 'in' and
  * write the result to 'out', which has space for 'out_nbytes_avail' bytes.  The
@@ -69,7 +69,7 @@ deflate_deflate_compress(struct libdeflate_compressor *compressor,
 			    const void *in, int in_nbytes,
 			    void *out, int out_nbytes_avail);
 
-/*
+/**
  * libdeflate_free_compressor() frees a compressor that was allocated with
  * libdeflate_alloc_compressor().  If a NULL pointer is passed in, no action is
  * taken.
@@ -77,13 +77,13 @@ deflate_deflate_compress(struct libdeflate_compressor *compressor,
 void
 deflate_free_compressor(struct libdeflate_compressor *compressor);
 
-/* ========================================================================== */
-/*                             Decompression                                  */
-/* ========================================================================== */
+/** ========================================================================== */
+/**                             Decompression                                  */
+/** ========================================================================== */
 
 struct libdeflate_decompressor;
 
-/*
+/**
  * libdeflate_alloc_decompressor() allocates a new decompressor that can be used
  * for DEFLATE, zlib, and gzip decompression.  The return value is a pointer to
  * the new decompressor, or NULL if out of memory.
@@ -98,7 +98,7 @@ struct libdeflate_decompressor;
 struct libdeflate_decompressor *
 deflate_alloc_decompressor(void);
 
-/*
+/**
  * libdeflate_deflate_decompress() decompresses a DEFLATE stream from the buffer
  * 'in' with compressed size up to 'in_nbytes' bytes.  The uncompressed data is
  * written to 'out', a buffer with size 'out_nbytes_avail' bytes.  If
@@ -135,7 +135,7 @@ deflate_deflate_decompress(struct libdeflate_decompressor *decompressor,
 			      void *out, int out_nbytes_avail,
 			      int *actual_out_nbytes_ret);
 
-/*
+/**
  * libdeflate_free_decompressor() frees a decompressor that was allocated with
  * libdeflate_alloc_decompressor().  If a NULL pointer is passed in, no action
  * is taken.
@@ -143,11 +143,11 @@ deflate_deflate_decompress(struct libdeflate_decompressor *decompressor,
 void
 deflate_free_decompressor(struct libdeflate_decompressor *decompressor);
 
-/* ========================================================================== */
-/*                           Custom memory allocator                          */
-/* ========================================================================== */
+/** ========================================================================== */
+/**                           Custom memory allocator                          */
+/** ========================================================================== */
 
-/*
+/**
  * Install a custom memory allocator which libdeflate will use for all memory
  * allocations by default.  'malloc_func' is a function that must behave like
  * malloc(), and 'free_func' is a function that must behave like free().
@@ -166,4 +166,4 @@ deflate_set_memory_allocator(void *(*malloc_func)(int),
 }
 #endif
 
-#endif /* LIBDEFLATE_H */
+#endif /** LIBDEFLATE_H */

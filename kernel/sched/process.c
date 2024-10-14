@@ -9,15 +9,15 @@
 
 uint32_t genpid = 2;
 
-/************************************************************/
-/*
+/*************************************************************/
+/**
  * shell(所有用户态进程的父进程初始化)
  */
 void init_shell(void) {
     int taskid = 0;
     strcpy(pcb[0].pcb_name, "shell");
 
-    /*pid,tid和父进程的pid*/
+    /**pid,tid和父进程的pid*/
     pcb[0].pid = genpid++;
     pcb[0].tid = 0;
     pcb[0].ppid = get_pcb()->pid;
@@ -46,10 +46,10 @@ void init_shell(void) {
     pcb[0].prior = 0;
 #endif
     pcb[0].status = TASK_READY;
-    /* TODO: [p2-task1] remember to initialize 'current_running' */
+    /** TODO: [p2-task1] remember to initialize 'current_running' */
 }
 
-/*
+/**
  * 创建进程
  */
 pid_t do_exec(char *name, int argc, char *argv[]) {
@@ -57,16 +57,16 @@ pid_t do_exec(char *name, int argc, char *argv[]) {
     int id = -1;
 
     pcb_t *current_running = get_pcb();
-    /* TODO [P3-TASK1] exec exit kill waitpid ps*/
+    /** TODO [P3-TASK1] exec exit kill waitpid ps*/
 
-    /*将用户的arg参数先拷贝到内核中，以免换页换出*/
+    /**将用户的arg参数先拷贝到内核中，以免换页换出*/
     kernel_argc = argc;
     for (int i = 0; i < argc; i++) {
         memcpy((void *)kernel_arg[i], (void *)argv[i], strlen(argv[i]) + 1);
         kernel_argv[i] = kernel_arg[i];
     }
 
-    /*找寻taskid*/
+    /**找寻taskid*/
     for (int i = 1; i < task_num; i++)
         if (strcmp(tasks[i].task_name, name) == 0) {
             taskid = i;
@@ -75,7 +75,7 @@ pid_t do_exec(char *name, int argc, char *argv[]) {
     if (taskid == -1)
         return -1;
 
-    /*找寻pcbid*/
+    /**找寻pcbid*/
     for (int i = hash(genpid, NUM_MAX_TASK), j = 0; j < NUM_MAX_TASK;
          i = (i + 1) % NUM_MAX_TASK, j++)
         if (pcb[i].status == TASK_EXITED) {
@@ -86,7 +86,7 @@ pid_t do_exec(char *name, int argc, char *argv[]) {
     if (id == -1)
         return -2;
 
-    /*pid,tid和父进程的pid*/
+    /**pid,tid和父进程的pid*/
     pcb[id].pid = genpid++;
     pcb[id].ppid = current_running->pid;
     pcb[id].tid = 0;
@@ -119,14 +119,14 @@ pid_t do_exec(char *name, int argc, char *argv[]) {
     return pcb[id].pid;
 }
 
-/*
+/**
  * 创建线程
  */
 void do_thread_create(pid_t *thread, void *thread_entrypoint, void *arg) {
     pcb_t *current_running = get_pcb();
     int id = -1;
 
-    /*找寻pcbid*/
+    /**找寻pcbid*/
     for (int i = hash(genpid, NUM_MAX_TASK), j = 0; j < NUM_MAX_TASK;
          i = (i + 1) % NUM_MAX_TASK, j++)
         if (pcb[i].status == TASK_EXITED) {
@@ -137,7 +137,7 @@ void do_thread_create(pid_t *thread, void *thread_entrypoint, void *arg) {
     if (id == -1)
         return;
 
-    /*pid,tid和父进程的pid*/
+    /**pid,tid和父进程的pid*/
     pcb[id].pid = genpid++;
     pcb[id].tid = current_running->tid + 1;
     pcb[id].ppid = current_running->pid;
@@ -171,14 +171,14 @@ void do_thread_create(pid_t *thread, void *thread_entrypoint, void *arg) {
     return;
 }
 
-/*
+/**
  * 进程fork
  */
 pid_t do_fork() {
     int id = -1;
     pcb_t *current_running = get_pcb();
 
-    /*找寻pcbid*/
+    /**找寻pcbid*/
     for (int i = hash(genpid, NUM_MAX_TASK), j = 0; j < NUM_MAX_TASK;
          i = (i + 1) % NUM_MAX_TASK, j++)
         if (pcb[i].status == TASK_EXITED) {
@@ -189,7 +189,7 @@ pid_t do_fork() {
     if (id == -1)
         return -1;
 
-    /*pid,tid和父进程的pid*/
+    /**pid,tid和父进程的pid*/
     pcb[id].pid = genpid++;
     pcb[id].tid = 0;
     pcb[id].ppid = current_running->pid;
@@ -222,7 +222,7 @@ pid_t do_fork() {
     return pcb[id].pid;
 }
 
-/************************************************************/
+/*************************************************************/
 void do_task_set_p(pid_t pid, int mask, char *buf) {
     int id = pid2id(pid);
     if (id == -1) {

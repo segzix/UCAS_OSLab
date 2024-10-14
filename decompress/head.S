@@ -1,5 +1,5 @@
-/* SPDX-License-Identifier: GPL-2.0-only */
-/*
+/** SPDX-License-Identifier: GPL-2.0-only */
+/**
  * Copyright (C) 2012 Regents of the University of California
  */
 
@@ -9,7 +9,7 @@
 
 .section ".entry_function","ax"
 ENTRY(_start)
-  /* Mask all interrupts */
+  /** Mask all interrupts */
   csrw CSR_SIE, zero
   csrw CSR_SIP, zero
 
@@ -23,7 +23,7 @@ head_loop:
   j     head_loop
 head_endloop:
 
-  /* setup C environment for deflate */ 
+  /** setup C environment for deflate */ 
   li    sp, DEFLATE_STACK
   call  main
 

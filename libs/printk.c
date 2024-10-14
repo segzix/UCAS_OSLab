@@ -1,4 +1,4 @@
-/*
+/**
  * The Minimal snprintf() implementation
  *
  * Copyright (c) 2013,2014 Michal Ludvig <michal@logix.cz>
@@ -62,7 +62,7 @@ static unsigned int mini_itoa(
     int negative  = 0;
     unsigned int i, len;
 
-    /* No support for unusual radixes. */
+    /** No support for unusual radixes. */
     if (radix > 16) return 0;
 
     if (value < 0 && !unsig) {
@@ -70,7 +70,7 @@ static unsigned int mini_itoa(
         value    = -value;
     }
 
-    /* This builds the string back to front ... */
+    /** This builds the string back to front ... */
     do {
         int digit = 0;
         if (unsig) {
@@ -95,7 +95,7 @@ static unsigned int mini_itoa(
 
     *(pbuffer) = '\0';
 
-    /* ... now we reverse it (could do it recursively but will
+    /** ... now we reverse it (could do it recursively but will
      * conserve the stack space) */
     len = (pbuffer - buffer);
     for (i = 0; i < len / 2; i++) {
@@ -130,7 +130,7 @@ static int _puts(char *s, unsigned int len, struct mini_buff *b)
     if (b->buffer_len - (b->pbuffer - b->buffer) - 1 < len)
         len = b->buffer_len - (b->pbuffer - b->buffer) - 1;
 
-    /* Copy to buffer */
+    /** Copy to buffer */
     for (i = 0; i < len; i++) *(b->pbuffer++) = s[i];
     *(b->pbuffer) = '\0';
 
@@ -163,7 +163,7 @@ static int mini_vsnprintf(
 
             ch = *(fmt++);
 
-            /* Zero padding requested */
+            /** Zero padding requested */
             if (ch == '0') {
                 while ((ch = *(fmt++))) {
                     if (ch == '\0') goto end;
@@ -292,7 +292,7 @@ int printl(const char *fmt, ...)
     return ret;
 }
 
-/****** sprintk ******/
+/******* sprintk ******/
 
 char strbuf[256];
 

@@ -1,4 +1,4 @@
-/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *  * * * * * * * * * * *
+/** * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *  * * * * * * * * * * *
  *            Copyright (C) 2018 Institute of Computing Technology, CAS
  *               Author : Han Shukai (email : hanshukai@ict.ac.cn)
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *  * * * * * * * * * * *
@@ -32,7 +32,7 @@
 
 #define NUM_SYSCALLS 96
 
-/* syscall function pointer */
+/** syscall function pointer */
 extern long (*syscall[NUM_SYSCALLS])();
 extern void handle_syscall(regs_context_t *regs, uint64_t stval, uint64_t scause);
 

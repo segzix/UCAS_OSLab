@@ -26,49 +26,49 @@ static char rx_pkt_buffer[RXDESCS][RX_PKT_SIZE];
 // Fixed Ethernet MAC Address of E1000
 static const uint8_t enetaddr[6] = {0x00, 0x0a, 0x35, 0x00, 0x1e, 0x53};
 
-/**
+/***
  * e1000_reset - Reset Tx and Rx Units; mask and clear all interrupts.
  **/
 static void e1000_reset(void)
 {
-	/* Turn off the ethernet interface */
+	/** Turn off the ethernet interface */
     e1000_write_reg(e1000, E1000_RCTL, 0);
     e1000_write_reg(e1000, E1000_TCTL, 0);
 
-	/* Clear the transmit ring */
+	/** Clear the transmit ring */
     e1000_write_reg(e1000, E1000_TDH, 0);
     e1000_write_reg(e1000, E1000_TDT, 0);
 
-	/* Clear the receive ring */
+	/** Clear the receive ring */
     e1000_write_reg(e1000, E1000_RDH, 0);
     e1000_write_reg(e1000, E1000_RDT, 0);
 
-	/**
+	/***
      * Delay to allow any outstanding PCI transactions to complete before
 	 * resetting the device
 	 */
     latency(1);
 
-	/* Clear interrupt mask to stop board from generating interrupts */
+	/** Clear interrupt mask to stop board from generating interrupts */
     //e1000_write_reg(e1000, E1000_IMC, 0xffffffff);
 
-    /* Clear any pending interrupt events. */
+    /** Clear any pending interrupt events. */
     while (0 != e1000_read_reg(e1000, E1000_ICR)) ;
 }
 
-/**
+/***
  * e1000_configure_tx - Configure 8254x Transmit Unit after Reset
  **/
 static void e1000_configure_tx(void)
 {
-    /* TODO: [p5-task1] Initialize tx descriptors */
+    /** TODO: [p5-task1] Initialize tx descriptors */
     for(int i=0; i<TXDESCS; i++){
         tx_desc_array[i].addr   = (uint32_t)kva2pa((uintptr_t)(tx_pkt_buffer[i]));
         tx_desc_array[i].cmd    = E1000_TXD_CMD_EOP | E1000_TXD_CMD_RS;
         tx_desc_array[i].status = E1000_TXD_STAT_DD;
     }
 
-    /* TODO: [p5-task1] Set up the Tx descriptor base address and length */
+    /** TODO: [p5-task1] Set up the Tx descriptor base address and length */
     
     uint32_t LOW  = (uint32_t)(((uint64_t)kva2pa((uintptr_t)tx_desc_array)) & 0xffffffff);
     uint32_t HIGH = (uint32_t)(((uint64_t)kva2pa((uintptr_t)tx_desc_array)) >> 32); 
@@ -79,12 +79,12 @@ static void e1000_configure_tx(void)
     e1000_write_reg(e1000,E1000_TDBAH,HIGH);
     e1000_write_reg(e1000,E1000_TDLEN,SIZE);
 
-	/* TODO: [p5-task1] Set up the HW Tx Head and Tail descriptor pointers */
+	/** TODO: [p5-task1] Set up the HW Tx Head and Tail descriptor pointers */
 
     e1000_write_reg(e1000,E1000_TDH,0);
     e1000_write_reg(e1000,E1000_TDT,0);
 
-    /* TODO: [p5-task1] Program the Transmit Control Register */
+    /** TODO: [p5-task1] Program the Transmit Control Register */
 
     //EN
     uint32_t TCTL_write = E1000_TCTL_EN |
@@ -96,12 +96,12 @@ static void e1000_configure_tx(void)
     local_flush_dcache();
 }
 
-/**
+/***
  * e1000_configure_rx - Configure 8254x Receive Unit after Reset
  **/
 static void e1000_configure_rx(void)
 {
-    /* TODO: [p5-task2] Set e1000 MAC Address to RAR[0] */
+    /** TODO: [p5-task2] Set e1000 MAC Address to RAR[0] */
     //RAL0
     uint32_t RAL0_v = (enetaddr[3]<<24) |
                       (enetaddr[2]<<16) |
@@ -117,7 +117,7 @@ static void e1000_configure_rx(void)
     e1000_write_reg_array(e1000,E1000_RA,0,RAL0_v);
     e1000_write_reg_array(e1000,E1000_RA,1,RAH0_v);
 
-    /* TODO: [p5-task2] Initialize rx descriptors */
+    /** TODO: [p5-task2] Initialize rx descriptors */
 
     for(int i=0; i<RXDESCS; i++){
         rx_desc_array[i].addr = (uint32_t)kva2pa((uintptr_t)(rx_pkt_buffer[i]));
@@ -129,18 +129,18 @@ static void e1000_configure_rx(void)
         // rx_desc_array[i].status |= (0<<1);//EOP
     }//全部清空
 
-    /* TODO: [p5-task2] Set up the Rx descriptor base address and length */
+    /** TODO: [p5-task2] Set up the Rx descriptor base address and length */
 
     e1000_write_reg(e1000, E1000_RDBAH, kva2pa((uint64_t)rx_desc_array) >> 32);
     e1000_write_reg(e1000, E1000_RDBAL, kva2pa((uint64_t)rx_desc_array) << 32 >> 32);
     e1000_write_reg(e1000, E1000_RDLEN, sizeof(rx_desc_array));
 
-    /* TODO: [p5-task2] Set up the HW Rx Head and Tail descriptor pointers */
+    /** TODO: [p5-task2] Set up the HW Rx Head and Tail descriptor pointers */
 
     e1000_write_reg(e1000,E1000_RDH,0);
     e1000_write_reg(e1000,E1000_RDT,RXDESCS -1);
 
-    /* TODO: [p5-task2] Program the Receive Control Register */
+    /** TODO: [p5-task2] Program the Receive Control Register */
 
     uint32_t RCTL_write = (E1000_RCTL_EN    | 
                           E1000_RCTL_BAM   )& ~E1000_RCTL_BSEX;
@@ -148,27 +148,27 @@ static void e1000_configure_rx(void)
     e1000_write_reg(e1000,E1000_RCTL,RCTL_write);
 
     e1000_write_reg(e1000, E1000_IMS, E1000_IMS_RXDMT0);
-    /* TODO: [p5-task4] Enable RXDMT0 Interrupt */
+    /** TODO: [p5-task4] Enable RXDMT0 Interrupt */
 
     local_flush_dcache();
 }
 
-/**
+/***
  * e1000_init - Initialize e1000 device and descriptors
  **/
 void e1000_init(void)
 {
-    /* Reset E1000 Tx & Rx Units; mask & clear all interrupts */
+    /** Reset E1000 Tx & Rx Units; mask & clear all interrupts */
     e1000_reset();
 
-    /* Configure E1000 Tx Unit */
+    /** Configure E1000 Tx Unit */
     e1000_configure_tx();
 
-    /* Configure E1000 Rx Unit */
+    /** Configure E1000 Rx Unit */
     e1000_configure_rx();
 }
 
-/**
+/***
  * e1000_transmit - Transmit packet through e1000 net device
  * @param txpacket - The buffer address of packet to be transmitted
  * @param length - Length of this packet
@@ -176,7 +176,7 @@ void e1000_init(void)
  **/
 int e1000_transmit(void *txpacket, int length)
 {
-    /* TODO: [p5-task1] Transmit one packet from txpacket */
+    /** TODO: [p5-task1] Transmit one packet from txpacket */
     pcb_t* current_running = get_pcb();
 
     uint32_t tail = e1000_read_reg(e1000,E1000_TDT);
@@ -187,7 +187,7 @@ int e1000_transmit(void *txpacket, int length)
     memcpy((void*)tx_pkt_buffer[tail],txpacket,length);//完成当前对于tail指针指向的发送描述符的一系列标志位等
     local_flush_dcache();
     
-    /*
+    /**
      * 注意在进入这个函数的时候，tail指向的位置一定是可以写入的
      * 只不过往后走可能不能写入了，那么这个时候需要被阻塞，并且不可以把新的tail指针写入
      */
@@ -205,14 +205,14 @@ int e1000_transmit(void *txpacket, int length)
     return 0;
 }
 
-/**
+/***
  * e1000_poll - Receive packet through e1000 net device
  * @param rxbuffer - The address of buffer to store received packet
  * @return - Length of received packet
  **/
 int e1000_poll(void *rxbuffer)
 {
-    /* TODO: [p5-task2] Receive one packet and put it into rxbuffer */
+    /** TODO: [p5-task2] Receive one packet and put it into rxbuffer */
     pcb_t* current_running = get_pcb();
 
     uint32_t tail = e1000_read_reg(e1000,E1000_RDT);
@@ -240,7 +240,7 @@ int e1000_poll(void *rxbuffer)
     return len;
 }
 
-/* 
+/** 
  * 两个函数最不同的地方就在于，对于发送描述符，进入函数之后一定可以发送，需要考虑的是发送完后tail能不能往前走
  * 接收则首先需要考虑前面的能不能走，如果不能走那么就应该直接被阻塞
  */

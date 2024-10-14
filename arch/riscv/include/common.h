@@ -1,4 +1,4 @@
-/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *  * * * * * * * * * * *
+/** * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *  * * * * * * * * * * *
  *            Copyright (C) 2018 Institute of Computing Technology, CAS
  *               Author : Han Shukai (email : hanshukai@ict.ac.cn)
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *  * * * * * * * * * * *
@@ -69,7 +69,7 @@ int port_read_ch(void);
 // use bios bios_sd_read function
 int sd_read(unsigned mem_address, unsigned num_of_blocks, unsigned block_id);
 
-/************************************************************/
+/*************************************************************/
 // write blocks to sd card
 // use bios bios_sdwrite function
 int sd_write(unsigned mem_address, unsigned num_of_blocks, unsigned block_id);
@@ -89,6 +89,6 @@ void qemu_logging(char *str);
 // send Inter-Processor Interrupts(IPI)
 // use bios send ipi function
 void send_ipi(const unsigned long *hart_mask);
-/************************************************************/
+/*************************************************************/
 
 #endif

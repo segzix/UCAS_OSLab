@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: GPL-2.0
-/*
+/**
  * Copyright (C) 2017 SiFive
  * Copyright (C) 2018 Christoph Hellwig
  */
 
-/*
+/**
  * This driver implements a version of the RISC-V PLIC with the actual layout
  * specified in chapter 8 of the SiFive U5 Coreplex Series Manual:
  *
@@ -45,7 +45,7 @@ static void plic_irq_unmask(int hwirq)
     if (handler->present) plic_toggle(handler, hwirq, enable);
 }
 
-/*
+/**
  * Handling an interrupt is a two-step process: first you claim the interrupt
  * by reading the claim register, then you complete the interrupt by writing
  * that source ID back to the same claim register.  This automatically enables
@@ -86,7 +86,7 @@ int plic_init(uint64_t plic_regs_addr, uint32_t nr_irqs)
     handler->enable_base = plic_regs + ENABLE_BASE;
 
 done:
-    /* priority must be > threshold to trigger an interrupt */
+    /** priority must be > threshold to trigger an interrupt */
     writel(threshold, handler->hart_base + CONTEXT_THRESHOLD);
     for (hwirq = 1; hwirq <= nr_irqs; hwirq++) plic_toggle(handler, hwirq, 0);
 

@@ -4,7 +4,7 @@
 #include "os/smp.h"
 #include "os/time.h"
 
-/*
+/**
  * !!!
  * 为什么这里不能用get_pcb()，因为要明白现在curRun1与curRun2这两个地方存放的值需要进行变化，
  * 而要变化就一定得知道这两个的地址
@@ -17,7 +17,7 @@ void do_scheduler(void) {
     pcb_t *current_running = get_pcb();
     int curcpu = get_current_cpu_id() ? 0x2 : 0x1;
 
-    /*检查睡眠队列，网络重传检测，回收物理页*/
+    /**检查睡眠队列，网络重传检测，回收物理页*/
     check_sleeping();
     do_resend();
     //当前是shell,并且经过了exit需要被回收，同时不是子线程，同时shell的不允许被回收
@@ -55,7 +55,7 @@ void do_scheduler(void) {
     switch_to(prev_running, current_running);
 }
 
-/*
+/**
  * 进程退出，释放相关资源
  */
 void do_exit(void) {
@@ -64,7 +64,7 @@ void do_exit(void) {
     do_scheduler();
 }
 
-/*
+/**
  * ???
  */
 int do_kill(pid_t pid) {
@@ -82,7 +82,7 @@ int do_kill(pid_t pid) {
     return 0;
 }
 
-/*
+/**
  * 等待某个进程，阻塞至对应进程的队列中
  */
 int do_waitpid(pid_t pid) {

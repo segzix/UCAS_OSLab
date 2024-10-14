@@ -1,4 +1,4 @@
-/*
+/**
  * deflate_decompress.c - a decompressor for DEFLATE
  *
  * Copyright 2016 Eric Biggers
@@ -45,7 +45,7 @@
 #include "lib_common.h"
 #include "deflate_constants.h"
 
-/*
+/**
  * If the expression passed to SAFETY_CHECK() evaluates to false, then the
  * decompression routine immediately returns LIBDEFLATE_BAD_DATA, indicating the
  * compressed data is invalid.
@@ -60,11 +60,11 @@
 #  define SAFETY_CHECK(expr)	if (unlikely(!(expr))) return LIBDEFLATE_BAD_DATA
 #endif
 
-/*****************************************************************************
+/******************************************************************************
  *				Input bitstream                              *
  *****************************************************************************/
 
-/*
+/**
  * The state of the "input bitstream" consists of the following variables:
  *
  *	- in_next: a pointer to the next unread byte in the input buffer
@@ -95,7 +95,7 @@
  *			  counted by 'bitsleft' and any already consumed
  */
 
-/*
+/**
  * The type for the bitbuffer variable ('bitbuf' described above).  For best
  * performance, this should have size equal to a machine word.
  *
@@ -105,10 +105,10 @@
 typedef machine_word_t bitbuf_t;
 #define BITBUF_NBITS	(8 * (int)sizeof(bitbuf_t))
 
-/* BITMASK(n) returns a bitmask of length 'n'. */
+/** BITMASK(n) returns a bitmask of length 'n'. */
 #define BITMASK(n)	(((bitbuf_t)1 << (n)) - 1)
 
-/*
+/**
  * MAX_BITSLEFT is the maximum number of consumable bits, i.e. the maximum value
  * of '(u8)bitsleft'.  This is the size of the bitbuffer variable, minus 1 if
  * the branchless refill method is being used (see REFILL_BITS_BRANCHLESS()).
@@ -116,7 +116,7 @@ typedef machine_word_t bitbuf_t;
 #define MAX_BITSLEFT	\
 	(UNALIGNED_ACCESS_IS_FAST ? BITBUF_NBITS - 1 : BITBUF_NBITS)
 
-/*
+/**
  * CONSUMABLE_NBITS is the minimum number of bits that are guaranteed to be
  * consumable (counted in 'bitsleft') immediately after refilling the bitbuffer.
  * Since only whole bytes can be added to 'bitsleft', the worst case is
@@ -124,7 +124,7 @@ typedef machine_word_t bitbuf_t;
  */
 #define CONSUMABLE_NBITS	(MAX_BITSLEFT - 7)
 
-/*
+/**
  * FASTLOOP_PRELOADABLE_NBITS is the minimum number of bits that are guaranteed
  * to be preloadable immediately after REFILL_BITS_IN_FASTLOOP().  (It is *not*
  * guaranteed after REFILL_BITS(), since REFILL_BITS() falls back to a
@@ -135,7 +135,7 @@ typedef machine_word_t bitbuf_t;
 #define FASTLOOP_PRELOADABLE_NBITS	\
 	(UNALIGNED_ACCESS_IS_FAST ? BITBUF_NBITS : CONSUMABLE_NBITS)
 
-/*
+/**
  * PRELOAD_SLACK is the minimum number of bits that are guaranteed to be
  * preloadable but not consumable, following REFILL_BITS_IN_FASTLOOP() and any
  * subsequent consumptions.  This is 1 bit if the branchless refill method is
@@ -143,14 +143,14 @@ typedef machine_word_t bitbuf_t;
  */
 #define PRELOAD_SLACK	MAX(0, FASTLOOP_PRELOADABLE_NBITS - MAX_BITSLEFT)
 
-/*
+/**
  * CAN_CONSUME(n) is true if it's guaranteed that if the bitbuffer has just been
  * refilled, then it's always possible to consume 'n' bits from it.  'n' should
  * be a compile-time constant, to enable compile-time evaluation.
  */
 #define CAN_CONSUME(n)	(CONSUMABLE_NBITS >= (n))
 
-/*
+/**
  * CAN_CONSUME_AND_THEN_PRELOAD(consume_nbits, preload_nbits) is true if it's
  * guaranteed that after REFILL_BITS_IN_FASTLOOP(), it's always possible to
  * consume 'consume_nbits' bits, then preload 'preload_nbits' bits.  The
@@ -160,7 +160,7 @@ typedef machine_word_t bitbuf_t;
 	(CONSUMABLE_NBITS >= (consume_nbits) &&				\
 	 FASTLOOP_PRELOADABLE_NBITS >= (consume_nbits) + (preload_nbits))
 
-/*
+/**
  * REFILL_BITS_BRANCHLESS() branchlessly refills the bitbuffer variable by
  * reading the next word from the input buffer and updating 'in_next' and
  * 'bitsleft' based on how many bits were refilled -- counting whole bytes only.
@@ -211,7 +211,7 @@ do {									\
 	bitsleft |= MAX_BITSLEFT & ~7;					\
 } while (0)
 
-/*
+/**
  * REFILL_BITS() loads bits from the input buffer until the bitbuffer variable
  * contains at least CONSUMABLE_NBITS consumable bits.
  *
@@ -253,7 +253,7 @@ do {									\
 	}								\
 } while (0)
 
-/*
+/**
  * REFILL_BITS_IN_FASTLOOP() is like REFILL_BITS(), but it doesn't check for the
  * end of the input.  It can only be used in the fastloop.
  */
@@ -271,7 +271,7 @@ do {									\
 	}								\
 } while (0)
 
-/*
+/**
  * This is the worst-case maximum number of output bytes that are written to
  * during each iteration of the fastloop.  The worst case is 2 literals, then a
  * match of length DEFLATE_MAX_MATCH_LEN.  Additionally, some slack space must
@@ -280,7 +280,7 @@ do {									\
 #define FASTLOOP_MAX_BYTES_WRITTEN	\
 	(2 + DEFLATE_MAX_MATCH_LEN + (5 * WORDBYTES) - 1)
 
-/*
+/**
  * This is the worst-case maximum number of input bytes that are read during
  * each iteration of the fastloop.  To get this value, we first compute the
  * greatest number of bits that can be refilled during a loop iteration.  The
@@ -296,11 +296,11 @@ do {									\
 		      LENGTH_MAXBITS + OFFSET_MAXBITS, 8) +	\
 	 sizeof(bitbuf_t))
 
-/*****************************************************************************
+/******************************************************************************
  *                              Huffman decoding                             *
  *****************************************************************************/
 
-/*
+/**
  * The fastest way to decode Huffman-encoded data is basically to use a decode
  * table that maps the next TABLEBITS bits of data to their symbol.  Each entry
  * decode_table[i] maps to the symbol whose codeword is a prefix of 'i'.  A
@@ -328,7 +328,7 @@ do {									\
  */
 
 
-/*
+/**
  * These are the TABLEBITS values we use for each of the DEFLATE Huffman codes,
  * along with their corresponding ENOUGH values.
  *
@@ -368,13 +368,13 @@ do {									\
  * The ENOUGH values were computed using the utility program 'enough' from zlib.
  */
 #define PRECODE_TABLEBITS	7
-#define PRECODE_ENOUGH		128	/* enough 19 7 7	*/
+#define PRECODE_ENOUGH		128	/** enough 19 7 7	*/
 #define LITLEN_TABLEBITS	11
-#define LITLEN_ENOUGH		2342	/* enough 288 11 15	*/
+#define LITLEN_ENOUGH		2342	/** enough 288 11 15	*/
 #define OFFSET_TABLEBITS	8
-#define OFFSET_ENOUGH		402	/* enough 32 8 15	*/
+#define OFFSET_ENOUGH		402	/** enough 32 8 15	*/
 
-/*
+/**
  * make_decode_table_entry() creates a decode table entry for the given symbol
  * by combining the static part 'decode_results[sym]' with the dynamic part
  * 'len', which is the remaining codeword length (the codeword length for main
@@ -390,7 +390,7 @@ make_decode_table_entry(const u32 decode_results[], u32 sym, u32 len)
 	return decode_results[sym] + (len << 8) + len;
 }
 
-/*
+/**
  * Here is the format of our precode decode table entries.  Bits not explicitly
  * described contain zeroes:
  *
@@ -414,27 +414,27 @@ static const u32 precode_decode_results[] = {
 #undef ENTRY
 };
 
-/* Litlen and offset decode table entry flags */
+/** Litlen and offset decode table entry flags */
 
-/* Indicates a literal entry in the litlen decode table */
+/** Indicates a literal entry in the litlen decode table */
 #define HUFFDEC_LITERAL			0x80000000
 
-/* Indicates that HUFFDEC_SUBTABLE_POINTER or HUFFDEC_END_OF_BLOCK is set */
+/** Indicates that HUFFDEC_SUBTABLE_POINTER or HUFFDEC_END_OF_BLOCK is set */
 #define HUFFDEC_EXCEPTIONAL		0x00008000
 
-/* Indicates a subtable pointer entry in the litlen or offset decode table */
+/** Indicates a subtable pointer entry in the litlen or offset decode table */
 #define HUFFDEC_SUBTABLE_POINTER	0x00004000
 
-/* Indicates an end-of-block entry in the litlen decode table */
+/** Indicates an end-of-block entry in the litlen decode table */
 #define HUFFDEC_END_OF_BLOCK		0x00002000
 
-/* Maximum number of bits that can be consumed by decoding a match length */
+/** Maximum number of bits that can be consumed by decoding a match length */
 #define LENGTH_MAXBITS		(DEFLATE_MAX_LITLEN_CODEWORD_LEN + \
 				 DEFLATE_MAX_EXTRA_LENGTH_BITS)
-#define LENGTH_MAXFASTBITS	(LITLEN_TABLEBITS /* no subtable needed */ + \
+#define LENGTH_MAXFASTBITS	(LITLEN_TABLEBITS /** no subtable needed */ + \
 				 DEFLATE_MAX_EXTRA_LENGTH_BITS)
 
-/*
+/**
  * Here is the format of our litlen decode table entries.  Bits not explicitly
  * described contain zeroes:
  *
@@ -503,7 +503,7 @@ static const u32 precode_decode_results[] = {
  */
 static const u32 litlen_decode_results[] = {
 
-	/* Literals */
+	/** Literals */
 #define ENTRY(literal)	(HUFFDEC_LITERAL | ((u32)literal << 16))
 	ENTRY(0)   , ENTRY(1)   , ENTRY(2)   , ENTRY(3)   ,
 	ENTRY(4)   , ENTRY(5)   , ENTRY(6)   , ENTRY(7)   ,
@@ -571,10 +571,10 @@ static const u32 litlen_decode_results[] = {
 	ENTRY(252) , ENTRY(253) , ENTRY(254) , ENTRY(255) ,
 #undef ENTRY
 
-	/* End of block */
+	/** End of block */
 	HUFFDEC_EXCEPTIONAL | HUFFDEC_END_OF_BLOCK,
 
-	/* Lengths */
+	/** Lengths */
 #define ENTRY(length_base, num_extra_bits)	\
 	(((u32)(length_base) << 16) | (num_extra_bits))
 	ENTRY(3  , 0) , ENTRY(4  , 0) , ENTRY(5  , 0) , ENTRY(6  , 0),
@@ -588,13 +588,13 @@ static const u32 litlen_decode_results[] = {
 #undef ENTRY
 };
 
-/* Maximum number of bits that can be consumed by decoding a match offset */
+/** Maximum number of bits that can be consumed by decoding a match offset */
 #define OFFSET_MAXBITS		(DEFLATE_MAX_OFFSET_CODEWORD_LEN + \
 				 DEFLATE_MAX_EXTRA_OFFSET_BITS)
-#define OFFSET_MAXFASTBITS	(OFFSET_TABLEBITS /* no subtable needed */ + \
+#define OFFSET_MAXFASTBITS	(OFFSET_TABLEBITS /** no subtable needed */ + \
 				 DEFLATE_MAX_EXTRA_OFFSET_BITS)
 
-/*
+/**
  * Here is the format of our offset decode table entries.  Bits not explicitly
  * described contain zeroes:
  *
@@ -628,7 +628,7 @@ static const u32 offset_decode_results[] = {
 #undef ENTRY
 };
 
-/*
+/**
  * The main DEFLATE decompressor structure.  Since libdeflate only supports
  * full-buffer decompression, this structure doesn't store the entire
  * decompression state, most of which is in stack variables.  Instead, this
@@ -641,7 +641,7 @@ static const u32 offset_decode_results[] = {
  */
 struct libdeflate_decompressor {
 
-	/*
+	/**
 	 * The arrays aren't all needed at the same time.  'precode_lens' and
 	 * 'precode_decode_table' are unneeded after 'lens' has been filled.
 	 * Furthermore, 'lens' need not be retained after building the litlen
@@ -666,17 +666,17 @@ struct libdeflate_decompressor {
 
 	u32 offset_decode_table[OFFSET_ENOUGH];
 
-	/* used only during build_decode_table() */
+	/** used only during build_decode_table() */
 	u16 sorted_syms[DEFLATE_MAX_NUM_SYMS];
 
 	bool static_codes_loaded;
 	unsigned litlen_tablebits;
 
-	/* The free() function for this struct, chosen at allocation time */
+	/** The free() function for this struct, chosen at allocation time */
 	free_func_t free_func;
 };
 
-/*
+/**
  * Build a table for fast decoding of symbols from a Huffman code.  As input,
  * this function takes the codeword length of each symbol which may be used in
  * the code.  As output, it produces a decode table for the canonical Huffman
@@ -730,23 +730,23 @@ build_decode_table(u32 decode_table[],
 {
 	unsigned len_counts[DEFLATE_MAX_CODEWORD_LEN + 1];
 	unsigned offsets[DEFLATE_MAX_CODEWORD_LEN + 1];
-	unsigned sym;		/* current symbol */
-	unsigned codeword;	/* current codeword, bit-reversed */
-	unsigned len;		/* current codeword length in bits */
-	unsigned count;		/* num codewords remaining with this length */
-	u32 codespace_used;	/* codespace used out of '2^max_codeword_len' */
-	unsigned cur_table_end; /* end index of current table */
-	unsigned subtable_prefix; /* codeword prefix of current subtable */
-	unsigned subtable_start;  /* start index of current subtable */
-	unsigned subtable_bits;   /* log2 of current subtable length */
+	unsigned sym;		/** current symbol */
+	unsigned codeword;	/** current codeword, bit-reversed */
+	unsigned len;		/** current codeword length in bits */
+	unsigned count;		/** num codewords remaining with this length */
+	u32 codespace_used;	/** codespace used out of '2^max_codeword_len' */
+	unsigned cur_table_end; /** end index of current table */
+	unsigned subtable_prefix; /** codeword prefix of current subtable */
+	unsigned subtable_start;  /** start index of current subtable */
+	unsigned subtable_bits;   /** log2 of current subtable length */
 
-	/* Count how many codewords have each length, including 0. */
+	/** Count how many codewords have each length, including 0. */
 	for (len = 0; len <= max_codeword_len; len++)
 		len_counts[len] = 0;
 	for (sym = 0; sym < num_syms; sym++)
 		len_counts[lens[sym]]++;
 
-	/*
+	/**
 	 * Determine the actual maximum codeword length that was used, and
 	 * decrease table_bits to it if allowed.
 	 */
@@ -757,7 +757,7 @@ build_decode_table(u32 decode_table[],
 		*table_bits_ret = table_bits;
 	}
 
-	/*
+	/**
 	 * Sort the symbols primarily by increasing codeword length and
 	 * secondarily by increasing symbol value; or equivalently by their
 	 * codewords in lexicographic order, since a canonical code is assumed.
@@ -766,7 +766,7 @@ build_decode_table(u32 decode_table[],
 	 * 'len_counts[]' used to build 'offsets[]' for sorting.
 	 */
 
-	/* Ensure that 'codespace_used' cannot overflow. */
+	/** Ensure that 'codespace_used' cannot overflow. */
 	STATIC_ASSERT(sizeof(codespace_used) == 4);
 	STATIC_ASSERT(UINT32_MAX / (1U << (DEFLATE_MAX_CODEWORD_LEN - 1)) >=
 		      DEFLATE_MAX_NUM_SYMS);
@@ -783,11 +783,11 @@ build_decode_table(u32 decode_table[],
 	for (sym = 0; sym < num_syms; sym++)
 		sorted_syms[offsets[lens[sym]]++] = sym;
 
-	sorted_syms += offsets[0]; /* Skip unused symbols */
+	sorted_syms += offsets[0]; /** Skip unused symbols */
 
-	/* lens[] is done being used, so we can write to decode_table[] now. */
+	/** lens[] is done being used, so we can write to decode_table[] now. */
 
-	/*
+	/**
 	 * Check whether the lengths form a complete code (exactly fills the
 	 * codespace), an incomplete code (doesn't fill the codespace), or an
 	 * overfull code (overflows the codespace).  A codeword of length 'n'
@@ -796,26 +796,26 @@ build_decode_table(u32 decode_table[],
 	 * considered valid only in two specific cases; see below.
 	 */
 
-	/* overfull code? */
+	/** overfull code? */
 	if (unlikely(codespace_used > (1U << max_codeword_len)))
 		return false;
 
-	/* incomplete code? */
+	/** incomplete code? */
 	if (unlikely(codespace_used < (1U << max_codeword_len))) {
 		u32 entry;
 		unsigned i;
 
 		if (codespace_used == 0) {
-			/*
+			/**
 			 * An empty code is allowed.  This can happen for the
 			 * offset code in DEFLATE, since a dynamic Huffman block
 			 * need not contain any matches.
 			 */
 
-			/* sym=0, len=1 (arbitrary) */
+			/** sym=0, len=1 (arbitrary) */
 			entry = make_decode_table_entry(decode_results, 0, 1);
 		} else {
-			/*
+			/**
 			 * Allow codes with a single used symbol, with codeword
 			 * length 1.  The DEFLATE RFC is unclear regarding this
 			 * case.  What zlib's decompressor does is permit this
@@ -832,7 +832,7 @@ build_decode_table(u32 decode_table[],
 			entry = make_decode_table_entry(decode_results,
 							*sorted_syms, 1);
 		}
-		/*
+		/**
 		 * Note: the decode table still must be fully initialized, in
 		 * case the stream is malformed and contains bits from the part
 		 * of the codespace the incomplete code doesn't use.
@@ -842,7 +842,7 @@ build_decode_table(u32 decode_table[],
 		return true;
 	}
 
-	/*
+	/**
 	 * The lengths form a complete code.  Now, enumerate the codewords in
 	 * lexicographic order and fill the decode table entries for each one.
 	 *
@@ -872,17 +872,17 @@ build_decode_table(u32 decode_table[],
 		len++;
 	cur_table_end = 1U << len;
 	while (len <= table_bits) {
-		/* Process all 'count' codewords with length 'len' bits. */
+		/** Process all 'count' codewords with length 'len' bits. */
 		do {
 			unsigned bit;
 
-			/* Fill the first entry for the current codeword. */
+			/** Fill the first entry for the current codeword. */
 			decode_table[codeword] =
 				make_decode_table_entry(decode_results,
 							*sorted_syms++, len);
 
 			if (codeword == cur_table_end - 1) {
-				/* Last codeword (all 1's) */
+				/** Last codeword (all 1's) */
 				for (; len < table_bits; len++) {
 					memcpy(&decode_table[cur_table_end],
 					       decode_table,
@@ -892,7 +892,7 @@ build_decode_table(u32 decode_table[],
 				}
 				return true;
 			}
-			/*
+			/**
 			 * To advance to the lexicographically next codeword in
 			 * the canonical code, the codeword must be incremented,
 			 * then 0's must be appended to the codeword as needed
@@ -912,7 +912,7 @@ build_decode_table(u32 decode_table[],
 			codeword |= bit;
 		} while (--count);
 
-		/* Advance to the next codeword length. */
+		/** Advance to the next codeword length. */
 		do {
 			if (++len <= table_bits) {
 				memcpy(&decode_table[cur_table_end],
@@ -923,7 +923,7 @@ build_decode_table(u32 decode_table[],
 		} while ((count = len_counts[len]) == 0);
 	}
 
-	/* Process codewords with len > table_bits.  These require subtables. */
+	/** Process codewords with len > table_bits.  These require subtables. */
 	cur_table_end = 1U << table_bits;
 	subtable_prefix = -1;
 	subtable_start = 0;
@@ -933,14 +933,14 @@ build_decode_table(u32 decode_table[],
 		unsigned stride;
 		unsigned bit;
 
-		/*
+		/**
 		 * Start a new subtable if the first 'table_bits' bits of the
 		 * codeword don't match the prefix of the current subtable.
 		 */
 		if ((codeword & ((1U << table_bits) - 1)) != subtable_prefix) {
 			subtable_prefix = (codeword & ((1U << table_bits) - 1));
 			subtable_start = cur_table_end;
-			/*
+			/**
 			 * Calculate the subtable length.  If the codeword has
 			 * length 'table_bits + n', then the subtable needs
 			 * '2^n' entries.  But it may need more; if fewer than
@@ -960,7 +960,7 @@ build_decode_table(u32 decode_table[],
 			}
 			cur_table_end = subtable_start + (1U << subtable_bits);
 
-			/*
+			/**
 			 * Create the entry that points from the main table to
 			 * the subtable.
 			 */
@@ -971,7 +971,7 @@ build_decode_table(u32 decode_table[],
 				(subtable_bits << 8) | table_bits;
 		}
 
-		/* Fill the subtable entries for the current codeword. */
+		/** Fill the subtable entries for the current codeword. */
 		entry = make_decode_table_entry(decode_results, *sorted_syms++,
 						len - table_bits);
 		i = subtable_start + (codeword >> table_bits);
@@ -981,8 +981,8 @@ build_decode_table(u32 decode_table[],
 			i += stride;
 		} while (i < cur_table_end);
 
-		/* Advance to the next codeword. */
-		if (codeword == (1U << len) - 1) /* last codeword (all 1's)? */
+		/** Advance to the next codeword. */
+		if (codeword == (1U << len) - 1) /** last codeword (all 1's)? */
 			return true;
 		bit = 1U << bsr32(codeword ^ ((1U << len) - 1));
 		codeword &= bit - 1;
@@ -993,11 +993,11 @@ build_decode_table(u32 decode_table[],
 	}
 }
 
-/* Build the decode table for the precode.  */
+/** Build the decode table for the precode.  */
 static bool
 build_precode_decode_table(struct libdeflate_decompressor *d)
 {
-	/* When you change TABLEBITS, you must change ENOUGH, and vice versa! */
+	/** When you change TABLEBITS, you must change ENOUGH, and vice versa! */
 	STATIC_ASSERT(PRECODE_TABLEBITS == 7 && PRECODE_ENOUGH == 128);
 
 	STATIC_ASSERT(ARRAY_LEN(precode_decode_results) ==
@@ -1013,12 +1013,12 @@ build_precode_decode_table(struct libdeflate_decompressor *d)
 				  NULL);
 }
 
-/* Build the decode table for the literal/length code.  */
+/** Build the decode table for the literal/length code.  */
 static bool
 build_litlen_decode_table(struct libdeflate_decompressor *d,
 			  unsigned num_litlen_syms, unsigned num_offset_syms)
 {
-	/* When you change TABLEBITS, you must change ENOUGH, and vice versa! */
+	/** When you change TABLEBITS, you must change ENOUGH, and vice versa! */
 	STATIC_ASSERT(LITLEN_TABLEBITS == 11 && LITLEN_ENOUGH == 2342);
 
 	STATIC_ASSERT(ARRAY_LEN(litlen_decode_results) ==
@@ -1034,12 +1034,12 @@ build_litlen_decode_table(struct libdeflate_decompressor *d,
 				  &d->litlen_tablebits);
 }
 
-/* Build the decode table for the offset code.  */
+/** Build the decode table for the offset code.  */
 static bool
 build_offset_decode_table(struct libdeflate_decompressor *d,
 			  unsigned num_litlen_syms, unsigned num_offset_syms)
 {
-	/* When you change TABLEBITS, you must change ENOUGH, and vice versa! */
+	/** When you change TABLEBITS, you must change ENOUGH, and vice versa! */
 	STATIC_ASSERT(OFFSET_TABLEBITS == 8 && OFFSET_ENOUGH == 402);
 
 	STATIC_ASSERT(ARRAY_LEN(offset_decode_results) ==
@@ -1055,7 +1055,7 @@ build_offset_decode_table(struct libdeflate_decompressor *d,
 				  NULL);
 }
 
-/*****************************************************************************
+/******************************************************************************
  *                         Main decompression routine
  *****************************************************************************/
 
@@ -1071,7 +1071,7 @@ typedef enum libdeflate_result (*decompress_func_t)
 #undef EXTRACT_VARBITS8
 #include "decompress_template.h"
 
-/* Include architecture-specific implementation(s) if available. */
+/** Include architecture-specific implementation(s) if available. */
 #undef DEFAULT_IMPL
 #undef arch_select_decompress_func
 // #if defined(ARCH_X86_32) || defined(ARCH_X86_64)
@@ -1091,7 +1091,7 @@ dispatch_decomp(struct libdeflate_decompressor *d,
 
 static volatile decompress_func_t decompress_impl = dispatch_decomp;
 
-/* Choose the best implementation at runtime. */
+/** Choose the best implementation at runtime. */
 static enum libdeflate_result
 dispatch_decomp(struct libdeflate_decompressor *d,
 		const void *in, size_t in_nbytes,
@@ -1108,11 +1108,11 @@ dispatch_decomp(struct libdeflate_decompressor *d,
 		 actual_in_nbytes_ret, actual_out_nbytes_ret);
 }
 #else
-/* The best implementation is statically known, so call it directly. */
+/** The best implementation is statically known, so call it directly. */
 #  define decompress_impl DEFAULT_IMPL
 #endif
 
-/*
+/**
  * This is the main DEFLATE decompression routine.  See libdeflate.h for the
  * documentation.
  *
@@ -1149,7 +1149,7 @@ libdeflate_alloc_decompressor_ex(const struct libdeflate_options *options)
 {
 	struct libdeflate_decompressor *d;
 
-	/*
+	/**
 	 * Note: if more fields are added to libdeflate_options, this code will
 	 * need to be updated to support both the old and new structs.
 	 */
@@ -1162,7 +1162,7 @@ libdeflate_alloc_decompressor_ex(const struct libdeflate_options *options)
 
 	if (d == NULL)
 		return NULL;
-	/*
+	/**
 	 * Note that only certain parts of the decompressor actually must be
 	 * initialized here:
 	 *

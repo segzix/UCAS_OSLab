@@ -27,7 +27,7 @@ void latency(uint64_t time) {
     return;
 }
 
-/*
+/**
  * 进入睡眠，设置苏醒时间并阻塞至睡眠队列中
  */
 void do_sleep(uint32_t sleep_time) {
@@ -38,7 +38,7 @@ void do_sleep(uint32_t sleep_time) {
     spin_lock_release(&sleep_spin_lock);
 }
 
-/*
+/**
  * 检查睡眠队列
  */
 void check_sleeping(void) {

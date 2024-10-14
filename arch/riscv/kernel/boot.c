@@ -1,4 +1,4 @@
-/* RISC-V kernel boot stage */
+/** RISC-V kernel boot stage */
 #include <pgtable.h>
 #include <asm.h>
 
@@ -6,7 +6,7 @@
 
 typedef void (*kernel_entry_t)(unsigned long);
 
-/********* setup memory mapping ***********/
+/********** setup memory mapping ***********/
 static uintptr_t ARRTIBUTE_BOOTKERNEL alloc_page()
 {
     static uintptr_t pg_base = PGDIR_PA;
@@ -42,7 +42,7 @@ static void ARRTIBUTE_BOOTKERNEL enable_vm()
     local_flush_tlb_all();
 }
 
-/* Sv-39 mode
+/** Sv-39 mode
  * 0x0000_0000_0000_0000-0x0000_003f_ffff_ffff is for user mode
  * 0xffff_ffc0_0000_0000-0xffff_ffff_ffff_ffff is for kernel mode
  */
@@ -67,7 +67,7 @@ static void ARRTIBUTE_BOOTKERNEL setup_vm()
 
 extern uintptr_t _start[];
 
-/*********** start here **************/
+/************ start here **************/
 int ARRTIBUTE_BOOTKERNEL boot_kernel(unsigned long mhartid)
 {
     if (mhartid == 0) {
@@ -76,7 +76,7 @@ int ARRTIBUTE_BOOTKERNEL boot_kernel(unsigned long mhartid)
         enable_vm();
     }
 
-    /* enter kernel */
+    /** enter kernel */
     ((kernel_entry_t)pa2kva((uintptr_t)_start))(mhartid);
 
     return 0;

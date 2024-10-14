@@ -17,4 +17,4 @@ static inline void _panic(const char* file_name,int lineno, const char* func_nam
         }                                            \
     }
 
-#endif /* ASSERT_H */
+#endif /** ASSERT_H */

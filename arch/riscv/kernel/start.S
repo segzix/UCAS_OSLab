@@ -1,5 +1,5 @@
-/* SPDX-License-Identifier: GPL-2.0-only */
-/*
+/** SPDX-License-Identifier: GPL-2.0-only */
+/**
  * Copyright (C) 2012 Regents of the University of California
  */
 
@@ -9,12 +9,12 @@
 
 .section ".bootkernel_entry","ax"
 ENTRY(_boot)
-  /*
+  /**
    * this is the entrypoint of the kernel. 
    * Don't clear BSS here
    */
 
-  /* Mask all interrupts */
+  /** Mask all interrupts */
   csrw CSR_SIE, zero
   csrw CSR_SIP, zero
 

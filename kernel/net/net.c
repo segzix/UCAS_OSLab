@@ -10,7 +10,7 @@
 #include <printk.h>
 #include <type.h>
 
-/****** 系统调用函数 ******/
+/******* 系统调用函数 ******/
 
 int do_net_send(void *txpacket, int length) {
     e1000_transmit(txpacket, length);
@@ -89,7 +89,7 @@ int do_net_recv_stream(void *buffer, int *nbytes) {
 
             memcpy((void *)resend_head, (void *)temp_buffer, RESEND_HEAD_NUM); //拷贝包头
 
-            /*找prev指针(head <= nowhead)*/
+            /**找prev指针(head <= nowhead)*/
             node_index = 0;
             while (true) {
                 uint64_t head = sbawin[node_index].seq;
@@ -104,7 +104,7 @@ int do_net_recv_stream(void *buffer, int *nbytes) {
                 node_index = sbawin[node_index].next;
             }
 
-            /*找next指针(tail >= now_tail)*/
+            /**找next指针(tail >= now_tail)*/
             node_index = 0;
             while (true) {
                 if (node_index == -1) {
@@ -119,11 +119,11 @@ int do_net_recv_stream(void *buffer, int *nbytes) {
                 node_index = sbawin[node_index].next;
             }
 
-            /*找空闲的sbawin*/
+            /**找空闲的sbawin*/
             for (neidx = 0; sbawin[neidx].valid; neidx++)
                 ;
 
-            /*处理刚填入的sbawin，并根据情况进行静态链表的前后合并*/
+            /**处理刚填入的sbawin，并根据情况进行静态链表的前后合并*/
             if (prev != next) {
                 //将空闲节点填入
                 memcpy((void *)buffer + now_seq, (void *)data_buffer, now_len);
@@ -171,7 +171,7 @@ int do_net_recv_stream(void *buffer, int *nbytes) {
         // printl("valid num: %d\n", valid);
     }
 
-    /*结束完之后最后一次确认*/
+    /**结束完之后最后一次确认*/
     do_perfm((int)(((void *)get_pcb() - (void *)pcb) / sizeof(pcb_t)));
     do_resend_ACK(((void *)get_pcb() - (void *)pcb) / sizeof(pcb_t));
 

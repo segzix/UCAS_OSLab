@@ -35,7 +35,7 @@ LIST_HEAD(sleep_queue);
 spin_lock_t ready_spin_lock = {UNLOCKED};
 spin_lock_t sleep_spin_lock = {UNLOCKED};
 
-/* current running task PCB */
+/** current running task PCB */
 pcb_t *current_running_0;
 pcb_t *current_running_1;
 //在main.c中初始化为只想pid0_pcb的pcb指针！
@@ -80,7 +80,7 @@ void clean_temp_page(uint64_t pgdir_addr) {
     }
 }
 
-/*
+/**
  * 阻塞进程至queue队列
  * 这里采用mesa风格写小锁(虽然最终没实现小锁)
  */
@@ -95,7 +95,7 @@ void do_block(list_node_t *pcb_node, list_head *queue, spin_lock_t *lock) {
     spin_lock_acquire(lock);
 }
 
-/*
+/**
  * 进程阻塞解除
  */
 void do_unblock(list_node_t *pcb_node) {
@@ -109,7 +109,7 @@ void do_unblock(list_node_t *pcb_node) {
     (list_entry(pcb_node, pcb_t, list))->status = TASK_READY;
 }
 
-/*
+/**
  * 释放相关锁资源，标记recycle方便后续物理页回收，标记为退出状态
  */
 void srcrel(int id) {

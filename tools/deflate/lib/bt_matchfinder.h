@@ -1,4 +1,4 @@
-/*
+/**
  * bt_matchfinder.h - Lempel-Ziv matchfinding with a hash table of binary trees
  *
  * Copyright 2016 Eric Biggers
@@ -75,32 +75,32 @@
 	(((1UL << BT_MATCHFINDER_HASH3_ORDER) * BT_MATCHFINDER_HASH3_WAYS + \
 	  (1UL << BT_MATCHFINDER_HASH4_ORDER)) * sizeof(mf_pos_t))
 
-/* Representation of a match found by the bt_matchfinder  */
+/** Representation of a match found by the bt_matchfinder  */
 struct lz_match {
 
-	/* The number of bytes matched.  */
+	/** The number of bytes matched.  */
 	u16 length;
 
-	/* The offset back from the current position that was matched.  */
+	/** The offset back from the current position that was matched.  */
 	u16 offset;
 };
 
 struct MATCHFINDER_ALIGNED bt_matchfinder {
 
-	/* The hash table for finding length 3 matches  */
+	/** The hash table for finding length 3 matches  */
 	mf_pos_t hash3_tab[1UL << BT_MATCHFINDER_HASH3_ORDER][BT_MATCHFINDER_HASH3_WAYS];
 
-	/* The hash table which contains the roots of the binary trees for
+	/** The hash table which contains the roots of the binary trees for
 	 * finding length 4+ matches  */
 	mf_pos_t hash4_tab[1UL << BT_MATCHFINDER_HASH4_ORDER];
 
-	/* The child node references for the binary trees.  The left and right
+	/** The child node references for the binary trees.  The left and right
 	 * children of the node for the sequence with position 'pos' are
 	 * 'child_tab[pos * 2]' and 'child_tab[pos * 2 + 1]', respectively.  */
 	mf_pos_t child_tab[2UL * MATCHFINDER_WINDOW_SIZE];
 };
 
-/* Prepare the matchfinder for a new input buffer.  */
+/** Prepare the matchfinder for a new input buffer.  */
 static forceinline void
 bt_matchfinder_init(struct bt_matchfinder *mf)
 {
@@ -130,12 +130,12 @@ bt_right_child(struct bt_matchfinder *mf, s32 node)
 	return &mf->child_tab[2 * (node & (MATCHFINDER_WINDOW_SIZE - 1)) + 1];
 }
 
-/* The minimum permissible value of 'max_len' for bt_matchfinder_get_matches()
+/** The minimum permissible value of 'max_len' for bt_matchfinder_get_matches()
  * and bt_matchfinder_skip_byte().  There must be sufficiently many bytes
  * remaining to load a 32-bit integer from the *next* position.  */
 #define BT_MATCHFINDER_REQUIRED_NBYTES	5
 
-/* Advance the binary tree matchfinder by one byte, optionally recording
+/** Advance the binary tree matchfinder by one byte, optionally recording
  * matches.  @record_matches should be a compile-time constant.  */
 static forceinline struct lz_match *
 bt_matchfinder_advance_one_byte(struct bt_matchfinder * const mf,
@@ -261,7 +261,7 @@ bt_matchfinder_advance_one_byte(struct bt_matchfinder * const mf,
 	}
 }
 
-/*
+/**
  * Retrieve a list of matches with the current position.
  *
  * @mf
@@ -314,7 +314,7 @@ bt_matchfinder_get_matches(struct bt_matchfinder *mf,
 					       true);
 }
 
-/*
+/**
  * Advance the matchfinder, but don't record any matches.
  *
  * This is very similar to bt_matchfinder_get_matches() because both functions
@@ -339,4 +339,4 @@ bt_matchfinder_skip_byte(struct bt_matchfinder *mf,
 					false);
 }
 
-#endif /* LIB_BT_MATCHFINDER_H */
+#endif /** LIB_BT_MATCHFINDER_H */

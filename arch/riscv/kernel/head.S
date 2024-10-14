@@ -1,5 +1,5 @@
-/* SPDX-License-Identifier: GPL-2.0-only */
-/*
+/** SPDX-License-Identifier: GPL-2.0-only */
+/**
  * Copyright (C) 2012 Regents of the University of California
  */
 
@@ -9,7 +9,7 @@
 
 .section ".entry_function","ax"
 ENTRY(_start)
-  /* Mask all interrupts */
+  /** Mask all interrupts */
   csrw CSR_SIE, zero
   csrw CSR_SIP, zero
 
@@ -26,7 +26,7 @@ head_loop:
   j     head_loop
 head_endloop:
 
-  /* setup C environment */
+  /** setup C environment */
   la    tp, pid0_pcb
   li    sp, PID0_STACK_KVA
 

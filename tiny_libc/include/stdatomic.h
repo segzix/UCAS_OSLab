@@ -1,7 +1,7 @@
 #ifndef STDATOMIC_H
 #define STDATOMIC_H
 
-/* from linux/arch/riscv/include/asm/cmpxchg.h and atomic.h */
+/** from linux/arch/riscv/include/asm/cmpxchg.h and atomic.h */
 
 #include "stdint.h"
 
@@ -83,4 +83,4 @@ static inline long atomic_exchange_d(volatile void* obj, long desired)
 }
 
 
-#endif /* ATOMIC_H */
+#endif /** ATOMIC_H */

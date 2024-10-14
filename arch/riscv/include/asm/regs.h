@@ -1,4 +1,4 @@
-/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *  * * * * * * * * * *
+/** * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *  * * * * * * * * * *
  *            Copyright (C) 2018 Institute of Computing Technology, CAS
  *               Author : Han Shukai (email : hanshukai@ict.ac.cn)
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *  * * * * * * * * * *
@@ -25,7 +25,7 @@
 #ifndef INCLUDE_REGS_H_
 #define INCLUDE_REGS_H_
 
-/* This is for struct TrapFrame in scheduler.h
+/** This is for struct TrapFrame in scheduler.h
  * Stack layout for all exceptions:
  *
  * ptrace needs to have all regs on the stack. If the order here is changed,
@@ -36,24 +36,24 @@
 
 #define OFFSET_REG_ZERO         0
 
-/* return address */
+/** return address */
 #define OFFSET_REG_RA           8
 
-/* pointers */
+/** pointers */
 #define OFFSET_REG_SP           16 // stack
 #define OFFSET_REG_GP           24 // global
 #define OFFSET_REG_TP           32 // thread
 
-/* temporary */
+/** temporary */
 #define OFFSET_REG_T0           40
 #define OFFSET_REG_T1           48
 #define OFFSET_REG_T2           56
 
-/* saved register */
+/** saved register */
 #define OFFSET_REG_S0           64
 #define OFFSET_REG_S1           72
 
-/* args */
+/** args */
 #define OFFSET_REG_A0           80
 #define OFFSET_REG_A1           88
 #define OFFSET_REG_A2           96
@@ -63,7 +63,7 @@
 #define OFFSET_REG_A6           128
 #define OFFSET_REG_A7           136
 
-/* saved register */
+/** saved register */
 #define OFFSET_REG_S2           144
 #define OFFSET_REG_S3           152
 #define OFFSET_REG_S4           160
@@ -75,25 +75,25 @@
 #define OFFSET_REG_S10          208
 #define OFFSET_REG_S11          216
 
-/* temporary register */
+/** temporary register */
 #define OFFSET_REG_T3           224
 #define OFFSET_REG_T4           232
 #define OFFSET_REG_T5           240
 #define OFFSET_REG_T6           248
 
-/* privileged register */
+/** privileged register */
 #define OFFSET_REG_SSTATUS      256
 #define OFFSET_REG_SEPC         264
 #define OFFSET_REG_SBADADDR     272
 #define OFFSET_REG_SCAUSE       280
 
-/* Size of stack frame, word/double word alignment */
+/** Size of stack frame, word/double word alignment */
 #define OFFSET_SIZE             288
 
 #define PCB_KERNEL_SP          0
 #define PCB_USER_SP            8
 
-/* offset in switch_to */
+/** offset in switch_to */
 #define SWITCH_TO_RA     0
 #define SWITCH_TO_SP     8
 #define SWITCH_TO_S0     16

@@ -17,7 +17,7 @@ void init_locks(void) {
         mlocks[i].block_queue.prev = &mlocks[i].block_queue;
         mlocks[i].block_queue.next = &mlocks[i].block_queue;
     }
-    /* TODO: [p2-task2] initialize mlocks */
+    /** TODO: [p2-task2] initialize mlocks */
 }
 
 void spin_lock_init(spin_lock_t *lock) {
@@ -81,7 +81,7 @@ void do_mutex_lock_acquire(int mlock_idx) {
             return;
         }
     }
-    /* TODO: [p2-task2] acquire mutex lock */
+    /** TODO: [p2-task2] acquire mutex lock */
 }
 
 void do_mutex_lock_release(int mlock_idx) {
@@ -97,7 +97,7 @@ void do_mutex_lock_release(int mlock_idx) {
             return;
         }
     }
-    /* TODO: [p2-task2] release mutex lock */
+    /** TODO: [p2-task2] release mutex lock */
 }
 
 barrier_t barriers[BARRIER_NUM];

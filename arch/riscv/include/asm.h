@@ -1,4 +1,4 @@
-/*
+/**
  * asm.h: Assembler macros to make things easier to read.
  *
  * Copyright (C) 1996 David S. Miller (dm@engr.sgi.com)
@@ -32,4 +32,4 @@
 #define RISCV_SZPTR		8
 #define RISCV_LGPTR		3
 
-#endif /* ASM_H */
+#endif /** ASM_H */

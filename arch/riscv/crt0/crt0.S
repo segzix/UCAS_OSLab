@@ -13,7 +13,7 @@ crt0_loop:
     j     crt0_loop
 crt0_endloop:
     
-    /* TODO: [p1-task3] setup C runtime environment for the user program */
+    /** TODO: [p1-task3] setup C runtime environment for the user program */
 
     call main
     call sys_exit

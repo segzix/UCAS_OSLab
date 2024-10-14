@@ -1,4 +1,4 @@
-/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *  * * * * * * * * * * *
+/** * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *  * * * * * * * * * * *
  *            Copyright (C) 2018 Institute of Computing Technology, CAS
  *               Author : Han Shukai (email : hanshukai@ict.ac.cn)
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *  * * * * * * * * * * *
@@ -104,7 +104,7 @@ static void init_task_info(void) {
 }
 
 static void init_pcb(void) {
-    /* TODO: [p2-task1] load needed tasks and init their corresponding PCB */
+    /** TODO: [p2-task1] load needed tasks and init their corresponding PCB */
 
     int num_pcbs;
 
@@ -123,7 +123,7 @@ static void init_pcb(void) {
 }
 
 static void init_page_general(void) {
-    /* TODO: [p2-task1] load needed tasks and init their corresponding PCB */
+    /** TODO: [p2-task1] load needed tasks and init their corresponding PCB */
 
     int num_pages;
 
@@ -137,7 +137,7 @@ static void init_page_general(void) {
 }
 
 static void init_share_page(void) {
-    /* TODO: [p2-task1] load needed tasks and init their corresponding PCB */
+    /** TODO: [p2-task1] load needed tasks and init their corresponding PCB */
 
     int share_num;
 
@@ -217,7 +217,7 @@ static void init_syscall(void) {
 
     // TODO: [p2-task3] initialize system call table.
 }
-/************************************************************/
+/*************************************************************/
 
 int main(void) {
     if (get_current_cpu_id() == 0) {

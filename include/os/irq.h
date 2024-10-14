@@ -1,4 +1,4 @@
-/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *  * * * * * * * * * * *
+/** * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *  * * * * * * * * * * *
  *            Copyright (C) 2018 Institute of Computing Technology, CAS
  *               Author : Han Shukai (email : hanshukai@ict.ac.cn)
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *  * * * * * * * * * * *
@@ -30,7 +30,7 @@
 #include <type.h>
 #include <os/sched.h>
 
-/* ERROR code */
+/** ERROR code */
 enum IrqCode
 {
     IRQC_U_SOFT  = 0,
@@ -66,7 +66,7 @@ extern handler_t exc_table[EXCC_COUNT];
 
 extern void interrupt_helper(regs_context_t *regs, uint64_t stval, uint64_t scause);
 
-/* exception handler entery */
+/** exception handler entery */
 extern void exception_handler_entry(void);
 extern void init_exception();
 extern void setup_exception();

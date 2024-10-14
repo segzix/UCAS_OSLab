@@ -45,7 +45,7 @@ void handle_irq_timer(regs_context_t *regs, uint64_t stval, uint64_t scause) {
 void handle_irq_ext(regs_context_t *regs, uint64_t stval, uint64_t scause) {
     uint32_t plic_ID = plic_claim();
 
-    /*
+    /**
      * PLIC_E1000_QEMU_IRQ || PLIC_E1000_PYNQ_IRQ：处理中断
      * 0：双核时之前另一核处理过
      * 其他情况
@@ -72,8 +72,8 @@ void init_exception() {
     exc_table[EXCC_INST_PAGE_FAULT] = (handler_t)handle_pagefault_access;
     exc_table[EXCC_LOAD_PAGE_FAULT] = (handler_t)handle_pagefault_access;
     exc_table[EXCC_STORE_PAGE_FAULT] = (handler_t)handle_pagefault_store;
-    /* TODO: [p2-task3] initialize exc_table */
-    /* NOTE: handle_syscall, handle_other, etc.*/
+    /** TODO: [p2-task3] initialize exc_table */
+    /** NOTE: handle_syscall, handle_other, etc.*/
 
     irq_table[IRQC_U_SOFT] = (handler_t)handle_other;
     irq_table[IRQC_S_SOFT] = (handler_t)handle_other;
@@ -84,11 +84,11 @@ void init_exception() {
     irq_table[IRQC_U_EXT] = (handler_t)handle_other;
     irq_table[IRQC_S_EXT] = (handler_t)handle_irq_ext;
     irq_table[IRQC_M_EXT] = (handler_t)handle_other;
-    /* TODO: [p2-task4] initialize irq_table */
-    /* NOTE: handle_int, handle_other, etc.*/
+    /** TODO: [p2-task4] initialize irq_table */
+    /** NOTE: handle_int, handle_other, etc.*/
 
     setup_exception();
-    /* TODO: [p2-task3] set up the entrypoint of exceptions */
+    /** TODO: [p2-task3] set up the entrypoint of exceptions */
 }
 
 void handle_other(regs_context_t *regs, uint64_t stval, uint64_t scause) {
@@ -126,7 +126,7 @@ void handle_pagefault_access(regs_context_t *regs, uint64_t stval, uint64_t scau
     search_PTE_swap = (PTE *)walk(stval, current_running->pgdir, ALLOC);
 #endif
 
-    /*
+    /**
      * p位有效：access位无，重新给出即可
      * p位无效：软件位有，在硬盘上
      * p位无效：软件位无，mmaloc完还未进行分配
@@ -169,7 +169,7 @@ void handle_pagefault_store(regs_context_t *regs, uint64_t stval, uint64_t scaus
     search_PTE_swap = (PTE *)walk(stval, current_running->pgdir, ALLOC);
 #endif
 
-    /*
+    /**
      * p位有效：wirte位无，说明是写时复制，需进行uvmcopy
      * p位有效：wirte位有，重新给出即可
      * p位无效：软件位有，在硬盘上

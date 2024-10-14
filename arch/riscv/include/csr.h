@@ -1,37 +1,37 @@
-/* SPDX-License-Identifier: GPL-2.0-only */
-/*
+/** SPDX-License-Identifier: GPL-2.0-only */
+/**
  * Copyright (C) 2015 Regents of the University of California
  */
 
 #ifndef CSR_H
 #define CSR_H
 
-/* Status register flags */
-#define SR_SIE    0x00000002 /* Supervisor Interrupt Enable */
-#define SR_SPIE   0x00000020 /* Previous Supervisor IE */
-#define SR_SPP    0x00000100 /* Previously Supervisor */
-#define SR_SUM    0x00040000 /* Supervisor User Memory Access */
+/** Status register flags */
+#define SR_SIE    0x00000002 /** Supervisor Interrupt Enable */
+#define SR_SPIE   0x00000020 /** Previous Supervisor IE */
+#define SR_SPP    0x00000100 /** Previously Supervisor */
+#define SR_SUM    0x00040000 /** Supervisor User Memory Access */
 
-#define SR_FS           0x00006000 /* Floating-point Status */
+#define SR_FS           0x00006000 /** Floating-point Status */
 #define SR_FS_OFF       0x00000000
 #define SR_FS_INITIAL   0x00002000
 #define SR_FS_CLEAN     0x00004000
 #define SR_FS_DIRTY     0x00006000
 
-#define SR_XS           0x00018000 /* Extension Status */
+#define SR_XS           0x00018000 /** Extension Status */
 #define SR_XS_OFF       0x00000000
 #define SR_XS_INITIAL   0x00008000
 #define SR_XS_CLEAN     0x00010000
 #define SR_XS_DIRTY     0x00018000
 
-#define SR_SD           0x8000000000000000 /* FS/XS dirty */
+#define SR_SD           0x8000000000000000 /** FS/XS dirty */
 
-/* SATP flags */
+/** SATP flags */
 #define SATP_PPN        0x00000FFFFFFFFFFF
 #define SATP_MODE_39    0x8000000000000000
 #define SATP_MODE       SATP_MODE_39
 
-/* SCAUSE */
+/** SCAUSE */
 #define SCAUSE_IRQ_FLAG   (1UL << 63)
 
 #define IRQ_U_SOFT		0
@@ -54,7 +54,7 @@
 #define EXC_LOAD_PAGE_FAULT	13
 #define EXC_STORE_PAGE_FAULT	15
 
-/* SIE (Interrupt Enable) and SIP (Interrupt Pending) flags */
+/** SIE (Interrupt Enable) and SIP (Interrupt Pending) flags */
 #define SIE_SSIE    (0x1 << IRQ_S_SOFT)
 #define SIE_STIE    (0x1 << IRQ_S_TIMER)
 #define SIE_SEIE    (0x1 << IRQ_S_EXT)
@@ -79,4 +79,4 @@
 
 #define CSR_MHARTID 0xf14
 
-#endif /* CSR_H */
+#endif /** CSR_H */

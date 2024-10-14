@@ -56,7 +56,7 @@ static inline int bios_sd_read(unsigned mem_address, unsigned num_of_blocks, \
                         (long)block_id, 0, 0);
 }
 
-/************************************************************/
+/*************************************************************/
 
 static inline int bios_sd_write(unsigned mem_address, unsigned num_of_blocks, \
                               unsigned block_id)
@@ -80,6 +80,6 @@ static inline uint64_t bios_read_fdt(enum FDT_TYPE type)
 {
     return call_jmptab(READ_FDT, (long)type, 0, 0, 0, 0);
 }
-/************************************************************/
+/*************************************************************/
 
 #endif

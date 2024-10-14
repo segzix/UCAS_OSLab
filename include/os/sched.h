@@ -1,4 +1,4 @@
-/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *  * * * * * * * * * * *
+/** * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *  * * * * * * * * * * *
  *            Copyright (C) 2018 Institute of Computing Technology, CAS
  *               Author : Han Shukai (email : hanshukai@ict.ac.cn)
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *  * * * * * * * * * * *
@@ -38,21 +38,21 @@
 #define TASK_LOCK_MAX 16
 extern uint16_t task_num;
 
-/* used to save register infomation */
+/** used to save register infomation */
 typedef struct regs_context {
-    /* Saved main processor registers.*/
+    /** Saved main processor registers.*/
     reg_t regs[32];
 
-    /* Saved special registers. */
+    /** Saved special registers. */
     reg_t sstatus;
     reg_t sepc;
     reg_t sbadaddr;
     reg_t scause;
 } regs_context_t;
 
-/* used to save register infomation in switch_to */
+/** used to save register infomation in switch_to */
 typedef struct switchto_context {
-    /* Callee saved registers.*/
+    /** Callee saved registers.*/
     reg_t regs[14];
 } switchto_context_t;
 
@@ -68,15 +68,15 @@ enum FORK {
     NOTFORK,
 };
 
-/* Process Control Block */
+/** Process Control Block */
 typedef struct pcb {
-    /* register context */
+    /** register context */
     // NOTE: this order must be preserved, which is defined in regs.h!!
     reg_t kernel_sp;
     reg_t user_sp;
     char pcb_name[32]; // for debugging
 
-    /* process id */
+    /** process id */
     pid_t pid;
     tid_t tid;
     pid_t ppid;
@@ -84,7 +84,7 @@ typedef struct pcb {
     ptr_t kernel_stack_base;
     ptr_t user_stack_base;
 
-    /* previous, next pointer */
+    /** previous, next pointer */
     list_node_t list;
 
     list_head wait_list;
@@ -93,17 +93,17 @@ typedef struct pcb {
 
     int kill;
 
-    /* BLOCK | READY | RUNNING */
+    /** BLOCK | READY | RUNNING */
     task_status_t status;
 
-    /* cursor position */
+    /** cursor position */
     int cursor_x;
     int cursor_y;
 
-    /* time(seconds) to wake up sleeping PCB */
+    /** time(seconds) to wake up sleeping PCB */
     uint64_t wakeup_time;
 
-    /* mask
+    /** mask
      * 0x01 core 0
      * 0x02 core 1
      * 0x03 core 0/1
@@ -113,7 +113,7 @@ typedef struct pcb {
     uint8_t cputime;
     uint8_t prior;
 
-    /* pgdir */
+    /** pgdir */
     PTE *pgdir;
     uintptr_t heap;
     unsigned recycle;
@@ -124,25 +124,25 @@ typedef struct pcb {
     netStream netstream;
 } pcb_t, tcb_t;
 
-/* ready queue to run */
+/** ready queue to run */
 extern list_head ready_queue;
 extern spin_lock_t ready_spin_lock;
 #ifdef MLFQ
 extern list_node_t ready_queues[];
 #endif
 
-/* sleep queue to be blocked in */
+/** sleep queue to be blocked in */
 extern list_head sleep_queue;
 extern spin_lock_t sleep_spin_lock;
 
-/* current running task PCB */
+/** current running task PCB */
 pcb_t *current_running_0;
 pcb_t *current_running_1;
 extern pcb_t pid0_pcb;
 extern pcb_t pid1_pcb;
 pcb_t pcb[NUM_MAX_TASK];
 
-/*sched function for shedular*/
+/**sched function for shedular*/
 #ifdef MLFQ
 pcb_t *MLFQsched(int curcpu, pcb_t *currunning);
 void MLFQupprior();
@@ -156,7 +156,7 @@ void do_sleep(uint32_t);
 void do_block(list_node_t *pcb_node, list_head *queue, spin_lock_t *lock);
 void do_unblock(list_node_t *);
 
-/*proc function for process*/
+/**proc function for process*/
 void clean_temp_page(uint64_t pgdir_addr);
 void srcrel(int id);
 // pcb与tcb的初始化
@@ -167,8 +167,8 @@ void init_tcb_stack(ptr_t kernel_stack, ptr_t kva_user_stack, ptr_t entry_point,
 void init_pcb_mm(int id, int taskid, enum FORK fork);
 void init_tcb_mm(int id, void *thread_entrypoint, void *arg);
 
-/************************************************************/
-/* exec exit kill waitpid ps */
+/*************************************************************/
+/** exec exit kill waitpid ps */
 void init_shell(void);
 #ifdef S_CORE
 extern pid_t do_exec(int id, int argc, uint64_t arg0, uint64_t arg1, uint64_t arg2);
@@ -195,9 +195,9 @@ static inline int pid2id(int pid) {
 void do_task_set_p(pid_t pid, int mask, char *buf);
 int do_task_set(int mask, char *name, int argc, char *argv[]);
 
-/************************************************************/
+/*************************************************************/
 
-/*kernel mem for argc&&argv*/
+/**kernel mem for argc&&argv*/
 int kernel_argc;
 char kernel_arg[5][200];
 char *kernel_argv[5];

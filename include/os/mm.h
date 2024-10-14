@@ -1,4 +1,4 @@
-/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *  * * * * * * * * * * *
+/** * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *  * * * * * * * * * * *
  *            Copyright (C) 2018 Institute of Computing Technology, CAS
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *  * * * * * * * * * * *
  *                                   Memory Management
@@ -44,7 +44,7 @@ enum WALK {
 
 enum PIN { UNPINED, PINED };
 
-/* Rounding; only works for n = power of two */
+/** Rounding; only works for n = power of two */
 #define PXSHIFT(level) (NORMAL_PAGE_SHIFT + (9 * (level)))
 #define PX(level, va) ((((uint64_t)(va)) >> PXSHIFT(level)) & PXMASK)
 #define PXMASK 0x1FF
@@ -77,7 +77,7 @@ typedef struct share_page {
 page_allocated page_general[PAGE_NUM];
 share_page share_pages[SHARE_PAGE_NUM];
 
-/* mm function for memory */
+/** mm function for memory */
 extern void share_pgtable(PTE *dest_pgdir, PTE *src_pgdir);
 uintptr_t walk(uintptr_t va, PTE *pgdir, enum WALK walk);
 PTE *mappages(uintptr_t va, PTE *pgdir, uintptr_t pa, uint64_t perm);
@@ -87,7 +87,7 @@ void pin_page(uintptr_t kva);
 unsigned swap_out();
 void setPTE(PTE *pte, uintptr_t pa, uint64_t perm);
 
-/*
+/**
  * alloc && free
  */
 uintptr_t kmalloc();
@@ -100,7 +100,7 @@ uintptr_t uvmfree(PTE *pgdir, uintptr_t va);
 void mapfree(PTE *pgdir);
 void kmfree(uintptr_t kva);
 
-/*syscall*/
+/**syscall*/
 uintptr_t mmalloc(uint32_t size);
 uintptr_t shm_page_get(int key);
 void shm_page_dt(uintptr_t va);
@@ -114,4 +114,4 @@ static inline uintptr_t pgindex2kva(uint32_t index) {
     return FREEMEM_KERNEL + index * PAGE_SIZE;
 }
 
-#endif /* MM_H */
+#endif /** MM_H */

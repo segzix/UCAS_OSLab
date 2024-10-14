@@ -1,7 +1,7 @@
 #ifndef ATOMIC_H
 #define ATOMIC_H
 
-/* from linux/arch/riscv/include/asm/cmpxchg.h */
+/** from linux/arch/riscv/include/asm/cmpxchg.h */
 
 #include <type.h>
 
@@ -27,7 +27,7 @@ static inline uint64_t atomic_swap_d(uint64_t val, ptr_t mem_addr)
     return ret;
 }
 
-/* if *mem_addr == old_val, then *mem_addr = new_val, else return *mem_addr */
+/** if *mem_addr == old_val, then *mem_addr = new_val, else return *mem_addr */
 static inline uint32_t atomic_cmpxchg(uint32_t old_val, uint32_t new_val, ptr_t mem_addr)
 {
     uint32_t ret;
@@ -45,7 +45,7 @@ static inline uint32_t atomic_cmpxchg(uint32_t old_val, uint32_t new_val, ptr_t 
     return ret;
 }
 
-/* if *mem_addr == old_val, then *mem_addr = new_val, else return *mem_addr */
+/** if *mem_addr == old_val, then *mem_addr = new_val, else return *mem_addr */
 static inline uint64_t atomic_cmpxchg_d(uint64_t old_val, uint64_t new_val, ptr_t mem_addr)
 {
     uint64_t ret;
@@ -63,4 +63,4 @@ static inline uint64_t atomic_cmpxchg_d(uint64_t old_val, uint64_t new_val, ptr_
     return ret;
 }
 
-#endif /* ATOMIC_H */
+#endif /** ATOMIC_H */

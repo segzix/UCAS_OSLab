@@ -20,7 +20,7 @@ int main(void)
         sys_move_cursor(0, print_location);
         printf("> [TASK] This task is sleeping, sleep time is %d.\n", sleep_time);
 
-        /* call syscall sleep() */
+        /** call syscall sleep() */
         sys_sleep(sleep_time);
 
         sys_move_cursor(0, print_location);

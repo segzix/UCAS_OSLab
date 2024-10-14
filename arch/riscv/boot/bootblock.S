@@ -26,9 +26,9 @@ main:
 	li 		t1, DEFLATE_ADDR
 	jr		t1
 
-	/************************************************************/
+	/*************************************************************/
 secondary:
-	/* TODO [P3-task3]: 
+	/** TODO [P3-task3]: 
 	 * 1. Mask all interrupts
 	 * 2. let stvec pointer to kernel_main
 	 * 3. enable software interrupt for ipi
@@ -49,7 +49,7 @@ wait_for_wakeup:
 	wfi
 	j wait_for_wakeup
 
-	/************************************************************/
+	/*************************************************************/
 // while(1) --> stop here
 stop:
 	j stop

@@ -1,4 +1,4 @@
-/* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *  * * * * * * * * * * *
+/** * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *  * * * * * * * * * * *
  *            Copyright (C) 2018 Institute of Computing Technology, CAS
  *               Author : Han Shukai (email : hanshukai@ict.ac.cn)
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *  * * * * * * * * * * *
@@ -27,19 +27,19 @@
 #ifndef INCLUDE_CONSOLE_H_
 #define INCLUDE_CONSOLE_H_
 
-/* configuring screen properties */
+/** configuring screen properties */
 void init_screen(void);
 
-/* clear screen */
+/** clear screen */
 void screen_clear(int begin,int end);
 
-/* reflush screen buffer */
+/** reflush screen buffer */
 void screen_reflush(void);
 
-/* screen write string */
+/** screen write string */
 void screen_write(char *buff);
 
-/* move cursor int (x,y) */
+/** move cursor int (x,y) */
 void screen_move_cursor(int x, int y);
 
 #endif

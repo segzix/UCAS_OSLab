@@ -5,7 +5,7 @@
 #include <os/smp.h>
 #include <os/time.h>
 
-/****** 初始化进程的netstream结构体 ******/
+/******* 初始化进程的netstream结构体 ******/
 
 void init_stream(void) {
     stream_buffer *sbawin = get_pcb()->netstream.sbawin;
@@ -33,9 +33,9 @@ void init_stream(void) {
     get_pcb()->netstream.perf_time = get_timer();
 }
 
-/****** 定时重传，唤醒。打印性能信息相关操作 ******/
+/******* 定时重传，唤醒。打印性能信息相关操作 ******/
 
-/*
+/**
  * RSD重传
  */
 void do_resend_RSD(int id) {
@@ -66,7 +66,7 @@ void do_resend_RSD(int id) {
     }
 }
 
-/*
+/**
  * ACK确认
  */
 void do_resend_ACK(int id) {
@@ -89,7 +89,7 @@ void do_resend_ACK(int id) {
     pcb[id].netstream.ACK_valid = 0;
 }
 
-/*
+/**
  * 接收队列定时唤醒
  */
 void do_wake_up_recv_stream(void) { //定时唤醒
@@ -97,7 +97,7 @@ void do_wake_up_recv_stream(void) { //定时唤醒
     printl("wakeup stream\n");
 }
 
-/*
+/**
  * 性能打印
  */
 void do_perfm(int id) {
@@ -108,19 +108,19 @@ void do_perfm(int id) {
     pcb[id].netstream.prevByte = pcb[id].netstream.CurByte;
 }
 
-/*
+/**
  * 定时重传集成函数
  */
 void do_resend() {
     for (int id = 0; id < NUM_MAX_TASK; id++) {
         if (pcb[id].netstream.valid && pcb[id].status != TASK_EXITED) {
-            /*打印性能*/
+            /**打印性能*/
             if (get_timer() >= pcb[id].netstream.perf_time) {
                 do_perfm(id);
                 pcb[id].netstream.perf_time += PERF_GAP;
             }
 
-            /*进行重传和进程唤醒，以便对接收区进行操作*/
+            /**进行重传和进程唤醒，以便对接收区进行操作*/
             if (get_ticks() >= pcb[id].netstream.resend_time) {
                 do_resend_RSD(id);
                 do_resend_ACK(id);
@@ -132,9 +132,9 @@ void do_resend() {
 }
 
 
-/****** 发送接收阻塞队列操作 ******/
+/******* 发送接收阻塞队列操作 ******/
 
-/*
+/**
  * 发送中断并从阻塞队列中取出，同时置零中断位
  */
 void e1000_handle_txpe(void) {
@@ -143,7 +143,7 @@ void e1000_handle_txpe(void) {
     e1000_write_reg(e1000, E1000_IMC, E1000_IMC_TXQE);
 }
 
-/*
+/**
  * 接收中断并从阻塞队列中取出，同时置零中断位
  */
 void e1000_handle_rxdmt0(void) {
